@@ -9,6 +9,7 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
 	return (
 		<html lang="en">
+			<link rel="icon" type="image/x-icon" href="/logo.png" />
 			<body>
 				{children}
 				<ToastContainer
