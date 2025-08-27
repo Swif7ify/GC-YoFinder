@@ -2,8 +2,8 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEyeSlash, faEye, faEnvelope, faLock, faShield, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
+
+import { EyeOff, Eye, Mail, Lock, Shield, Search } from "lucide-react";
 import { toastError, toastSuccess } from "@/utils/toast";
 
 export default function LoginPage() {
@@ -56,7 +56,7 @@ export default function LoginPage() {
 		}
 		try {
 			toastSuccess("Successfully signed in!", "Welcome back.");
-			// do something
+			// API CALL DO SOMETHING
 		} catch (error) {
 			console.log(error);
 			toastError("Please try again.", "An error occurred while signing in.");
@@ -95,7 +95,7 @@ export default function LoginPage() {
 						<span className="text-sm font-medium text-gray-700">Student ID / Email</span>
 						<div className="relative mt-1">
 							<span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
-								<FontAwesomeIcon icon={faEnvelope} />
+								<Mail size={20}/>
 							</span>
 							<input
 								id="email"
@@ -115,7 +115,7 @@ export default function LoginPage() {
 						<span className="text-sm font-medium text-gray-700">Password</span>
 						<div className="relative mt-1">
 							<span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
-								<FontAwesomeIcon icon={faLock} />
+								<Lock size={20}/>
 							</span>
 							<input
 								id="password"
@@ -135,7 +135,7 @@ export default function LoginPage() {
 								className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-500"
 								onClick={() => setShowPassword(!showPassword)}
 							>
-								<FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
+								{showPassword ? <EyeOff /> : <Eye />}
 							</button>
 						</div>
 					</label>
@@ -162,13 +162,13 @@ export default function LoginPage() {
 				<p className="text-center text-gray-500 text-sm">For Gordon College students only</p>
 			</form>
 
-			<div className="flex flex-row max-w-md justify-center items-center gap-4 mt-6 mx-auto">
-				<div className="w-full bg-white/95 shadow-lg rounded-xl p-4 flex flex-col items-center">
-					<FontAwesomeIcon icon={faMagnifyingGlass} className="text-blue-600 text-2xl h-6 w-6 mb-2" />
+			<div className="flex flex-row max-w-md justify-center items-center gap-4 mt-6 mx-auto h-full">
+				<div className="w-full bg-white/95 shadow-lg rounded-xl p-4 flex flex-col items-center h-full ">
+					<Search className="text-blue-600 text-2xl h-6 w-6 mb-2" />
 					<h1 className="text-gray-900">Find Items</h1>
 				</div>
-				<div className="w-full bg-white/95 shadow-lg rounded-xl p-4 flex flex-col items-center">
-					<FontAwesomeIcon icon={faShield} className="text-green-600 text-2xl h-6 w-6 mb-2" />
+				<div className="w-full bg-white/95 shadow-lg rounded-xl p-4 flex flex-col items-center h-full">
+					<Shield className="text-green-600 text-2xl h-6 w-6 mb-2" />
 					<h1 className="text-gray-900">Secure Claims</h1>
 				</div>
 			</div>
