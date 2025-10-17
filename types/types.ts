@@ -9,6 +9,18 @@ export interface RecentItems {
 	image_url?: string;
 }
 
+export interface Items {
+	id: RecentItems["id"];
+	title: RecentItems["title"];
+	description: RecentItems["description"];
+	type: RecentItems["type"];
+	location: RecentItems["location"];
+	date: RecentItems["date"];
+	status: RecentItems["status"];
+	image_url: RecentItems["image_url"];
+	category: string;
+}
+
 export interface RecentActivity {
 	id: string;
 	action: string;

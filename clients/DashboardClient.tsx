@@ -73,6 +73,14 @@ const MessagesComponent = Dynamic(
 	{ ssr: false }
 );
 
+const SettingsComponent = Dynamic(
+	() =>
+		import("@/component/dashboard/items/SettingsComponent").then(
+			(mod) => mod.default
+		),
+	{ ssr: false }
+);
+
 const TAB_MAP: Record<string, string> = {
 	dashboard: "Dashboard",
 	"new-item": "New Item",
@@ -143,6 +151,7 @@ export default function DashboardPage() {
 		"my-items": <MyItemsComponent />,
 		messages: <MessagesComponent />,
 		locations: <LocationsComponent />,
+		settings: <SettingsComponent />,
 	};
 
 	const ActiveComponent =
