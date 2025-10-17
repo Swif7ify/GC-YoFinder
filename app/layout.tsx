@@ -63,7 +63,7 @@ export default function RootLayout({
 	return (
 		<html lang="en">
 			<link rel="icon" type="image/x-icon" href="/logo.png" />
-			<body>
+			<body className="bg-slate-50 dark:bg-black">
 				<LoadingProvider>
 					<ThemeProvider>{children}</ThemeProvider>
 					<GlobalLoading />
