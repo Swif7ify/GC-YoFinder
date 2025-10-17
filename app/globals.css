@@ -38,3 +38,86 @@ a {
 		scrollbar-color: var(--sb-thumb-color) var(--sb-track-color);
 	}
 }
+
+.dark .MuiFormControl-root,
+.dark .MuiPickersTextField-root,
+.dark .css-eqc3kq-MuiFormControl-root-MuiPickersTextField-root {
+	width: 100%;
+	background-color: rgba(38, 38, 38, 0.5) !important;
+	border-radius: 8px;
+	border: 1px solid #404040 !important;
+	color: white !important;
+}
+
+.dark .MuiPickersSectionList-section,
+.dark .css-joz0rk-MuiPickersSectionList-section-MuiPickersInputBase-section {
+	color: whitesmoke !important;
+}
+
+.dark .MuiSvgIcon-roo,
+.dark .MuiSvgIcon-fontSizeMedium,
+.dark .css-1umw9bq-MuiSvgIcon-root {
+	color: gray !important;
+}
+
+.dark .MuiButtonBase-root,
+.dark .MuiMenuItem-root,
+.dark .MuiMenuItem-gutters,
+.dark .MuiMenuItem-root,
+.dark .MuiMenuItem-gutters,
+.dark .MuiMultiSectionDigitalClockSection-item,
+.dark
+	.css-ux17pc-MuiButtonBase-root-MuiMenuItem-root-MuiMultiSectionDigitalClockSection-item {
+	color: whitesmoke !important;
+}
+
+.dark .MuiPickersCalendarHeader-label,
+.dark .css-1chuxo2-MuiPickersCalendarHeader-label {
+	color: rgb(255, 255, 255) !important;
+}
+
+.dark .MuiTypography-root,
+.dark .MuiTypography-caption,
+.dark .MuiDayCalendar-weekDayLabel,
+.dark .css-17f9e7e-MuiTypography-root-MuiDayCalendar-weekDayLabel {
+	color: rgb(255, 255, 255) !important;
+}
+
+.dark .MuiPickersFadeTransitionGroup-root,
+.dark .MuiDateCalendar-viewTransitionContainer,
+.dark
+	.css-hwynws-MuiPickersFadeTransitionGroup-root-MuiDateCalendar-viewTransitionContainer {
+	color: rgb(255, 255, 255) !important;
+}
+
+.dark .MuiPaper-root,
+.dark .MuiPaper-elevation,
+.dark .MuiPaper-rounded,
+.dark .MuiPaper-elevation8,
+.dark .MuiPickerPopper-paper,
+.dark .css-151nkvq-MuiPaper-root-MuiPickerPopper-paper {
+	background-color: #262626 !important;
+	border: 1px solid #1f2937 !important;
+}
+
+.MuiFormControl-root,
+.MuiPickersTextField-root,
+.css-eqc3kq-MuiFormControl-root-MuiPickersTextField-root {
+	width: 100%;
+	background-color: #ffffff !important;
+	border-radius: 8px;
+	border: 1px solid #d1d5db !important;
+	color: #0f1720 !important;
+}
+
+.MuiPickersSectionList-section,
+.css-joz0rk-MuiPickersSectionList-section-MuiPickersInputBase-section {
+	color: #374151 !important;
+}
+
+.MuiSvgIcon-root,
+.MuiSvgIcon-roo,
+.MuiSvgIcon-fontSizeMedium,
+.css-1umw9bq-MuiSvgIcon-root {
+	color: #6b7280 !important;
+}

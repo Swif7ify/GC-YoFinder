@@ -8,6 +8,7 @@ import {
 	MapPinIcon,
 	PackagePlusIcon,
 	PackageCheckIcon,
+	SettingsIcon,
 } from "lucide-react";
 
 import { useRouter, useSearchParams } from "next/navigation";
@@ -79,6 +80,7 @@ const TAB_MAP: Record<string, string> = {
 	"my-items": "My Items",
 	messages: "Messages",
 	locations: "Locations",
+	settings: "Settings",
 };
 
 export default function DashboardPage() {
@@ -90,7 +92,7 @@ export default function DashboardPage() {
 	const [showNotifications, setShowNotifications] = useState(false);
 	const initialTab = searchParams.get("tab") || "dashboard";
 	const [activeTab, setActiveTab] = useState(initialTab);
-	const mainRef = useRef	<HTMLElement | null>(null);
+	const mainRef = useRef<HTMLElement | null>(null);
 
 	useEffect(() => {
 		const tab = (searchParams?.get("tab") ?? "dashboard").toLowerCase();
@@ -126,6 +128,11 @@ export default function DashboardPage() {
 			name: "Locations",
 			path: "/locations",
 			icon: <MapPinIcon size={20} />,
+		},
+		{
+			name: "Settings",
+			path: "/settings",
+			icon: <SettingsIcon size={20} />,
 		},
 	];
 
@@ -193,7 +200,7 @@ export default function DashboardPage() {
 	};
 
 	return (
-		<div className="h-screen ">
+		<div className="h-screen overflow-hidden">
 			{/* sidebar */}
 			<a
 				href="#main-content"
