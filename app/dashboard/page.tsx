@@ -17,6 +17,7 @@ import {
 
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
+import { api } from "@/lib/api.config";
 
 export default function DashboardPage() {
 	const searchParams = useSearchParams();
@@ -93,7 +94,23 @@ export default function DashboardPage() {
 	const [showMobileMenu, setShowMobileMenu] = useState(false);
 	const [showProfileMenu, setShowProfileMenu] = useState(false);
 	const [showNotifications, setShowNotifications] = useState(false);
-	const unreadCount = mockNotifications.filter((notification) => !notification.isRead).length;
+	const unreadCount = mockNotifications.filter(
+		(notification) => !notification.isRead
+	).length;
+
+	const handleLogout = async () => {
+		try {
+			const response = await api("/api/logout", {
+				method: "POST",
+			});
+
+			if (response.ok) {
+				router.replace("/login");
+			}
+		} catch (error) {
+			console.log(error);
+		}
+	};
 
 	return (
 		<div className="h-screen w-full flex flex-col">
@@ -104,7 +121,11 @@ export default function DashboardPage() {
 							className="md:hidden mr-3 text-gray-600"
 							onClick={() => setShowMobileMenu(!showMobileMenu)}
 						>
-							{showMobileMenu ? <XIcon size={24} /> : <MenuIcon size={24} />}
+							{showMobileMenu ? (
+								<XIcon size={24} />
+							) : (
+								<MenuIcon size={24} />
+							)}
 						</button>
 						<div className="flex items-center">
 							<Image
@@ -114,7 +135,9 @@ export default function DashboardPage() {
 								height={32}
 								className="rounded-full mr-2"
 							/>
-							<h1 className="text-lg font-semibold text-gray-800">GC Yofinder</h1>
+							<h1 className="text-lg font-semibold text-gray-800">
+								GC Yofinder
+							</h1>
 						</div>
 					</div>
 					<div className="flex items-center space-x-4">
@@ -123,7 +146,8 @@ export default function DashboardPage() {
 								className="text-gray-600 hover:text-gray-800"
 								onClick={() => {
 									setShowNotifications(!showNotifications);
-									if (showProfileMenu) setShowProfileMenu(false);
+									if (showProfileMenu)
+										setShowProfileMenu(false);
 								}}
 							>
 								<BellIcon size={20} />
@@ -135,7 +159,9 @@ export default function DashboardPage() {
 								<div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg ring-1 ring-black/5 z-50 py-2">
 									<div className="px-4 py-2 border-b border-gray-100">
 										<div className="flex justify-between items-center">
-											<h3 className="text-sm font-medium text-gray-700">Notifications</h3>
+											<h3 className="text-sm font-medium text-gray-700">
+												Notifications
+											</h3>
 											{unreadCount > 0 && (
 												<span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
 													{unreadCount} new
@@ -145,42 +171,66 @@ export default function DashboardPage() {
 									</div>
 									<div className="max-h-80 overflow-y-auto">
 										{mockNotifications.length > 0 ? (
-											mockNotifications.map((notification) => (
-												<div
-													key={notification.id}
-													className={`px-4 py-3 hover:bg-gray-50 ${
-														!notification.isRead ? "bg-emerald-50" : ""
-													} border-b border-gray-100`}
-												>
-													<div className="flex">
-														<div
-															className={`flex-shrink-0 h-8 w-8 rounded-full ${
-																!notification.isRead ? "bg-emerald-100" : "bg-gray-100"
-															} flex items-center justify-center mr-3`}
-														>
-															{!notification.isRead ? (
-																<BellIcon size={16} className="text-emerald-500" />
-															) : (
-																<CheckIcon size={16} className="text-gray-400" />
-															)}
-														</div>
-														<div>
-															<p className="text-sm font-medium text-gray-800">
-																{notification.title}
-															</p>
-															<p className="text-xs text-gray-500 mt-0.5">
-																{notification.message}
-															</p>
-															<p className="text-xs text-gray-400 mt-1">
-																{notification.time}
-															</p>
+											mockNotifications.map(
+												(notification) => (
+													<div
+														key={notification.id}
+														className={`px-4 py-3 hover:bg-gray-50 ${
+															!notification.isRead
+																? "bg-emerald-50"
+																: ""
+														} border-b border-gray-100`}
+													>
+														<div className="flex">
+															<div
+																className={`flex-shrink-0 h-8 w-8 rounded-full ${
+																	!notification.isRead
+																		? "bg-emerald-100"
+																		: "bg-gray-100"
+																} flex items-center justify-center mr-3`}
+															>
+																{!notification.isRead ? (
+																	<BellIcon
+																		size={
+																			16
+																		}
+																		className="text-emerald-500"
+																	/>
+																) : (
+																	<CheckIcon
+																		size={
+																			16
+																		}
+																		className="text-gray-400"
+																	/>
+																)}
+															</div>
+															<div>
+																<p className="text-sm font-medium text-gray-800">
+																	{
+																		notification.title
+																	}
+																</p>
+																<p className="text-xs text-gray-500 mt-0.5">
+																	{
+																		notification.message
+																	}
+																</p>
+																<p className="text-xs text-gray-400 mt-1">
+																	{
+																		notification.time
+																	}
+																</p>
+															</div>
 														</div>
 													</div>
-												</div>
-											))
+												)
+											)
 										) : (
 											<div className="px-4 py-6 text-center">
-												<p className="text-gray-500 text-sm">No notifications</p>
+												<p className="text-gray-500 text-sm">
+													No notifications
+												</p>
 											</div>
 										)}
 									</div>
@@ -197,7 +247,8 @@ export default function DashboardPage() {
 								className="flex items-center space-x-2"
 								onClick={() => {
 									setShowProfileMenu(!showProfileMenu);
-									if (showNotifications) setShowNotifications(false);
+									if (showNotifications)
+										setShowNotifications(false);
 								}}
 							>
 								<div className="h-8 w-8 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700">
@@ -211,11 +262,16 @@ export default function DashboardPage() {
 								<div className="absolute right-0 mt-2 w-48 py-2 bg-white rounded-md shadow-lg ring-1 ring-black/5 !z-50">
 									<div
 										className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-										onClick={() => setShowProfileMenu(false)}
+										onClick={() =>
+											setShowProfileMenu(false)
+										}
 									>
 										Profile Settings
 									</div>
-									<button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+									<button
+										onClick={handleLogout}
+										className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+									>
 										Sign Out
 									</button>
 								</div>
@@ -229,21 +285,34 @@ export default function DashboardPage() {
 				<aside className="fixed left-0 top-16 w-64 bg-white border-r border-gray-200 h-[calc(100vh-4rem)] overflow-y-auto hidden md:block z-10">
 					<nav className="py-4">
 						<div className="px-4 mb-6">
-							<h2 className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Main Menu</h2>
+							<h2 className="text-xs uppercase tracking-wider text-gray-500 font-semibold">
+								Main Menu
+							</h2>
 						</div>
 						<div className="px-4 mb-6"></div>
 						<ul className="space-y-1">
 							{sidebar.map((item) => (
 								<a
-									onClick={() => handleTabClick(item.name.toLowerCase().replace(/ /g, "-"))}
+									onClick={() =>
+										handleTabClick(
+											item.name
+												.toLowerCase()
+												.replace(/ /g, "-")
+										)
+									}
 									className={`text-emerald-700 flex items-center px-4 py-3 transition-all duration-300 font-normal  ${
-										activeTab === item.name.toLowerCase().replace(/ /g, "-")
+										activeTab ===
+										item.name
+											.toLowerCase()
+											.replace(/ /g, "-")
 											? "bg-emerald-50 font-medium border-l-4 border-emerald-500"
 											: "hover:bg-emerald-50"
 									} cursor-pointer `}
 									key={item.name}
 								>
-									<span className="mr-3 text-gray-500">{item.icon}</span>
+									<span className="mr-3 text-gray-500">
+										{item.icon}
+									</span>
 									<span>{item.name}</span>
 								</a>
 							))}
@@ -267,17 +336,26 @@ export default function DashboardPage() {
 									{sidebar.map((item) => (
 										<a
 											onClick={() => {
-												handleTabClick(item.name.toLowerCase().replace(/ /g, "-"));
+												handleTabClick(
+													item.name
+														.toLowerCase()
+														.replace(/ /g, "-")
+												);
 												setShowMobileMenu(false);
 											}}
 											className={`text-emerald-700 flex items-center px-4 py-3 transition-all duration-300 font-normal  ${
-												activeTab === item.name.toLowerCase().replace(/ /g, "-")
+												activeTab ===
+												item.name
+													.toLowerCase()
+													.replace(/ /g, "-")
 													? "bg-emerald-50 font-medium border-l-4 border-emerald-500"
 													: "hover:bg-emerald-50"
 											} cursor-pointer `}
 											key={item.name}
 										>
-											<span className="mr-3 text-gray-500">{item.icon}</span>
+											<span className="mr-3 text-gray-500">
+												{item.icon}
+											</span>
 											<span>{item.name}</span>
 										</a>
 									))}
@@ -291,7 +369,8 @@ export default function DashboardPage() {
 				<main className="flex-1 bg-gray-50 overflow-y-auto p-6 md:ml-64">
 					<div className="max-w-7xl mx-auto">
 						<h2 className="text-2xl font-semibold text-gray-900 mb-6">
-							{activeTab.charAt(0).toUpperCase() + activeTab.slice(1).replace("-", " ")}
+							{activeTab.charAt(0).toUpperCase() +
+								activeTab.slice(1).replace("-", " ")}
 						</h2>
 
 						<div className="bg-white rounded-lg shadow p-6">

@@ -1,15 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 
 import { EyeOff, Eye, Mail, Lock, Shield, Search } from "lucide-react";
 import { toastError, toastSuccess } from "@/utils/toast";
 import { api } from "@/lib/api.config";
 import { useRouter } from "next/navigation";
+import { useApiLoading } from "@/hooks/useApiLoading";
 
 export default function LoginPage() {
 	const router = useRouter();
+	const { withLoading } = useApiLoading();
 	const [showPassword, setShowPassword] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [form, setform] = useState({
@@ -33,6 +35,14 @@ export default function LoginPage() {
 		}
 		return true;
 	};
+
+	useEffect(() => {
+		withLoading(async () => {
+			// await a real promise, not a plain setTimeout call
+			await new Promise((resolve) => setTimeout(resolve, 5000));
+		});
+		// include withLoading in deps
+	}, [withLoading]);
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
