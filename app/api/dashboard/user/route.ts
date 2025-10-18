@@ -21,7 +21,6 @@ export async function GET(request: NextRequest) {
 			);
 
 		const response = await getUserDataByID(userID);
-		console.log("Dashboard User Data Response:", response);
 		const message = response.status.message;
 		const statusCode = response.status_code;
 

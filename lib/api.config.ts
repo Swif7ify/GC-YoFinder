@@ -43,13 +43,12 @@ export async function api(url: string, options: RequestInit = {}) {
 
 	const makeRequest = async (accessToken?: string): Promise<Response> => {
 		const headers: Record<string, string> = {
-			"Content-Type": "application/json",
 			Accept: "application/json",
 			...((options.headers as Record<string, string>) || {}),
 		};
 
-		if (accessToken) {
-			headers["Authorization"] = `Bearer ${accessToken}`;
+		if (!(options.body instanceof FormData) && !headers["Content-Type"]) {
+			headers["Content-Type"] = "application/json";
 		}
 
 		const defaultOptions: RequestInit = {

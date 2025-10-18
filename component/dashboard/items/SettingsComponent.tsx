@@ -4,12 +4,9 @@ import React, { useState, useRef, useEffect } from "react";
 import {
 	User,
 	Mail,
-	Lock,
 	Bell,
-	Eye,
 	Globe,
 	Shield,
-	Trash2,
 	Save,
 	Camera,
 	Info,
@@ -20,6 +17,7 @@ import CustomSelect from "@/ui/CustomSelect";
 import { UserData } from "@/types/types";
 import { api } from "@/lib/api.config";
 import { toastError, toastSuccess } from "@/utils/toast";
+import { useApiLoading } from "@/hooks/useApiLoading";
 
 interface SettingsComponentProps {
 	userData: UserData;
@@ -30,6 +28,7 @@ export default function SettingsComponent({
 	userData,
 	onChange,
 }: SettingsComponentProps) {
+	const { withLoading } = useApiLoading();
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [firstName, setFirstName] = useState("John");
 	const [lastName, setLastName] = useState("Doe");
@@ -128,6 +127,14 @@ export default function SettingsComponent({
 		}
 	};
 
+	const handleCancel = () => {
+		setFirstName(userData.firstname ?? "");
+		setLastName(userData.lastname ?? "");
+		setEmail(userData.email ?? "");
+		setUsername(userData.username ?? "");
+		setPhone(userData.phone || "");
+	};
+
 	const onTabKeyDown = (e: React.KeyboardEvent) => {
 		const order = tabs.map((t) => t.id) as Array<
 			"profile" | "notifications" | "preferences"
@@ -137,6 +144,61 @@ export default function SettingsComponent({
 			setActiveTab(order[(idx + 1) % order.length]);
 		} else if (e.key === "ArrowLeft") {
 			setActiveTab(order[(idx - 1 + order.length) % order.length]);
+		}
+	};
+
+	const updateUserPhoto = async (file: File) => {
+		if (!file) return;
+		if (isSubmitting) return;
+
+		const allowedTypes = [
+			"image/png",
+			"image/jpeg",
+			"image/jpg",
+			"image/webp",
+		];
+		if (!allowedTypes.includes(file.type)) {
+			toastError(
+				"Invalid file type",
+				"Please upload a PNG, JPG, JPEG, or WEBP image."
+			);
+			return;
+		}
+
+		const maxSize = 5 * 1024 * 1024; // 5 MB in bytes
+		if (file.size > maxSize) {
+			toastError(
+				"File too large",
+				"Please upload an image smaller than 5MB."
+			);
+			return;
+		}
+
+		try {
+			setIsSubmitting(true);
+			const formData = new FormData();
+			formData.append("photo", file);
+			const response = await withLoading(() =>
+				api("/api/dashboard/user/photo", {
+					method: "POST",
+					body: formData,
+				})
+			);
+
+			if (response.status !== 200) {
+				toastError("Error updating photo", "Please try again later.");
+				return;
+			}
+
+			toastSuccess(
+				"Photo updated",
+				"Your profile photo has been updated."
+			);
+			onChange();
+		} catch (error) {
+			console.error("Error updating photo:", error);
+		} finally {
+			setIsSubmitting(false);
 		}
 	};
 
@@ -273,6 +335,13 @@ export default function SettingsComponent({
 													</div>
 												</div>
 												<button
+													onClick={() =>
+														document
+															.getElementById(
+																"profile-photo-input"
+															)
+															?.click()
+													}
 													type="button"
 													className="absolute bottom-0 right-0 w-8 h-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
 													aria-label="Change profile picture"
@@ -292,6 +361,13 @@ export default function SettingsComponent({
 													JPG or PNG. Max size 5MB.
 												</p>
 												<button
+													onClick={() =>
+														document
+															.getElementById(
+																"profile-photo-input"
+															)
+															?.click()
+													}
 													type="button"
 													className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded"
 												>
@@ -299,6 +375,19 @@ export default function SettingsComponent({
 												</button>
 											</div>
 										</div>
+
+										<input
+											type="file"
+											className="hidden"
+											accept="PNG, JPG, JPEG"
+											onChange={(e) => {
+												e.target.files?.[0] &&
+													updateUserPhoto(
+														e.target.files[0]
+													);
+											}}
+											id="profile-photo-input"
+										/>
 
 										{/* username */}
 										<div>
@@ -330,7 +419,8 @@ export default function SettingsComponent({
 											</div>
 											<p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
 												Must be at least 4-50 characters
-												long
+												long and may include letters,
+												numbers but no spaces
 											</p>
 										</div>
 
@@ -431,23 +521,38 @@ export default function SettingsComponent({
 
 										{/* Save Button */}
 										<div className="flex justify-end">
-											<button
-												type="submit"
-												className={`px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 flex items-center gap-2 ${
-													isSubmitting
-														? "opacity-50 cursor-not-allowed"
-														: ""
-												}`}
-												disabled={isSubmitting}
-											>
-												<Save
-													size={18}
-													aria-hidden="true"
-												/>
-												{isSubmitting
-													? "Saving..."
-													: "Save Profile"}
-											</button>
+											<div className="flex items-center gap-6">
+												<div>
+													<button
+														type="submit"
+														className={`px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 flex items-center gap-2 ${
+															isSubmitting
+																? "opacity-50 cursor-not-allowed"
+																: ""
+														}`}
+														disabled={isSubmitting}
+													>
+														<Save
+															size={18}
+															aria-hidden="true"
+														/>
+														{isSubmitting
+															? "Saving..."
+															: "Save Profile"}
+													</button>
+												</div>
+
+												<div>
+													{/* cancel button */}
+													<button
+														onClick={handleCancel}
+														type="button"
+														className="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+													>
+														Cancel
+													</button>
+												</div>
+											</div>
 										</div>
 									</form>
 								</section>

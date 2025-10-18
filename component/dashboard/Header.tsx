@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import Image from "next/image";
 import {
 	BellIcon,
@@ -48,6 +48,7 @@ export default function Header({
 	const avatarRef = useRef<HTMLDivElement | null>(null);
 	const notificationButtonRef = useRef<HTMLButtonElement | null>(null);
 	const avatarButtonRef = useRef<HTMLButtonElement | null>(null);
+	const [photoUrl, setPhotoUrl] = useState<string>();
 
 	const handleButtonKeyDown = (e: React.KeyboardEvent) => {
 		if (e.key === "Escape") {
@@ -127,6 +128,10 @@ export default function Header({
 		showProfileMenu,
 		setShowProfileMenu,
 	]);
+
+	useEffect(() => {
+		setPhotoUrl(userData.photo?.url);
+	}, [userData])
 
 	return (
 		<motion.header
@@ -314,7 +319,20 @@ export default function Header({
 								className="h-9 w-9 bg-emerald-100 dark:bg-emerald-900/40 rounded-full flex items-center justify-center text-emerald-700 dark:text-emerald-400"
 								aria-hidden="true"
 							>
-								<UserIcon size={18} />
+								{photoUrl ? (
+									<Image
+										src={photoUrl}
+										alt="Profile picture"
+										width={96}
+										height={96}
+									/>
+								) : (
+									<UserIcon
+										size={24}
+										className="text-emerald-700 dark:text-emerald-400"
+										aria-hidden="true"
+									/>
+								)}
 							</div>
 							<span className="hidden sm:inline-block text-sm font-medium text-gray-700 dark:text-gray-200">
 								{userData.firstname} {userData.lastname}
