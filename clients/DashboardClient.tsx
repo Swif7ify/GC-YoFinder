@@ -11,10 +11,15 @@ import {
 	SettingsIcon,
 } from "lucide-react";
 
+import { UserData } from "@/types/types";
+
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api.config";
 import Dynamic from "next/dynamic";
 import { motion } from "framer-motion";
+import { toastError } from "@/utils/toast";
+
+import { useApiLoading } from "@/hooks/useApiLoading";
 
 const Sidebar = Dynamic(
 	() => import("@/component/dashboard/Sidebar").then((mod) => mod.default),
@@ -92,6 +97,7 @@ const TAB_MAP: Record<string, string> = {
 };
 
 export default function DashboardPage() {
+	const { withLoading } = useApiLoading();
 	const searchParams = useSearchParams();
 	const router = useRouter();
 
@@ -101,6 +107,11 @@ export default function DashboardPage() {
 	const initialTab = searchParams.get("tab") || "dashboard";
 	const [activeTab, setActiveTab] = useState(initialTab);
 	const mainRef = useRef<HTMLElement | null>(null);
+
+	// userData
+	const [userData, setUserData] = useState<UserData>(
+		[] as unknown as UserData
+	);
 
 	useEffect(() => {
 		const tab = (searchParams?.get("tab") ?? "dashboard").toLowerCase();
@@ -144,14 +155,38 @@ export default function DashboardPage() {
 		},
 	];
 
+	const fetchUserData = async () => {
+		try {
+			const response = await api("/api/dashboard/user", {
+				method: "GET",
+			});
+
+			if (response.status !== 200) {
+				toastError("Server Error", "Unable to fetch user data.");
+				return;
+			}
+
+			const data = await response.json();
+			setUserData(data.data);
+		} catch (error) {
+			console.error("Error fetching user data:", error);
+		}
+	};
+
 	const componentMap: Record<string, React.ReactNode> = {
-		dashboard: <HomeComponent />,
+		dashboard: (
+			<HomeComponent
+				userFullName={userData.firstname + " " + userData.lastname}
+			/>
+		),
 		"new-item": <NewItemComponent />,
 		"search-items": <SearchItemsComponent />,
 		"my-items": <MyItemsComponent />,
 		messages: <MessagesComponent />,
 		locations: <LocationsComponent />,
-		settings: <SettingsComponent />,
+		settings: (
+			<SettingsComponent userData={userData} onChange={fetchUserData} />
+		),
 	};
 
 	const ActiveComponent =
@@ -208,6 +243,13 @@ export default function DashboardPage() {
 		}
 	};
 
+	useEffect(() => {
+		const fetch = async () => {
+			await withLoading(() => fetchUserData());
+		};
+		fetch();
+	}, []);
+
 	return (
 		<div className="h-screen overflow-hidden">
 			{/* sidebar */}
@@ -239,6 +281,7 @@ export default function DashboardPage() {
 						unreadCount={unreadCount}
 						mockNotifications={mockNotifications}
 						handleLogout={handleLogout}
+						userData={userData}
 					/>
 
 					{/* Main content area */}
@@ -257,7 +300,7 @@ export default function DashboardPage() {
 							animate={{ opacity: 1, y: 0 }}
 							transition={{ duration: 0.3 }}
 						>
-							{ActiveComponent || <HomeComponent />}
+							{ActiveComponent || "Component not found."}
 						</motion.div>
 					</main>
 				</div>

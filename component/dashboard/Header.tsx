@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import DarkModeButton from "@/ui/DarkModeButton";
+import { UserData } from "@/types/types";
 
 interface HeaderProps {
 	setShowMobileMenu: (show: boolean) => void;
@@ -28,6 +29,7 @@ interface HeaderProps {
 		isRead: boolean;
 	}[];
 	handleLogout: () => void;
+	userData: UserData;
 }
 
 export default function Header({
@@ -40,6 +42,7 @@ export default function Header({
 	unreadCount,
 	mockNotifications,
 	handleLogout,
+	userData,
 }: HeaderProps) {
 	const notificationsRef = useRef<HTMLDivElement | null>(null);
 	const avatarRef = useRef<HTMLDivElement | null>(null);
@@ -124,6 +127,7 @@ export default function Header({
 		showProfileMenu,
 		setShowProfileMenu,
 	]);
+
 	return (
 		<motion.header
 			initial={{ y: -8, opacity: 0 }}
@@ -313,7 +317,7 @@ export default function Header({
 								<UserIcon size={18} />
 							</div>
 							<span className="hidden sm:inline-block text-sm font-medium text-gray-700 dark:text-gray-200">
-								John Smith
+								{userData.firstname} {userData.lastname}
 							</span>
 						</button>
 						<AnimatePresence>
@@ -329,10 +333,10 @@ export default function Header({
 								>
 									<div className="px-4 py-3 border-b border-gray-100 dark:border-neutral-800">
 										<p className="text-sm font-medium text-gray-700 dark:text-gray-200">
-											John Smith
+											{userData.username}
 										</p>
 										<p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-											student@gordoncollege.edu.ph
+											{userData.email}
 										</p>
 									</div>
 									<nav>

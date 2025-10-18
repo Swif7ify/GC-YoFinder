@@ -1,3 +1,26 @@
+export interface UserData {
+	created_at: string;
+	email: string;
+	username: string;
+	firstname: string;
+	lastname: string;
+	is_online: boolean;
+	phone?: string;
+	photo?: {
+		url: string;
+		publicId: string;
+		cloudinaryId: string;
+		format: string;
+		size: number;
+		width: number;
+		height: number;
+		uploaded_at: Date;
+		resourceType: "image" | "video" | "raw" | "auto";
+	};
+	role: "student" | "admin";
+	updated_at: string;
+}
+
 export interface RecentItems {
 	id: string;
 	title: string;
@@ -71,4 +94,14 @@ export interface MyItem {
 	views: number;
 	matchCount: number;
 	image_url?: string;
+}
+
+export interface CloudinaryImagePreviewProps {
+	images: string[];
+	className?: string;
+	gridCols?: "2" | "3" | "4" | "6";
+	aspectRatio?: "square" | "video" | "auto";
+	showCount?: boolean;
+	allowDownload?: boolean;
+	children?: React.ReactNode;
 }

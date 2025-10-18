@@ -19,6 +19,7 @@ async function TokenHasher(token) {
 
 const studentSchema = new mongoose.Schema(
 	{
+		username: { type: String, unique: true },
 		firstname: { type: String, default: null },
 		lastname: { type: String, default: null },
 		email: {
@@ -28,6 +29,20 @@ const studentSchema = new mongoose.Schema(
 		},
 		password: { type: String, default: null, select: false },
 		phone: { type: String, default: null },
+		photo: {
+			type: Object,
+			default: {
+				url: "",
+				publicId: "",
+				cloudinaryId: "",
+				format: "",
+				size: 0,
+				width: 0,
+				height: 0,
+				uploaded_at: new Date(),
+				resourceType: "image",
+			},
+		},
 		is_online: { type: Boolean, default: false },
 		role: {
 			type: String,
@@ -81,29 +96,37 @@ async function createStudent() {
 		const firstName = await question("Enter first name: ");
 		const lastName = await question("Enter last name: ");
 		const email = await question("Enter email address: ");
-		const password = await question("Enter password (min 8 characters): ");
+
+		const username = (
+			email.slice(0, 4).toLowerCase().trim() +
+			"_" +
+			firstName.toLowerCase().trim().replace(" ", "_") +
+			"_" +
+			lastName.toLowerCase().trim().replace(" ", "_")
+		)
+			.replace(" ", "_")
+			.trim();
 
 		if (!firstName.trim() || !lastName.trim()) {
 			console.log("❌ First name and last name are required!");
 			process.exit(1);
 		}
 
-		if (!validateEmail(email)) {
-			console.log("❌ Invalid email format!");
+		if (email.includes("@")) {
+			console.log(
+				"❌ Please enter only the email prefix (without @gordoncollege.edu.ph)!"
+			);
 			process.exit(1);
 		}
 
-		if (password.length < 8) {
-			console.log("❌ Password must be at least 8 characters long!");
-			process.exit(1);
-		}
-
+		const password = email.trim().toLowerCase() + "_gordon_college";
 		const hashedPassword = await TokenHasher(password);
 
 		const student = new Student({
+			username: username,
 			firstname: firstName.trim(),
 			lastname: lastName.trim(),
-			email: email.trim(),
+			email: email.trim() + "@gordoncollege.edu.ph",
 			password: hashedPassword,
 			role: "student",
 		});

@@ -16,7 +16,11 @@ import Image from "next/image";
 import { RecentItems, RecentActivity } from "@/types/types";
 import Link from "next/link";
 
-export default function HomeComponent() {
+interface HomeComponentProps {
+	userFullName: string;
+}
+
+export default function HomeComponent({ userFullName }: HomeComponentProps) {
 	const stats = [
 		{
 			label: "Items Posted",
@@ -195,7 +199,10 @@ export default function HomeComponent() {
 					id="welcome-heading"
 					className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-gray-100 mb-2"
 				>
-					Welcome back, John! 👋
+					Welcome back,{" "}
+					<span className="text-emerald-700 font-medium dark:text-emerald-400">
+						{userFullName}!
+					</span>
 				</h1>
 				<p className="text-gray-600 dark:text-gray-400">
 					Here's what's happening with your lost and found items

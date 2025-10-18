@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
 	User,
 	Mail,
@@ -13,35 +13,44 @@ import {
 	Save,
 	Camera,
 	Info,
+	Phone,
 } from "lucide-react";
 import Image from "next/image";
 import CustomSelect from "@/ui/CustomSelect";
+import { UserData } from "@/types/types";
+import { api } from "@/lib/api.config";
+import { toastError, toastSuccess } from "@/utils/toast";
 
-export default function SettingsComponent() {
-	// Account Settings
+interface SettingsComponentProps {
+	userData: UserData;
+	onChange: () => void;
+}
+
+export default function SettingsComponent({
+	userData,
+	onChange,
+}: SettingsComponentProps) {
+	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [firstName, setFirstName] = useState("John");
 	const [lastName, setLastName] = useState("Doe");
+	const [username, setUsername] = useState("");
 	const [email, setEmail] = useState("john.doe@gordoncollege.edu.ph");
-	const [newPassword, setNewPassword] = useState("");
-	const [confirmPassword, setConfirmPassword] = useState("");
+	const [photoUrl, setPhotoUrl] = useState<string>();
+	const [phone, setPhone] = useState(userData.phone || "");
 
-	// Notification Settings
 	const [emailNotifications, setEmailNotifications] = useState(true);
 	const [matchAlerts, setMatchAlerts] = useState(true);
 	const [messageAlerts, setMessageAlerts] = useState(true);
 	const [statusUpdates, setStatusUpdates] = useState(false);
 
-	// Privacy Settings
 	const [profileVisibility, setProfileVisibility] = useState<
 		"public" | "college" | "private"
 	>("college");
 	const [showEmail, setShowEmail] = useState(false);
 	const [showContactInfo, setShowContactInfo] = useState(true);
 
-	// Language & Display
 	const [language, setLanguage] = useState("en");
 
-	// Tab navigation: profile | notifications | preferences
 	const [activeTab, setActiveTab] = useState<
 		"profile" | "notifications" | "preferences"
 	>("profile");
@@ -57,13 +66,68 @@ export default function SettingsComponent() {
 
 	const tabListRef = useRef<HTMLDivElement | null>(null);
 
-	const handleSaveProfile = (e: React.FormEvent) => {
-		e.preventDefault();
-		// TODO: Implement save profile logic
-		// console.log("Profile saved:", { fullName, email, studentId });
+	const ValidateFields = () => {
+		if (phone && !/^(09|\+639)\d{9}$/.test(phone)) {
+			toastError(
+				"Invalid phone number",
+				"Please enter a valid phone number."
+			);
+			return false;
+		}
+
+		if (username) {
+			const u = username.trim();
+			const usernamePattern = /^[A-Za-z][A-Za-z0-9._-]{3,49}$/;
+			if (!usernamePattern.test(u)) {
+				toastError(
+					"Invalid username",
+					"Username must start with a letter, be 4–50 characters, and may include letters, numbers, ., _, -"
+				);
+				return false;
+			}
+		}
+		return true;
 	};
 
-	// keyboard navigation for tabs (Left/Right)
+	const handleSaveProfile = async (e: React.FormEvent) => {
+		e.preventDefault();
+		if (isSubmitting) return;
+		try {
+			if (!ValidateFields()) return;
+			setIsSubmitting(true);
+			const form: Partial<{
+				username: string;
+				phone: string;
+			}> = {};
+
+			if (username !== userData.username && !!username)
+				form.username = username.trim();
+			if (phone !== userData.phone && !!phone) form.phone = phone.trim();
+
+			if (Object.keys(form).length === 0) {
+				setIsSubmitting(false);
+				return;
+			}
+
+			const response = await api("/api/dashboard/user", {
+				method: "POST",
+				body: JSON.stringify(form),
+			});
+
+			if (response.status !== 200) {
+				toastError("Error saving profile", "Please try again later.");
+				return;
+			}
+
+			toastSuccess("Profile saved", "Your profile has been updated.");
+			onChange();
+		} catch (error) {
+			console.error("Error saving profile:", error);
+		} finally {
+			setIsSubmitting(false);
+		}
+	};
+
 	const onTabKeyDown = (e: React.KeyboardEvent) => {
 		const order = tabs.map((t) => t.id) as Array<
 			"profile" | "notifications" | "preferences"
@@ -75,6 +139,15 @@ export default function SettingsComponent() {
 			setActiveTab(order[(idx - 1 + order.length) % order.length]);
 		}
 	};
+
+	useEffect(() => {
+		setFirstName(userData.firstname ?? "");
+		setLastName(userData.lastname ?? "");
+		setEmail(userData.email ?? "");
+		setUsername(userData.username ?? "");
+		setPhotoUrl(userData.photo?.url);
+		setPhone(userData.phone || "");
+	}, [userData]);
 
 	return (
 		<div className="space-y-6">
@@ -181,14 +254,23 @@ export default function SettingsComponent() {
 										{/* Profile Picture */}
 										<div className="flex items-center gap-6">
 											<div className="relative">
-												<div className="w-24 h-24 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
-													<Image
-														src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop"
-														alt="Profile picture"
-														width={96}
-														height={96}
-														className="object-cover"
-													/>
+												<div className="w-24 h-24 rounded-full bg-emerald-100 dark:bg-emerald-900/40 overflow-hidden ">
+													<div className="w-full h-full flex items-center justify-center">
+														{photoUrl ? (
+															<Image
+																src={photoUrl}
+																alt="Profile picture"
+																width={96}
+																height={96}
+															/>
+														) : (
+															<User
+																size={64}
+																className="text-emerald-700 dark:text-emerald-400"
+																aria-hidden="true"
+															/>
+														)}
+													</div>
 												</div>
 												<button
 													type="button"
@@ -203,7 +285,8 @@ export default function SettingsComponent() {
 											</div>
 											<div>
 												<h3 className="font-medium text-gray-900 dark:text-gray-100 mb-1">
-													Profile Photo
+													{userData.firstname}{" "}
+													{userData.lastname}
 												</h3>
 												<p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
 													JPG or PNG. Max size 5MB.
@@ -215,6 +298,40 @@ export default function SettingsComponent() {
 													Upload new photo
 												</button>
 											</div>
+										</div>
+
+										{/* username */}
+										<div>
+											<label
+												htmlFor="username"
+												className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+											>
+												Username
+											</label>
+											<div className="relative">
+												<User
+													size={18}
+													className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
+													aria-hidden="true"
+												/>
+												<input
+													type="text"
+													id="username"
+													maxLength={50}
+													value={username}
+													placeholder="Enter your username"
+													onChange={(e) =>
+														setUsername(
+															e.target.value
+														)
+													}
+													className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-neutral-800/50 text-gray-900 dark:text-gray-100"
+												/>
+											</div>
+											<p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
+												Must be at least 4-50 characters
+												long
+											</p>
 										</div>
 
 										{/* Full Name */}
@@ -230,13 +347,8 @@ export default function SettingsComponent() {
 													type="text"
 													id="first-name"
 													value={firstName}
-													onChange={(e) =>
-														setFirstName(
-															e.target.value
-														)
-													}
-													className="w-full px-4 py-2.5 border border-gray-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-neutral-800/50 text-gray-900 dark:text-gray-100"
-													required
+													className="w-full px-4 py-2.5 border border-gray-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-neutral-800/50 text-gray-900 dark:text-gray-100 disabled:bg-gray-50 dark:disabled:bg-neutral-800/30 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed disabled:opacity-60"
+													disabled
 												/>
 											</div>
 
@@ -251,13 +363,8 @@ export default function SettingsComponent() {
 													type="text"
 													id="last-name"
 													value={lastName}
-													onChange={(e) =>
-														setLastName(
-															e.target.value
-														)
-													}
-													className="w-full px-4 py-2.5 border border-gray-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-neutral-800/50 text-gray-900 dark:text-gray-100"
-													required
+													className="w-full px-4 py-2.5 border border-gray-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-neutral-800/50 text-gray-900 dark:text-gray-100 disabled:bg-gray-50 dark:disabled:bg-neutral-800/30 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed disabled:opacity-60"
+													disabled
 												/>
 											</div>
 										</div>
@@ -290,17 +397,56 @@ export default function SettingsComponent() {
 											</p>
 										</div>
 
+										{/* Phone Number */}
+										<div>
+											<label
+												htmlFor="phone"
+												className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+											>
+												Phone Number
+											</label>
+											<div className="relative">
+												<Phone
+													size={18}
+													className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
+													aria-hidden="true"
+												/>
+												<input
+													type="tel"
+													maxLength={11}
+													id="phone"
+													value={phone}
+													placeholder="Enter your phone number"
+													onChange={(e) =>
+														setPhone(e.target.value)
+													}
+													className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-neutral-800/50 text-gray-900 dark:text-gray-100"
+												/>
+											</div>
+											<p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
+												Must be a valid Philippine phone
+												number
+											</p>
+										</div>
+
 										{/* Save Button */}
 										<div className="flex justify-end">
 											<button
 												type="submit"
-												className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 flex items-center gap-2"
+												className={`px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 flex items-center gap-2 ${
+													isSubmitting
+														? "opacity-50 cursor-not-allowed"
+														: ""
+												}`}
+												disabled={isSubmitting}
 											>
 												<Save
 													size={18}
 													aria-hidden="true"
 												/>
-												Save Changes
+												{isSubmitting
+													? "Saving..."
+													: "Save Profile"}
 											</button>
 										</div>
 									</form>
