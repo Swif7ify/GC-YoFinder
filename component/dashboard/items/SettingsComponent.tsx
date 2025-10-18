@@ -379,7 +379,7 @@ export default function SettingsComponent({
 										<input
 											type="file"
 											className="hidden"
-											accept="PNG, JPG, JPEG"
+											accept="image/png, image/jpg, image/jpeg, image/webp"
 											onChange={(e) => {
 												e.target.files?.[0] &&
 													updateUserPhoto(
