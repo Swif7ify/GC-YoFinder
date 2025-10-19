@@ -211,7 +211,7 @@ export default function DashboardPage() {
 		),
 		"new-item": <NewItemComponent />,
 		"search-items": <SearchItemsComponent />,
-		"my-items": <MyItemsComponent userItems={userItems} />,
+		"my-items": <MyItemsComponent userItems={userItems} onUpdate={fetchUserItems} />,
 		messages: <MessagesComponent />,
 		locations: <LocationsComponent />,
 		settings: (

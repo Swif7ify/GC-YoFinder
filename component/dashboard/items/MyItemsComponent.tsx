@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import dayjs from "dayjs";
 import {
 	Package,
@@ -18,49 +18,55 @@ import {
 import Image from "next/image";
 import { MyItem } from "@/types/types";
 import Link from "next/link";
+import { motion } from "framer-motion";
+import { useConfirm } from "@/ui/ConfirmProvider";
+import ItemForm from "./MyItems/ItemForm";
+import { api } from "@/lib/api.config";
+import { toastError, toastSuccess } from "@/utils/toast";
+import { useApiLoading } from "@/hooks/useApiLoading";
 
 interface MyItemsComponentProps {
 	userItems?: MyItem[];
+	onUpdate?: () => void;
 }
 
-export default function MyItemsComponent({ userItems }: MyItemsComponentProps) {
+export default function MyItemsComponent({
+	userItems,
+	onUpdate,
+}: MyItemsComponentProps) {
+	const { withLoading } = useApiLoading();
+	const confirm = useConfirm();
+	const [isUpdating, setIsUpdating] = useState(false);
 	const [items, setItems] = useState<MyItem[]>([]);
 	const [filterTab, setFilterTab] = useState<"all" | "lost" | "found">("all");
 	const [activeMenu, setActiveMenu] = useState<string | null>(null);
 	const [searchQuery, setSearchQuery] = useState<string>("");
+	const [editingItem, setEditingItem] = useState<MyItem | null>(null);
 
 	useEffect(() => {
 		setItems(userItems || []);
-		console.log(" Items:", items);
 	}, [userItems]);
 
 	const visibleItems = useMemo(() => {
 		const q = searchQuery.trim().toLowerCase();
 
-		return (
-			(items || [])
-				.filter((item) =>
-					filterTab === "all" ? true : item.type === filterTab
-				)
-				.filter((item) => {
-					if (!q) return true;
-					return (
-						(item.title ?? "").toLowerCase().includes(q) ||
-						(item.description ?? "").toLowerCase().includes(q) ||
-						(item.location ?? "").toLowerCase().includes(q)
-					);
-				})
-				// optional: sort newest first by reported/created date (adjust field name if different)
-				.sort((a, b) => {
-					const ta = a.dateReported
-						? dayjs(a.dateReported).valueOf()
-						: 0;
-					const tb = b.dateReported
-						? dayjs(b.dateReported).valueOf()
-						: 0;
-					return tb - ta;
-				})
-		);
+		return (items || [])
+			.filter((item) =>
+				filterTab === "all" ? true : item.type === filterTab
+			)
+			.filter((item) => {
+				if (!q) return true;
+				return (
+					(item.title ?? "").toLowerCase().includes(q) ||
+					(item.description ?? "").toLowerCase().includes(q) ||
+					(item.location ?? "").toLowerCase().includes(q)
+				);
+			})
+			.sort((a, b) => {
+				const ta = a.dateReported ? dayjs(a.dateReported).valueOf() : 0;
+				const tb = b.dateReported ? dayjs(b.dateReported).valueOf() : 0;
+				return tb - ta;
+			});
 	}, [items, filterTab, searchQuery]);
 
 	const stats = {
@@ -70,15 +76,69 @@ export default function MyItemsComponent({ userItems }: MyItemsComponentProps) {
 		active: items.filter((i) => i.status === "active").length,
 	};
 
-	const handleDelete = (id: string) => {
-		if (confirm("Are you sure you want to delete this item?")) {
-			setItems(items.filter((item) => item.id !== id));
-			setActiveMenu(null);
+	const handleDelete = async (id: string) => {
+		try {
+			const ok = await confirm({
+				title: "Confirm Deletion",
+				description: "Are you sure you want to delete this item?",
+				variant: "danger",
+				cancelText: "Cancel",
+				confirmText: "Delete",
+			});
+
+			if (!ok) return;
+			const response = await withLoading(() =>
+				api(`/api/items/${id}`, {
+					method: "DELETE",
+				})
+			);
+			if (response.status !== 200) {
+				toastError("Failed to delete item.", "Please try again later.");
+				return;
+			}
+			toastSuccess(
+				"Item deleted successfully.",
+				"The item has been removed from your list."
+			);
+			onUpdate?.();
+		} catch (error) {
+			console.error("Error deleting item:", error);
 		}
+	};
+
+	const handleEdit = (item: MyItem) => {
+		setEditingItem(item);
+		setActiveMenu(null);
+	};
+
+	const handleUpdate = (updatedItem: MyItem) => {
+		if (isUpdating) return;
+		try {
+			setIsUpdating(true);
+		} catch (error) {
+			console.error("Error updating item:", error);
+		} finally {
+			setIsUpdating(false);
+		}
+	};
+
+	const handleCloseForm = () => {
+		setEditingItem(null);
 	};
 
 	return (
 		<div className="space-y-6">
+			{/* Edit Form Modal */}
+			{editingItem && (
+				<div className="z-50">
+					<ItemForm
+						item={editingItem}
+						onClose={handleCloseForm}
+						onUpdate={handleUpdate}
+					/>
+				</div>
+			)}
+
 			{/* Header */}
 			<section
 				aria-labelledby="my-items-heading"
@@ -342,12 +402,30 @@ export default function MyItemsComponent({ userItems }: MyItemsComponentProps) {
 												</button>
 
 												{activeMenu === item.id && (
-													<div
+													<motion.div
+														initial={{
+															opacity: 0,
+															scale: 0.95,
+														}}
+														animate={{
+															opacity: 1,
+															scale: 1,
+														}}
+														transition={{
+															duration: 0.15,
+														}}
+														exit={{
+															opacity: 0,
+															scale: 0.95,
+														}}
 														className="absolute right-0 mt-2 w-48 bg-white dark:bg-neutral-900 rounded-lg shadow-lg ring-1 ring-black/5 dark:ring-white/10 z-10 py-1"
 														role="menu"
 													>
 														<button
 															type="button"
+															onClick={() =>
+																handleEdit(item)
+															}
 															className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
 															role="menuitem"
 														>
@@ -373,15 +451,13 @@ export default function MyItemsComponent({ userItems }: MyItemsComponentProps) {
 															/>
 															Delete Item
 														</button>
-													</div>
+													</motion.div>
 												)}
 											</div>
-										</div>
-
+										</div>{" "}
 										<p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
 											{item.description}
 										</p>
-
 										<div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 dark:text-gray-400 mb-3">
 											<span>
 												Location: {item.location}
@@ -395,7 +471,6 @@ export default function MyItemsComponent({ userItems }: MyItemsComponentProps) {
 													: "N/A"}
 											</span>
 										</div>
-
 										{/* Stats */}
 										<div className="flex items-center gap-4">
 											<div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">

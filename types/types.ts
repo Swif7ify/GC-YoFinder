@@ -92,7 +92,7 @@ export interface MyItem {
 	type: "lost" | "found";
 	location: string;
 	dateReported: string;
-	status: "active" | "claimed" | "expired" | "removed";
+	status: "active" | "claimed" | "removed";
 	views: number;
 	matchCount: number;
 	image_url?: string;

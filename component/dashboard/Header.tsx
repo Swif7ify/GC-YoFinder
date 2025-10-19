@@ -59,6 +59,7 @@ export default function Header({
 			if (showProfileMenu) {
 				setShowProfileMenu(false);
 				avatarButtonRef.current?.focus();
+				
 			}
 		}
 	};
