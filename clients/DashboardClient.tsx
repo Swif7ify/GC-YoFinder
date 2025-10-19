@@ -20,6 +20,7 @@ import { motion } from "framer-motion";
 import { toastError } from "@/utils/toast";
 
 import { useApiLoading } from "@/hooks/useApiLoading";
+import { useConfirm } from "@/ui/ConfirmProvider";
 
 const Sidebar = Dynamic(
 	() => import("@/component/dashboard/Sidebar").then((mod) => mod.default),
@@ -97,6 +98,7 @@ const TAB_MAP: Record<string, string> = {
 };
 
 export default function DashboardPage() {
+	const confirm = useConfirm();
 	const { withLoading } = useApiLoading();
 	const searchParams = useSearchParams();
 	const router = useRouter();
@@ -230,6 +232,15 @@ export default function DashboardPage() {
 	).length;
 
 	const handleLogout = async () => {
+		const ok = await confirm({
+			title: "Confirm Logout",
+			description: "Are you sure you want to log out?",
+			variant: "danger",
+			cancelText: "Cancel",
+			confirmText: "Logout",
+		});
+
+		if (!ok) return;
 		try {
 			const response = await api("/api/logout", {
 				method: "POST",

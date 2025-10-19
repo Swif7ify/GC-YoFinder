@@ -29,7 +29,7 @@ export const GlobalLoading = () => {
 										"dark"
 									)
 										? "#4ade80"
-										: "#86efac"
+										: "#41e27c"
 								}
 								size={60}
 							/>

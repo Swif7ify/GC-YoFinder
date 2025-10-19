@@ -16,7 +16,7 @@ import {
 	RotateCcw,
 } from "lucide-react";
 import Image from "next/image";
-import { Items } from "@/types/types";
+import { Items, ITEM_CATEGORIES } from "@/types/types";
 import CustomSelect from "@/ui/CustomSelect";
 
 export default function SearchItemsComponent() {
@@ -33,16 +33,7 @@ export default function SearchItemsComponent() {
 	const [sortBy, setSortBy] = useState<"latest" | "oldest">("latest");
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-	const categories = [
-		"Electronics",
-		"Personal Items",
-		"Bags & Accessories",
-		"Books & Supplies",
-		"Clothing",
-		"Keys & Cards",
-		"Sports Equipment",
-		"Other",
-	];
+	const categories = ITEM_CATEGORIES;
 
 	const locations = [
 		"Library 2nd Floor",
@@ -57,86 +48,86 @@ export default function SearchItemsComponent() {
 
 	useEffect(() => {
 		// Mock data with timestamps for sorting
-		setItems([
-			{
-				id: "1",
-				title: "Black Laptop Bag",
-				description:
-					"A black laptop bag with a silver logo on the front. Contains my laptop and charger.",
-				type: "lost",
-				location: "Library 2nd Floor",
-				date: "2024-10-17T10:00:00",
-				status: "active",
-				image_url:
-					"https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=400&fit=crop",
-				category: "Bags & Accessories",
-			},
-			{
-				id: "2",
-				title: "Blue Water Bottle",
-				description:
-					"A blue Hydro Flask water bottle with a floral sticker.",
-				type: "found",
-				location: "Cafeteria",
-				date: "2024-10-17T07:00:00",
-				status: "claimed",
-				image_url:
-					"https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=400&h=400&fit=crop",
-				category: "Personal Items",
-			},
-			{
-				id: "3",
-				title: "Student ID Card - John Smith",
-				description:
-					"A college student ID card with photo. Name: John Smith, ID: 2021-12345",
-				type: "found",
-				location: "Gym Locker Room",
-				date: "2024-10-16T12:00:00",
-				status: "active",
-				image_url:
-					"https://images.unsplash.com/photo-1589395937784-2f3a87df93e6?w=400&h=400&fit=crop",
-				category: "Personal Items",
-			},
-			{
-				id: "4",
-				title: "Red Umbrella",
-				description:
-					"A red umbrella with a wooden handle and auto-open feature.",
-				type: "lost",
-				location: "Building A",
-				date: "2024-10-15T09:00:00",
-				status: "active",
-				image_url:
-					"https://images.unsplash.com/photo-1527693224088-e54750ee3ea9?w=400&h=400&fit=crop",
-				category: "Personal Items",
-			},
-			{
-				id: "5",
-				title: "Organic Chemistry Textbook",
-				description:
-					"8th Edition Organic Chemistry textbook with notes inside.",
-				type: "found",
-				location: "Science Building 3rd Floor",
-				date: "2024-10-14T15:00:00",
-				status: "active",
-				image_url:
-					"https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=400&h=400&fit=crop",
-				category: "Books & Supplies",
-			},
-			{
-				id: "6",
-				title: "Wireless Earbuds (AirPods)",
-				description:
-					"White Apple AirPods Pro with charging case. Left near the water fountain.",
-				type: "found",
-				location: "Admin Building Hallway",
-				date: "2024-10-13T11:00:00",
-				status: "active",
-				image_url:
-					"https://images.unsplash.com/photo-1606841837239-c5a1a4a07af7?w=400&h=400&fit=crop",
-				category: "Personal Items",
-			},
-		]);
+		// setItems([
+		// 	{
+		// 		id: "1",
+		// 		title: "Black Laptop Bag",
+		// 		description:
+		// 			"A black laptop bag with a silver logo on the front. Contains my laptop and charger.",
+		// 		type: "lost",
+		// 		location: "Library 2nd Floor",
+		// 		date: "2024-10-17T10:00:00",
+		// 		status: "active",
+		// 		image_url:
+		// 			"https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=400&fit=crop",
+		// 		category: "Bags & Accessories",
+		// 	},
+		// 	{
+		// 		id: "2",
+		// 		title: "Blue Water Bottle",
+		// 		description:
+		// 			"A blue Hydro Flask water bottle with a floral sticker.",
+		// 		type: "found",
+		// 		location: "Cafeteria",
+		// 		date: "2024-10-17T07:00:00",
+		// 		status: "claimed",
+		// 		image_url:
+		// 			"https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=400&h=400&fit=crop",
+		// 		category: "Personal Items",
+		// 	},
+		// 	{
+		// 		id: "3",
+		// 		title: "Student ID Card - John Smith",
+		// 		description:
+		// 			"A college student ID card with photo. Name: John Smith, ID: 2021-12345",
+		// 		type: "found",
+		// 		location: "Gym Locker Room",
+		// 		date: "2024-10-16T12:00:00",
+		// 		status: "active",
+		// 		image_url:
+		// 			"https://images.unsplash.com/photo-1589395937784-2f3a87df93e6?w=400&h=400&fit=crop",
+		// 		category: "Personal Items",
+		// 	},
+		// 	{
+		// 		id: "4",
+		// 		title: "Red Umbrella",
+		// 		description:
+		// 			"A red umbrella with a wooden handle and auto-open feature.",
+		// 		type: "lost",
+		// 		location: "Building A",
+		// 		date: "2024-10-15T09:00:00",
+		// 		status: "active",
+		// 		image_url:
+		// 			"https://images.unsplash.com/photo-1527693224088-e54750ee3ea9?w=400&h=400&fit=crop",
+		// 		category: "Personal Items",
+		// 	},
+		// 	{
+		// 		id: "5",
+		// 		title: "Organic Chemistry Textbook",
+		// 		description:
+		// 			"8th Edition Organic Chemistry textbook with notes inside.",
+		// 		type: "found",
+		// 		location: "Science Building 3rd Floor",
+		// 		date: "2024-10-14T15:00:00",
+		// 		status: "active",
+		// 		image_url:
+		// 			"https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=400&h=400&fit=crop",
+		// 		category: "Books & Supplies",
+		// 	},
+		// 	{
+		// 		id: "6",
+		// 		title: "Wireless Earbuds (AirPods)",
+		// 		description:
+		// 			"White Apple AirPods Pro with charging case. Left near the water fountain.",
+		// 		type: "found",
+		// 		location: "Admin Building Hallway",
+		// 		date: "2024-10-13T11:00:00",
+		// 		status: "active",
+		// 		image_url:
+		// 			"https://images.unsplash.com/photo-1606841837239-c5a1a4a07af7?w=400&h=400&fit=crop",
+		// 		category: "Personal Items",
+		// 	},
+		// ]);
 	}, []);
 
 	const resetFilters = () => {

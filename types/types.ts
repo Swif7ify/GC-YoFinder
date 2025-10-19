@@ -1,3 +1,5 @@
+import { ElementType } from "react";
+
 export interface UserData {
 	created_at: string;
 	email: string;
@@ -105,3 +107,35 @@ export interface CloudinaryImagePreviewProps {
 	allowDownload?: boolean;
 	children?: React.ReactNode;
 }
+
+export interface StatsCard {
+	label: string;
+	value: number | string;
+	change: string;
+	icon: ElementType;
+	color: string;
+	bgColor: string;
+	iconColor: string;
+	trend: string;
+}
+
+export type ItemCategory =
+	| "Electronics"
+	| "Personal Items"
+	| "Bags & Accessories"
+	| "Books & Supplies"
+	| "Clothing"
+	| "Keys & Cards"
+	| "Sports Equipment"
+	| "Other";
+
+export const ITEM_CATEGORIES: ItemCategory[] = [
+	"Electronics",
+	"Personal Items",
+	"Bags & Accessories",
+	"Books & Supplies",
+	"Clothing",
+	"Keys & Cards",
+	"Sports Equipment",
+	"Other",
+];

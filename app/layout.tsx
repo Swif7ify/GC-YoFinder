@@ -4,6 +4,7 @@ import "react-toastify/dist/ReactToastify.css";
 import ThemeProvider from "@/contexts/ThemeProvider";
 import { LoadingProvider } from "@/contexts/LoadingManager";
 import { GlobalLoading } from "@/component/GlobalLoader";
+import { ConfirmProvider } from "@/ui/ConfirmProvider";
 // import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata = {
@@ -64,10 +65,13 @@ export default function RootLayout({
 		<html lang="en">
 			<link rel="icon" type="image/x-icon" href="/logo.png" />
 			<body className="bg-slate-50 dark:bg-black">
-				<LoadingProvider>
-					<ThemeProvider>{children}</ThemeProvider>
-					<GlobalLoading />
-				</LoadingProvider>
+				<ConfirmProvider>
+					<LoadingProvider>
+						<ThemeProvider>{children}</ThemeProvider>
+						<GlobalLoading />
+					</LoadingProvider>
+				</ConfirmProvider>
+
 				<ToastContainer
 					position="bottom-right"
 					autoClose={5000}

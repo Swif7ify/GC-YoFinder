@@ -90,6 +90,10 @@ a {
 	color: rgb(255, 255, 255) !important;
 }
 
+.dark .Mui-disabled {
+	color: #6b7280 !important;
+}
+
 .dark .MuiPaper-root,
 .dark .MuiPaper-elevation,
 .dark .MuiPaper-rounded,

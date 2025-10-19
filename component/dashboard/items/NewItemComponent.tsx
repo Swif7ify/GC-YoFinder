@@ -11,16 +11,22 @@ import {
 	X,
 	Plus,
 } from "lucide-react";
-import { toastError } from "@/utils/toast";
+import { toastError, toastSuccess } from "@/utils/toast";
 import CustomSelect from "@/ui/CustomSelect";
 
 import dayjs, { Dayjs } from "dayjs";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import TextField from "@mui/material/TextField";
+import { ITEM_CATEGORIES } from "@/types/types";
+import { api } from "@/lib/api.config";
+import { useApiLoading } from "@/hooks/useApiLoading";
+import { useRouter } from "next/navigation";
 
 export default function NewItemComponent() {
+	const { withLoading } = useApiLoading();
+	const router = useRouter();
+	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [itemType, setItemType] = useState<"lost" | "found">("lost");
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
@@ -32,18 +38,22 @@ export default function NewItemComponent() {
 	const MAX_IMAGES = 5;
 	const MAX_BYTES = 5 * 1024 * 1024; // 5MB
 
-	const categories = [
-		"Electronics",
-		"Personal Items",
-		"Bags & Accessories",
-		"Books & Supplies",
-		"Clothing",
-		"Keys & Cards",
-		"Sports Equipment",
-		"Other",
-	];
+	const categories = ITEM_CATEGORIES;
 
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+	const dataURLtoBlob = (dataUrl: string): Blob => {
+		const arr = dataUrl.split(",");
+		const mimeMatch = arr[0].match(/:(.*?);/);
+		const mime = mimeMatch ? mimeMatch[1] : "image/png";
+		const bstr = atob(arr[1]);
+		let n = bstr.length;
+		const u8arr = new Uint8Array(n);
+		while (n--) {
+			u8arr[n] = bstr.charCodeAt(n);
+		}
+		return new Blob([u8arr], { type: mime });
+	};
 
 	const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const files = Array.from(e.target.files || []);
@@ -106,17 +116,60 @@ export default function NewItemComponent() {
 		setImagePreviews((prev) => prev.filter((_, i) => i !== index));
 	};
 
-	const handleSubmit = (e: React.FormEvent) => {
+	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		// TODO: Implement submit logic
-		console.log({
-			itemType,
-			title,
-			description,
-			location,
-			date,
-			category,
-		});
+		if (isSubmitting) return;
+		try {
+			setIsSubmitting(true);
+			const form = new FormData();
+			form.append("type", itemType);
+			form.append("title", title);
+			form.append("description", description);
+			form.append("category", category);
+			form.append("location", location);
+			form.append("date_lost_or_found", date ? date.toISOString() : "");
+
+			// Append images
+			imagePreviews.forEach((dataUrl, idx) => {
+				const blob = dataURLtoBlob(dataUrl);
+				form.append("photos", blob, `item_${idx}.png`);
+			});
+
+			const response = await withLoading(() =>
+				api("/api/items", {
+					method: "POST",
+					body: form,
+				})
+			);
+
+			if (response.status !== 201) {
+				toastError(
+					"Submission Failed",
+					"Unable to submit the item report. Please try again."
+				);
+				return;
+			}
+
+			toastSuccess(
+				"Report Submitted",
+				"Your item report has been successfully submitted."
+			);
+			setTitle("");
+			setDescription("");
+			setCategory("");
+			setLocation("");
+			setDate(null);
+			setImagePreviews([]);
+			router.push("/dashboard?tab=my-items");
+		} catch (error) {
+			toastError(
+				"Submission Error",
+				"An error occurred while submitting your report. Please try again."
+			);
+			console.error("Submission error:", error);
+		} finally {
+			setIsSubmitting(false);
+		}
 	};
 
 	return (
@@ -378,6 +431,8 @@ export default function NewItemComponent() {
 
 							<LocalizationProvider dateAdapter={AdapterDayjs}>
 								<DateTimePicker
+									disableFuture
+									maxDateTime={dayjs()}
 									aria-label={`Select date and time the item was ${
 										itemType === "lost" ? "lost" : "found"
 									}`}
@@ -531,16 +586,13 @@ export default function NewItemComponent() {
 				{/* Submit Button */}
 				<div className="flex justify-end gap-4">
 					<button
-						type="button"
-						className="px-6 py-2.5 border border-gray-300 dark:border-neutral-700  rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500"
-					>
-						Cancel
-					</button>
-					<button
 						type="submit"
-						className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white rounded-lg font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+						disabled={isSubmitting}
+						className={`px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white rounded-lg font-medium focus-visible:outline-none focus-visible:ring-2 transition-colors focus-visible:ring-emerald-500 ${
+							isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+						}`}
 					>
-						Submit Report
+						{isSubmitting ? "Submitting..." : "Submit Report"}
 					</button>
 				</div>
 			</form>
