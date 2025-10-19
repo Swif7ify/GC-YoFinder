@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import dayjs from "dayjs";
 import {
 	Package,
 	Eye,
@@ -16,69 +17,19 @@ import {
 import Image from "next/image";
 import { MyItem } from "@/types/types";
 
-export default function MyItemsComponent() {
+interface MyItemsComponentProps {
+	userItems?: MyItem[];
+}
+
+export default function MyItemsComponent({ userItems }: MyItemsComponentProps) {
 	const [items, setItems] = useState<MyItem[]>([]);
 	const [filterTab, setFilterTab] = useState<"all" | "lost" | "found">("all");
 	const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
 	useEffect(() => {
-		// Mock data
-		setItems([
-			{
-				id: "1",
-				title: "Black Laptop Bag",
-				description:
-					"A black laptop bag with a silver logo on the front",
-				type: "lost",
-				location: "Library 2nd Floor",
-				dateReported: "2024-01-15",
-				status: "active",
-				views: 45,
-				matchCount: 2,
-				image_url:
-					"https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=400&fit=crop",
-			},
-			{
-				id: "2",
-				title: "Blue Water Bottle",
-				description: "A blue Hydro Flask water bottle with stickers",
-				type: "found",
-				location: "Cafeteria",
-				dateReported: "2024-01-14",
-				status: "claimed",
-				views: 32,
-				matchCount: 1,
-				image_url:
-					"https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=400&h=400&fit=crop",
-			},
-			{
-				id: "3",
-				title: "Red Umbrella",
-				description: "A red umbrella with wooden handle",
-				type: "lost",
-				location: "Building A",
-				dateReported: "2024-01-10",
-				status: "expired",
-				views: 18,
-				matchCount: 0,
-				image_url:
-					"https://images.unsplash.com/photo-1527693224088-e54750ee3ea9?w=400&h=400&fit=crop",
-			},
-			{
-				id: "4",
-				title: "Student ID Card",
-				description: "Gordon College student ID",
-				type: "found",
-				location: "Gym",
-				dateReported: "2024-01-12",
-				status: "active",
-				views: 28,
-				matchCount: 3,
-				image_url:
-					"https://images.unsplash.com/photo-1589395937784-2f3a87df93e6?w=400&h=400&fit=crop",
-			},
-		]);
-	}, []);
+		setItems(userItems || []);
+		console.log(" Items:", items);
+	}, [userItems]);
 
 	const filteredItems = items.filter(
 		(item) => filterTab === "all" || item.type === filterTab
@@ -392,9 +343,11 @@ export default function MyItemsComponent() {
 											</span>
 											<span>
 												Posted:{" "}
-												{new Date(
-													item.dateReported
-												).toLocaleDateString()}
+												{item.dateReported
+													? dayjs(
+															item.dateReported
+													  ).format("MMM D, YYYY")
+													: "N/A"}
 											</span>
 										</div>
 

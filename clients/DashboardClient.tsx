@@ -12,13 +12,11 @@ import {
 } from "lucide-react";
 
 import { UserData } from "@/types/types";
-
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api.config";
 import Dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { toastError } from "@/utils/toast";
-
 import { useApiLoading } from "@/hooks/useApiLoading";
 import { useConfirm } from "@/ui/ConfirmProvider";
 
@@ -106,6 +104,7 @@ export default function DashboardPage() {
 	const [showMobileMenu, setShowMobileMenu] = useState(false);
 	const [showProfileMenu, setShowProfileMenu] = useState(false);
 	const [showNotifications, setShowNotifications] = useState(false);
+	const [userItems, setUserItems] = useState([]);
 	const initialTab = searchParams.get("tab") || "dashboard";
 	const [activeTab, setActiveTab] = useState(initialTab);
 	const mainRef = useRef<HTMLElement | null>(null);
@@ -175,6 +174,35 @@ export default function DashboardPage() {
 		}
 	};
 
+	const fetchUserItems = async () => {
+		try {
+			const response = await api("/api/items");
+			if (response.status !== 200) {
+				toastError("Server Error", "Unable to fetch user items.");
+				return;
+			}
+			const data = await response.json();
+			const mappedItems = data.items.map((item: any) => ({
+				...item,
+				id: item._id,
+				title: item.name,
+				description: item.description,
+				type: item.type,
+				location: item.location,
+				dateReported: item.date_lost_or_found,
+				status: item.status,
+				views: item.views,
+				matchCount: item.matched,
+				image_url: item.photos.length > 0 ? item.photos[0].url : null,
+				category: item.category,
+			}));
+
+			setUserItems(mappedItems);
+		} catch (error) {
+			console.error("Error fetching user items:", error);
+		}
+	};
+
 	const componentMap: Record<string, React.ReactNode> = {
 		dashboard: (
 			<HomeComponent
@@ -183,7 +211,7 @@ export default function DashboardPage() {
 		),
 		"new-item": <NewItemComponent />,
 		"search-items": <SearchItemsComponent />,
-		"my-items": <MyItemsComponent />,
+		"my-items": <MyItemsComponent userItems={userItems} />,
 		messages: <MessagesComponent />,
 		locations: <LocationsComponent />,
 		settings: (
@@ -256,7 +284,9 @@ export default function DashboardPage() {
 
 	useEffect(() => {
 		const fetch = async () => {
-			await withLoading(() => fetchUserData());
+			await withLoading(() =>
+				Promise.all([fetchUserData(), fetchUserItems()])
+			);
 		};
 		fetch();
 	}, []);

@@ -1,10 +1,33 @@
 import { NextResponse, NextRequest } from "next/server";
 import { getUserFromRequest } from "@/services/Access";
-import { createNewItem } from "@/server/handlers/ItemsHandlers";
+import { createNewItem, getUserItems } from "@/server/handlers/ItemsHandlers";
 
 export async function GET(request: NextRequest) {
 	try {
-		// TODO: Implement fetching items logic here
+		const user = await getUserFromRequest(request);
+		if (!user)
+			return NextResponse.json(
+				{ error: "Unauthorized" },
+				{ status: 401 }
+			);
+		const userID = user.userID;
+		if (!userID)
+			return NextResponse.json(
+				{ error: "Unauthorized" },
+				{ status: 401 }
+			);
+
+		const response = await getUserItems(userID);
+		const message = response.status.message;
+		const statusCode = response.status_code;
+
+		if (statusCode !== 200)
+			return NextResponse.json(
+				{ error: message },
+				{ status: statusCode }
+			);
+
+		return NextResponse.json({ items: response.payload }, { status: statusCode });
 	} catch (error) {
 		return NextResponse.json(
 			{ error: "Internal Server Error" },
@@ -40,7 +63,7 @@ export async function POST(request: NextRequest) {
 		};
 
 		const response = await createNewItem(userID, extractedFields);
-        console.log("Create New Item Response:", response);
+		console.log("Create New Item Response:", response);
 		const message = response.status.message;
 		const statusCode = response.status_code;
 		if (statusCode !== 200)

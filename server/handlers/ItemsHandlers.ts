@@ -53,8 +53,8 @@ class ItemsHandlers {
 			if (itemData.photos && itemData.photos.length > 0) {
 				try {
 					const validImages = itemData.photos
-					.filter((img) => img instanceof File && img.size > 0)
-					.slice(0, 6);
+						.filter((img) => img instanceof File && img.size > 0)
+						.slice(0, 6);
 
 					if (validImages.length > 0) {
 						const uploadPromises = validImages.map((image, idx) => {
@@ -149,6 +149,31 @@ class ItemsHandlers {
 			await session.endSession();
 		}
 	}
+
+	static async getUserItems(userID: string) {
+		await connectToDatabase();
+		try {
+			const validateUserID = ValidateStringField(userID);
+			if (!validateUserID)
+				return responsePayload(null, "error", "Invalid user ID", 400);
+
+			const user = await UserSchema.findById(userID);
+			if (!user) return userNotFoundError();
+
+			const items = await ItemsSchema.find({ user_id: user._id }).sort({
+				created_at: -1,
+			});
+			return responsePayload(
+				items,
+				"success",
+				"User items fetched successfully",
+				200
+			);
+		} catch (error) {
+			console.log(error);
+			return serverResponseError();
+		}
+	}
 }
 
-export const { createNewItem } = ItemsHandlers;
+export const { createNewItem, getUserItems } = ItemsHandlers;
