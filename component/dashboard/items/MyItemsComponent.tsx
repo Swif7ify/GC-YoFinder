@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import dayjs from "dayjs";
 import {
 	Package,
@@ -13,9 +13,11 @@ import {
 	CheckCircle2,
 	TrendingUp,
 	PackagePlus,
+	Search,
 } from "lucide-react";
 import Image from "next/image";
 import { MyItem } from "@/types/types";
+import Link from "next/link";
 
 interface MyItemsComponentProps {
 	userItems?: MyItem[];
@@ -25,15 +27,41 @@ export default function MyItemsComponent({ userItems }: MyItemsComponentProps) {
 	const [items, setItems] = useState<MyItem[]>([]);
 	const [filterTab, setFilterTab] = useState<"all" | "lost" | "found">("all");
 	const [activeMenu, setActiveMenu] = useState<string | null>(null);
+	const [searchQuery, setSearchQuery] = useState<string>("");
 
 	useEffect(() => {
 		setItems(userItems || []);
 		console.log(" Items:", items);
 	}, [userItems]);
 
-	const filteredItems = items.filter(
-		(item) => filterTab === "all" || item.type === filterTab
-	);
+	const visibleItems = useMemo(() => {
+		const q = searchQuery.trim().toLowerCase();
+
+		return (
+			(items || [])
+				.filter((item) =>
+					filterTab === "all" ? true : item.type === filterTab
+				)
+				.filter((item) => {
+					if (!q) return true;
+					return (
+						(item.title ?? "").toLowerCase().includes(q) ||
+						(item.description ?? "").toLowerCase().includes(q) ||
+						(item.location ?? "").toLowerCase().includes(q)
+					);
+				})
+				// optional: sort newest first by reported/created date (adjust field name if different)
+				.sort((a, b) => {
+					const ta = a.dateReported
+						? dayjs(a.dateReported).valueOf()
+						: 0;
+					const tb = b.dateReported
+						? dayjs(b.dateReported).valueOf()
+						: 0;
+					return tb - ta;
+				})
+		);
+	}, [items, filterTab, searchQuery]);
 
 	const stats = {
 		total: items.length,
@@ -52,16 +80,35 @@ export default function MyItemsComponent({ userItems }: MyItemsComponentProps) {
 	return (
 		<div className="space-y-6">
 			{/* Header */}
-			<section aria-labelledby="my-items-heading">
-				<h1
-					id="my-items-heading"
-					className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-gray-100 mb-2"
-				>
-					My Items
-				</h1>
-				<p className="text-gray-600 dark:text-gray-400">
-					Manage your posted lost and found items
-				</p>
+			<section
+				aria-labelledby="my-items-heading"
+				className="flex items-center justify-between max-sm:flex-col gap-4 max-sm:items-start"
+			>
+				<div>
+					<h1
+						id="my-items-heading"
+						className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-gray-100 mb-2"
+					>
+						My Items
+					</h1>
+					<p className="text-gray-600 dark:text-gray-400">
+						Manage your posted lost and found items
+					</p>
+				</div>
+
+				<div>
+					{/* Report Lost Item Button */}
+					<div className="flex justify-center sm:justify-start">
+						<Link
+							href="/dashboard?tab=new-item"
+							className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900 flex items-center gap-2"
+							aria-label="Report a lost item"
+						>
+							<PackagePlus size={20} aria-hidden="true" />
+							Report Lost Item
+						</Link>
+					</div>
+				</div>
 			</section>
 
 			{/* Stats Cards */}
@@ -133,10 +180,27 @@ export default function MyItemsComponent({ userItems }: MyItemsComponentProps) {
 
 			{/* Filter Tabs */}
 			<div
-				className="flex items-center justify-between"
+				className="flex items-center justify-between gap-8"
 				role="tablist"
 				aria-label="Filter items"
 			>
+				{/* search */}
+				<div className="relative w-full flex-1">
+					<input
+						type="text"
+						value={searchQuery}
+						onChange={(e) => setSearchQuery(e.target.value)}
+						placeholder="Search items..."
+						className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-neutral-700  rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-neutral-800/50 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-sm"
+					/>
+					<span className="absolute inset-y-0 left-0 flex items-center pl-3">
+						<Search
+							size={20}
+							className="text-gray-400 dark:text-gray-500"
+						/>
+					</span>
+				</div>
+
 				<div className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 p-1 inline-flex">
 					<button
 						type="button"
@@ -181,25 +245,6 @@ export default function MyItemsComponent({ userItems }: MyItemsComponentProps) {
 						Found
 					</button>
 				</div>
-
-				<div>
-					{/* Report Lost Item Button */}
-					<div className="flex justify-center sm:justify-start">
-						<button
-							type="button"
-							onClick={() => {
-								// Navigate to new item page
-								window.location.href =
-									"/dashboard?tab=new-item";
-							}}
-							className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900 flex items-center gap-2"
-							aria-label="Report a lost item"
-						>
-							<PackagePlus size={20} aria-hidden="true" />
-							Report Lost Item
-						</button>
-					</div>
-				</div>
 			</div>
 
 			{/* Items List */}
@@ -208,9 +253,9 @@ export default function MyItemsComponent({ userItems }: MyItemsComponentProps) {
 				role="tabpanel"
 				aria-labelledby="my-items-heading"
 			>
-				{filteredItems.length > 0 ? (
+				{visibleItems.length > 0 ? (
 					<div className="space-y-4">
-						{filteredItems.map((item) => (
+						{visibleItems.map((item) => (
 							<article
 								key={item.id}
 								className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 overflow-hidden hover:shadow-md transition-shadow"
