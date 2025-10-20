@@ -19,6 +19,7 @@ import Image from "next/image";
 import { ITEM_CATEGORIES, AllItem } from "@/types/types";
 import CustomSelect from "@/ui/CustomSelect";
 import DetailsModal from "./SearchItems/detailsModal";
+import dayjs from "dayjs";
 
 interface SearchItemsComponentProps {
 	allItems: AllItem[];
@@ -56,7 +57,7 @@ export default function SearchItemsComponent({
 	);
 	const [filterStatus, setFilterStatus] = useState<
 		"all" | "active" | "claimed"
-	>("active");
+	>("all");
 	const [filterCategory, setFilterCategory] = useState<string>("all");
 	const [filterLocation, setFilterLocation] = useState<string>("all");
 	const [sortBy, setSortBy] = useState<"latest" | "oldest">("latest");
@@ -113,7 +114,6 @@ export default function SearchItemsComponent({
 		setItems(allItems);
 	}, [allItems]);
 
-	// Trigger server-side search when filters change
 	useEffect(() => {
 		if (!paginationMeta) return;
 
@@ -196,19 +196,15 @@ export default function SearchItemsComponent({
 		const pages: (number | string)[] = [];
 
 		if (totalPages <= maxVisiblePages) {
-			// Show all pages if total is small
 			for (let i = 1; i <= totalPages; i++) {
 				pages.push(i);
 			}
 		} else {
-			// Smart pagination with ellipsis
 			if (page <= 3) {
-				// Near start
 				for (let i = 1; i <= 4; i++) pages.push(i);
 				pages.push("...");
 				pages.push(totalPages);
 			} else if (page >= totalPages - 2) {
-				// Near end
 				pages.push(1);
 				pages.push("...");
 				for (let i = totalPages - 3; i <= totalPages; i++)
@@ -513,7 +509,7 @@ export default function SearchItemsComponent({
 					<div
 						className={
 							viewMode === "grid"
-								? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+								? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6"
 								: "space-y-4"
 						}
 					>
@@ -521,7 +517,7 @@ export default function SearchItemsComponent({
 							viewMode === "grid" ? (
 								<article
 									key={item.id}
-									className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 overflow-hidden hover:shadow-md transition-shadow group"
+									className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 overflow-hidden hover:shadow-md transition-shadow group flex flex-col"
 								>
 									{/* Image */}
 									<div className="relative h-48 bg-gray-100 dark:bg-gray-700">
@@ -571,41 +567,49 @@ export default function SearchItemsComponent({
 									</div>
 
 									{/* Content */}
-									<div className="p-4">
-										<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2 line-clamp-1 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-											{item.name}
-										</h3>
+									<div className="p-4 flex flex-col flex-1">
+										<div>
+											<div>
+												<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2 line-clamp-1 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+													{item.name}
+												</h3>
 
-										<p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
-											{item.description}
-										</p>
-
-										<div className="space-y-2 mb-4">
-											<div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-												<MapPin
-													size={14}
-													className="flex-shrink-0"
-													aria-hidden="true"
-												/>
-												<span className="truncate">
-													{item.location}
-												</span>
+												<p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
+													{item.description}
+												</p>
 											</div>
 
-											<div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-												<Calendar
-													size={14}
-													className="flex-shrink-0"
-													aria-hidden="true"
-												/>
-												<span>
-													{item.date_lost_or_found}
-												</span>
+											<div className="space-y-2 mb-4">
+												<div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+													<MapPin
+														size={14}
+														className="flex-shrink-0"
+														aria-hidden="true"
+													/>
+													<span className="truncate">
+														{item.location}
+													</span>
+												</div>
+
+												<div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+													<Calendar
+														size={14}
+														className="flex-shrink-0"
+														aria-hidden="true"
+													/>
+													<span>
+														{dayjs(
+															item.date_lost_or_found
+														).format(
+															"MMMM D, YYYY"
+														)}
+													</span>
+												</div>
 											</div>
 										</div>
 
 										{/* Actions */}
-										<div className="flex gap-2">
+										<div className="flex gap-2 mt-auto">
 											<button
 												type="button"
 												onClick={() =>

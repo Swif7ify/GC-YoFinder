@@ -244,8 +244,8 @@ export default function DashboardPage() {
 			if (filters?.location && filters.location !== "all")
 				params.set("location", filters.location);
 
-			const response = await api(
-				`/api/dashboard/items?${params.toString()}`
+			const response = await withLoading(() =>
+				api(`/api/dashboard/items?${params.toString()}`)
 			);
 			if (response.status !== 200) {
 				toastError("Server Error", "Unable to fetch items.");
@@ -253,7 +253,6 @@ export default function DashboardPage() {
 			}
 			const data = await response.json();
 
-			// data structure: { items: [...], meta: { total, page, limit, totalPages } }
 			const mappedItems = (data.items || []).map((item: any) => ({
 				...item,
 				id: item._id,
