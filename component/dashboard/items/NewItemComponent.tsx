@@ -124,6 +124,19 @@ export default function NewItemComponent({ onUpdate }: NewItemComponentProps) {
 		e.preventDefault();
 		if (isSubmitting) return;
 		try {
+			if (
+				!title.trim() ||
+				!description.trim() ||
+				!category ||
+				!location.trim() ||
+				!date
+			) {
+				toastError(
+					"Incomplete Form",
+					"Please fill in all required fields."
+				);
+				return;
+			}
 			setIsSubmitting(true);
 			const form = new FormData();
 			form.append("type", itemType);

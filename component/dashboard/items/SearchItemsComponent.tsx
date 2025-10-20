@@ -12,21 +12,42 @@ import {
 	Grid3x3,
 	List,
 	RotateCcw,
+	ChevronLeft,
+	ChevronRight,
 } from "lucide-react";
 import Image from "next/image";
 import { ITEM_CATEGORIES, AllItem } from "@/types/types";
 import CustomSelect from "@/ui/CustomSelect";
 import DetailsModal from "./SearchItems/detailsModal";
-import dayjs from "dayjs";
 
 interface SearchItemsComponentProps {
 	allItems: AllItem[];
 	userID: string | null;
+	paginationMeta: {
+		total: number;
+		page: number;
+		limit: number;
+		totalPages: number;
+	} | null;
+	onPageChange: (
+		page: number,
+		limit: number,
+		append?: boolean,
+		filters?: {
+			searchQuery?: string;
+			type?: "all" | "lost" | "found";
+			status?: "all" | "active" | "claimed";
+			category?: string;
+			location?: string;
+		}
+	) => Promise<any>;
 }
 
 export default function SearchItemsComponent({
 	allItems,
 	userID,
+	paginationMeta,
+	onPageChange,
 }: SearchItemsComponentProps) {
 	const [items, setItems] = useState<AllItem[]>([]);
 	const [searchQuery, setSearchQuery] = useState("");
@@ -35,13 +56,15 @@ export default function SearchItemsComponent({
 	);
 	const [filterStatus, setFilterStatus] = useState<
 		"all" | "active" | "claimed"
-	>("all");
+	>("active");
 	const [filterCategory, setFilterCategory] = useState<string>("all");
 	const [filterLocation, setFilterLocation] = useState<string>("all");
 	const [sortBy, setSortBy] = useState<"latest" | "oldest">("latest");
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 	const [selectedItem, setSelectedItem] = useState<AllItem | null>(null);
 	const [mounted, setMounted] = useState(false);
+	const [isLoadingPage, setIsLoadingPage] = useState(false);
+	const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 
 	useEffect(() => {
 		try {
@@ -64,6 +87,15 @@ export default function SearchItemsComponent({
 		}
 	}, [viewMode]);
 
+	// Debounce search query
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedSearchQuery(searchQuery);
+		}, 500);
+
+		return () => clearTimeout(timer);
+	}, [searchQuery]);
+
 	const categories = ITEM_CATEGORIES;
 
 	const locations = [
@@ -81,7 +113,46 @@ export default function SearchItemsComponent({
 		setItems(allItems);
 	}, [allItems]);
 
+	// Trigger server-side search when filters change
+	useEffect(() => {
+		if (!paginationMeta) return;
+
+		const filters = {
+			searchQuery: debouncedSearchQuery,
+			type: filterType,
+			status: filterStatus,
+			category: filterCategory,
+			location: filterLocation,
+		};
+
+		handleFilterChange(filters);
+	}, [
+		debouncedSearchQuery,
+		filterType,
+		filterStatus,
+		filterCategory,
+		filterLocation,
+	]);
+
+	const handleFilterChange = async (filters: {
+		searchQuery?: string;
+		type?: "all" | "lost" | "found";
+		status?: "all" | "active" | "claimed";
+		category?: string;
+		location?: string;
+	}) => {
+		if (!paginationMeta || isLoadingPage) return;
+
+		setIsLoadingPage(true);
+		try {
+			await onPageChange(1, paginationMeta.limit, false, filters);
+		} finally {
+			setIsLoadingPage(false);
+		}
+	};
+
 	const resetFilters = () => {
+		setDebouncedSearchQuery("");
 		setSearchQuery("");
 		setFilterType("all");
 		setFilterStatus("all");
@@ -90,37 +161,131 @@ export default function SearchItemsComponent({
 		setSortBy("latest");
 	};
 
-	const filteredItems = items
-		.filter((item) => {
-			const matchesSearch =
-				item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-				item.description
-					.toLowerCase()
-					.includes(searchQuery.toLowerCase()) ||
-				item.location.toLowerCase().includes(searchQuery.toLowerCase());
+	// Client-side sorting only (search and filter now happen server-side)
+	const sortedItems = [...items].sort((a, b) => {
+		const dateA = new Date(a.date_lost_or_found).getTime();
+		const dateB = new Date(b.date_lost_or_found).getTime();
+		return sortBy === "latest" ? dateB - dateA : dateA - dateB;
+	});
 
-			const matchesType =
-				filterType === "all" || item.type === filterType;
-			const matchesStatus =
-				filterStatus === "all" || item.status === filterStatus;
-			const matchesLocation =
-				filterLocation === "all" || item.location === filterLocation;
-			const matchesCategory =
-				filterCategory === "all" || item.category === filterCategory;
+	const handlePageChange = async (newPage: number) => {
+		if (!paginationMeta || isLoadingPage) return;
+		if (newPage < 1 || newPage > paginationMeta.totalPages) return;
 
-			return (
-				matchesSearch &&
-				matchesType &&
-				matchesStatus &&
-				matchesLocation &&
-				matchesCategory
-			);
-		})
-		.sort((a, b) => {
-			const dateA = new Date(a.date_lost_or_found).getTime();
-			const dateB = new Date(b.date_lost_or_found).getTime();
-			return sortBy === "latest" ? dateB - dateA : dateA - dateB;
-		});
+		const filters = {
+			searchQuery: debouncedSearchQuery,
+			type: filterType,
+			status: filterStatus,
+			category: filterCategory,
+			location: filterLocation,
+		};
+
+		setIsLoadingPage(true);
+		try {
+			await onPageChange(newPage, paginationMeta.limit, false, filters);
+		} finally {
+			setIsLoadingPage(false);
+		}
+	};
+
+	const renderPaginationButtons = () => {
+		if (!paginationMeta || paginationMeta.totalPages <= 1) return null;
+
+		const { page, totalPages } = paginationMeta;
+		const maxVisiblePages = 5;
+		const pages: (number | string)[] = [];
+
+		if (totalPages <= maxVisiblePages) {
+			// Show all pages if total is small
+			for (let i = 1; i <= totalPages; i++) {
+				pages.push(i);
+			}
+		} else {
+			// Smart pagination with ellipsis
+			if (page <= 3) {
+				// Near start
+				for (let i = 1; i <= 4; i++) pages.push(i);
+				pages.push("...");
+				pages.push(totalPages);
+			} else if (page >= totalPages - 2) {
+				// Near end
+				pages.push(1);
+				pages.push("...");
+				for (let i = totalPages - 3; i <= totalPages; i++)
+					pages.push(i);
+			} else {
+				// Middle
+				pages.push(1);
+				pages.push("...");
+				for (let i = page - 1; i <= page + 1; i++) pages.push(i);
+				pages.push("...");
+				pages.push(totalPages);
+			}
+		}
+
+		return (
+			<div className="flex items-center justify-center gap-2 mt-6">
+				{/* Previous Button */}
+				<button
+					type="button"
+					onClick={() => handlePageChange(page - 1)}
+					disabled={page === 1 || isLoadingPage}
+					className="p-2 rounded-lg border border-gray-300 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+					aria-label="Previous page"
+				>
+					<ChevronLeft size={20} />
+				</button>
+
+				{/* Page Numbers */}
+				<div className="flex items-center gap-1">
+					{pages.map((pageNum, idx) => {
+						if (pageNum === "...") {
+							return (
+								<span
+									key={`ellipsis-${idx}`}
+									className="px-3 py-2 text-gray-500 dark:text-gray-400"
+								>
+									...
+								</span>
+							);
+						}
+
+						const isActive = pageNum === page;
+						return (
+							<button
+								key={pageNum}
+								type="button"
+								onClick={() =>
+									handlePageChange(pageNum as number)
+								}
+								disabled={isLoadingPage}
+								className={`min-w-[40px] px-3 py-2 rounded-lg font-medium transition-colors ${
+									isActive
+										? "bg-emerald-600 text-white"
+										: "border border-gray-300 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+								} disabled:opacity-50 disabled:cursor-not-allowed`}
+								aria-label={`Go to page ${pageNum}`}
+								aria-current={isActive ? "page" : undefined}
+							>
+								{pageNum}
+							</button>
+						);
+					})}
+				</div>
+
+				{/* Next Button */}
+				<button
+					type="button"
+					onClick={() => handlePageChange(page + 1)}
+					disabled={page === totalPages || isLoadingPage}
+					className="p-2 rounded-lg border border-gray-300 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+					aria-label="Next page"
+				>
+					<ChevronRight size={20} />
+				</button>
+			</div>
+		);
+	};
 
 	return (
 		<div className="space-y-6">
@@ -297,9 +462,10 @@ export default function SearchItemsComponent({
 			<div className="flex items-center justify-between">
 				<p className="text-sm text-gray-600 dark:text-gray-400">
 					<span className="font-medium text-gray-900 dark:text-gray-100">
-						{filteredItems.length}
+						{paginationMeta?.total || 0}
 					</span>{" "}
-					{filteredItems.length === 1 ? "item" : "items"} found
+					{(paginationMeta?.total || 0) === 1 ? "item" : "items"}{" "}
+					found
 				</p>
 
 				{/* View Toggle */}
@@ -343,7 +509,7 @@ export default function SearchItemsComponent({
 					Search Results
 				</h2>
 
-				{filteredItems.length > 0 ? (
+				{sortedItems.length > 0 ? (
 					<div
 						className={
 							viewMode === "grid"
@@ -351,7 +517,7 @@ export default function SearchItemsComponent({
 								: "space-y-4"
 						}
 					>
-						{filteredItems.map((item) =>
+						{sortedItems.map((item: AllItem) =>
 							viewMode === "grid" ? (
 								<article
 									key={item.id}
@@ -626,6 +792,38 @@ export default function SearchItemsComponent({
 					</div>
 				)}
 			</section>
+
+			{/* Pagination Controls */}
+			{paginationMeta && paginationMeta.totalPages > 1 && (
+				<div className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 p-4">
+					<div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+						{/* Pagination Info */}
+						<p className="text-sm text-gray-600 dark:text-gray-400">
+							Showing{" "}
+							<span className="font-medium text-gray-900 dark:text-gray-100">
+								{(paginationMeta.page - 1) *
+									paginationMeta.limit +
+									1}
+							</span>{" "}
+							to{" "}
+							<span className="font-medium text-gray-900 dark:text-gray-100">
+								{Math.min(
+									paginationMeta.page * paginationMeta.limit,
+									paginationMeta.total
+								)}
+							</span>{" "}
+							of{" "}
+							<span className="font-medium text-gray-900 dark:text-gray-100">
+								{paginationMeta.total}
+							</span>{" "}
+							results
+						</p>
+
+						{/* Pagination Buttons */}
+						{renderPaginationButtons()}
+					</div>
+				</div>
+			)}
 
 			{/* Details Modal */}
 			{selectedItem && (

@@ -108,6 +108,12 @@ export default function DashboardPage() {
 	const [userID, setUserID] = useState<string | null>(null);
 	const [userItems, setUserItems] = useState([]);
 	const [allItems, setAllItems] = useState<AllItem[]>([]);
+	const [paginationMeta, setPaginationMeta] = useState<{
+		total: number;
+		page: number;
+		limit: number;
+		totalPages: number;
+	} | null>(null);
 	const initialTab = searchParams.get("tab") || "dashboard";
 	const [activeTab, setActiveTab] = useState(initialTab);
 	const mainRef = useRef<HTMLElement | null>(null);
@@ -203,21 +209,52 @@ export default function DashboardPage() {
 			}));
 
 			setUserItems(mappedItems);
-			fetchAllItems();
+			fetchPaginatedItems(1, 10);
 		} catch (error) {
 			console.error("Error fetching user items:", error);
 		}
 	};
 
-	const fetchAllItems = async () => {
+	const fetchPaginatedItems = async (
+		page: number,
+		limit: number,
+		append = false,
+		filters?: {
+			searchQuery?: string;
+			type?: "all" | "lost" | "found";
+			status?: "all" | "active" | "claimed";
+			category?: string;
+			location?: string;
+		}
+	) => {
 		try {
-			const response = await api("/api/dashboard/items");
+			const params = new URLSearchParams({
+				page: String(page),
+				limit: String(limit),
+			});
+
+			if (filters?.searchQuery)
+				params.set("searchQuery", filters.searchQuery);
+			if (filters?.type && filters.type !== "all")
+				params.set("type", filters.type);
+			if (filters?.status && filters.status !== "all")
+				params.set("status", filters.status);
+			if (filters?.category && filters.category !== "all")
+				params.set("category", filters.category);
+			if (filters?.location && filters.location !== "all")
+				params.set("location", filters.location);
+
+			const response = await api(
+				`/api/dashboard/items?${params.toString()}`
+			);
 			if (response.status !== 200) {
 				toastError("Server Error", "Unable to fetch items.");
 				return;
 			}
 			const data = await response.json();
-			const mappedItems = data.items.map((item: any) => ({
+
+			// data structure: { items: [...], meta: { total, page, limit, totalPages } }
+			const mappedItems = (data.items || []).map((item: any) => ({
 				...item,
 				id: item._id,
 				category: item.category,
@@ -243,7 +280,15 @@ export default function DashboardPage() {
 				views: item.views,
 			}));
 
-			setAllItems(mappedItems);
+			setAllItems((prev) =>
+				append ? [...prev, ...mappedItems] : mappedItems
+			);
+
+			if (data.meta) {
+				setPaginationMeta(data.meta);
+			}
+
+			return data.meta;
 		} catch (error) {
 			console.error("Error fetching items:", error);
 		}
@@ -257,7 +302,12 @@ export default function DashboardPage() {
 		),
 		"new-item": <NewItemComponent onUpdate={fetchUserItems} />,
 		"search-items": (
-			<SearchItemsComponent allItems={allItems} userID={userID} />
+			<SearchItemsComponent
+				allItems={allItems}
+				userID={userID}
+				paginationMeta={paginationMeta}
+				onPageChange={fetchPaginatedItems}
+			/>
 		),
 		"my-items": (
 			<MyItemsComponent userItems={userItems} onUpdate={fetchUserItems} />
@@ -338,7 +388,7 @@ export default function DashboardPage() {
 				Promise.all([
 					fetchUserData(),
 					fetchUserItems(),
-					fetchAllItems(),
+					fetchPaginatedItems(1, 10),
 				])
 			);
 		};

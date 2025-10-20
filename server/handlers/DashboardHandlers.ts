@@ -173,7 +173,18 @@ class DashboardHandlers {
 		}
 	}
 
-	static async getAllItems(userID: string) {
+	static async getAllItems(
+		userID: string,
+		page = 1,
+		limit = 10,
+		filters?: {
+			searchQuery?: string;
+			type?: "all" | "lost" | "found";
+			status?: "all" | "active" | "claimed";
+			category?: string;
+			location?: string;
+		}
+	) {
 		await connectToDatabase();
 		try {
 			const validateUserID = ValidateStringField(userID);
@@ -183,12 +194,47 @@ class DashboardHandlers {
 			const user = await UserSchema.findById(userID);
 			if (!user) return userNotFoundError();
 
-			const items = await ItemsSchema.find({})
+			page = Math.max(1, Number(page) || 1);
+			limit = Math.max(1, Math.min(100, Number(limit) || 10));
+
+			// Build query based on filters
+			const query: any = {};
+
+			if (filters?.searchQuery) {
+				const searchRegex = new RegExp(filters.searchQuery, "i");
+				query.$or = [
+					{ name: searchRegex },
+					{ description: searchRegex },
+					{ location: searchRegex },
+				];
+			}
+
+			if (filters?.type && filters.type !== "all") {
+				query.type = filters.type;
+			}
+
+			if (filters?.status && filters.status !== "all") {
+				query.status = filters.status;
+			}
+
+			if (filters?.category && filters.category !== "all") {
+				query.category = filters.category;
+			}
+
+			if (filters?.location && filters.location !== "all") {
+				query.location = filters.location;
+			}
+
+			const total = await ItemsSchema.countDocuments(query);
+
+			const items = await ItemsSchema.find(query)
 				.populate({
 					path: "user_id",
 					select: "firstname lastname username photo",
 				})
 				.sort({ created_at: -1 })
+				.skip((page - 1) * limit)
+				.limit(limit)
 				.lean()
 				.exec();
 
@@ -226,8 +272,19 @@ class DashboardHandlers {
 				};
 			});
 
+			const totalPages = Math.ceil(total / limit);
+			const payload = {
+				items: itemsWithPhotoUrl,
+				meta: {
+					total,
+					page,
+					limit,
+					totalPages,
+				},
+			};
+
 			return responsePayload(
-				itemsWithPhotoUrl,
+				payload,
 				"success",
 				"Items fetched successfully",
 				200
