@@ -194,6 +194,7 @@ export default function DashboardPage() {
 				views: item.views,
 				matchCount: item.matched,
 				image_url: item.photos.length > 0 ? item.photos[0].url : null,
+				images: item.photos.map((photo: any) => photo.url),
 				category: item.category,
 			}));
 
@@ -211,7 +212,9 @@ export default function DashboardPage() {
 		),
 		"new-item": <NewItemComponent />,
 		"search-items": <SearchItemsComponent />,
-		"my-items": <MyItemsComponent userItems={userItems} onUpdate={fetchUserItems} />,
+		"my-items": (
+			<MyItemsComponent userItems={userItems} onUpdate={fetchUserItems} />
+		),
 		messages: <MessagesComponent />,
 		locations: <LocationsComponent />,
 		settings: (

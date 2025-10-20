@@ -111,10 +111,26 @@ export default function MyItemsComponent({
 		setActiveMenu(null);
 	};
 
-	const handleUpdate = (updatedItem: MyItem) => {
+	const handleUpdate = async (formData: FormData) => {
 		if (isUpdating) return;
 		try {
 			setIsUpdating(true);
+			const response = await withLoading(() =>
+				api(`/api/items/${editingItem?.id}`, {
+					method: "PUT",
+					body: formData,
+				})
+			);
+			if (response.status !== 200) {
+				toastError("Failed to update item.", "Please try again later.");
+				return;
+			}
+			toastSuccess(
+				"Item updated successfully.",
+				"Your changes have been saved."
+			);
+			onUpdate?.();
+			setEditingItem(null);
 		} catch (error) {
 			console.error("Error updating item:", error);
 		} finally {
@@ -134,7 +150,7 @@ export default function MyItemsComponent({
 					<ItemForm
 						item={editingItem}
 						onClose={handleCloseForm}
-						onUpdate={handleUpdate}
+						handleUpdate={handleUpdate}
 					/>
 				</div>
 			)}

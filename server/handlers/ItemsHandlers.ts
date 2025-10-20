@@ -8,7 +8,9 @@ import {
 import { ValidateStringField } from "@/server/utils/DataValitdation";
 import mongoose from "mongoose";
 import { connectToDatabase } from "@/server/lib/mongodb";
-import { uploadFiles, deleteFiles } from "@/server/config/cloudinary.config";
+import { deleteFiles } from "@/server/config/cloudinary.config";
+
+import { handleImagesUpload } from "@/server/utils/MultipleImageHandler";
 
 interface ItemData {
 	type: string;
@@ -18,6 +20,8 @@ interface ItemData {
 	location: string;
 	date_lost_or_found: string;
 	photos: File[];
+	existing_images: string[];
+	status?: string;
 }
 
 class ItemsHandlers {
@@ -45,66 +49,30 @@ class ItemsHandlers {
 			const user = await UserSchema.findById(userID);
 			if (!user) return userNotFoundError();
 
-			const uploadedPublicIds: string[] = [];
+			let uploadedPublicIds: string[] = [];
 			let imageMetadata: any[] = [];
 
 			session.startTransaction();
 
 			if (itemData.photos && itemData.photos.length > 0) {
-				try {
-					const validImages = itemData.photos
-						.filter((img) => img instanceof File && img.size > 0)
-						.slice(0, 6);
+				const uploadResult = await handleImagesUpload(
+					itemData.photos,
+					userID,
+					5
+				);
 
-					if (validImages.length > 0) {
-						const uploadPromises = validImages.map((image, idx) => {
-							const publicIdBase = `items_${userID}_${Date.now()}_${idx}`;
-							return uploadFiles(
-								image,
-								publicIdBase,
-								"gc-yofinder/items"
-							);
-						});
-
-						const uploadResults = await Promise.all(uploadPromises);
-						uploadedPublicIds.push(
-							...uploadResults.map((res) => res.public_id)
-						);
-
-						const buildImageMeta = (res: any) => ({
-							url: res.secure_url || res.url,
-							publicId: res.public_id || res.publicId || "",
-							cloudinaryId: res.public_id || "",
-							format: res.format || "",
-							size:
-								typeof res.bytes === "number"
-									? res.bytes
-									: res.size || 0,
-							width: res.width || 0,
-							height: res.height || 0,
-							uploadedAt: res.created_at
-								? new Date(res.created_at)
-								: new Date(),
-							version: res.version,
-							signature: res.signature,
-							etag: res.etag,
-							resourceType: res.resource_type || "image",
-						});
-
-						imageMetadata = uploadResults.map(buildImageMeta);
-					}
-				} catch (uploadError) {
-					// If upload fails, delete any previously uploaded images
-					if (uploadedPublicIds.length > 0) {
-						await deleteFiles(uploadedPublicIds);
-					}
+				if (!uploadResult) {
+					await session.abortTransaction();
 					return responsePayload(
 						null,
 						"error",
-						"Image upload failed",
+						"Failed to upload images",
 						500
 					);
 				}
+
+				uploadedPublicIds = uploadResult.uploadedPublicIds;
+				imageMetadata = uploadResult.imageMetadata;
 			}
 
 			const doc = {
@@ -163,6 +131,7 @@ class ItemsHandlers {
 			const items = await ItemsSchema.find({ user_id: user._id }).sort({
 				created_at: -1,
 			});
+
 			return responsePayload(
 				items,
 				"success",
@@ -230,6 +199,132 @@ class ItemsHandlers {
 			await session.endSession();
 		}
 	}
+
+	static async updateItemByID(
+		userID: string,
+		itemID: string,
+		itemData: ItemData
+	) {
+		await connectToDatabase();
+		const session = await mongoose.startSession();
+		try {
+			const validateFields = ValidateStringField(
+				userID,
+				itemID,
+				itemData.type,
+				itemData.title,
+				itemData.description,
+				itemData.category,
+				itemData.location,
+				itemData.status
+			);
+			if (!validateFields)
+				return responsePayload(null, "error", "Invalid item data", 400);
+			const user = await UserSchema.findById(userID);
+			if (!user) return userNotFoundError();
+			const item = await ItemsSchema.findById(itemID);
+			if (!item)
+				return responsePayload(null, "error", "Item not found", 404);
+
+			let uploadedPublicIds: string[] = [];
+
+			session.startTransaction();
+			let finalPhotos = [];
+
+			const imagesToDelete: string[] = [];
+			if (item.photos && item.photos.length > 0) {
+				const keptUrls = new Set(itemData.existing_images || []);
+				item.photos.forEach((photo: any) => {
+					if (!keptUrls.has(photo.url) && photo.publicId) {
+						imagesToDelete.push(photo.publicId);
+					}
+				});
+			}
+
+			if (
+				itemData.existing_images &&
+				itemData.existing_images.length > 0
+			) {
+				const existingPhotos = item.photos.filter((photo: any) =>
+					itemData.existing_images!.includes(photo.url)
+				);
+				finalPhotos.push(...existingPhotos);
+			}
+
+			if (itemData.photos && itemData.photos.length > 0) {
+				const uploadResult = await handleImagesUpload(
+					itemData.photos,
+					userID,
+					5 - finalPhotos.length
+				);
+
+				if (!uploadResult) {
+					return responsePayload(
+						null,
+						"error",
+						"Failed to upload images",
+						500
+					);
+				}
+
+				finalPhotos.push(...uploadResult.imageMetadata);
+			}
+
+			const doc = {
+				type: itemData.type,
+				name: itemData.title,
+				description: itemData.description,
+				category: itemData.category,
+				location: itemData.location,
+				status: itemData.status,
+				date_lost_or_found: itemData.date_lost_or_found
+					? new Date(itemData.date_lost_or_found)
+					: new Date(),
+				photos: finalPhotos,
+			};
+
+			const updatedItem = await ItemsSchema.findByIdAndUpdate(
+				itemID,
+				doc,
+				{ new: true, session }
+			);
+			if (!updatedItem) {
+				if (uploadedPublicIds.length > 0) {
+					await deleteFiles(uploadedPublicIds);
+				}
+				await session.abortTransaction();
+				return responsePayload(
+					null,
+					"error",
+					"Failed to update item",
+					500
+				);
+			}
+
+			await session.commitTransaction();
+			if (imagesToDelete.length > 0) {
+				await deleteFiles(imagesToDelete).catch((err) =>
+					console.error(
+						"Failed to delete old images from Cloudinary:",
+						err
+					)
+				);
+			}
+			return responsePayload(
+				null,
+				"success",
+				"Item updated successfully",
+				200
+			);
+		} catch (error) {
+			await session.abortTransaction();
+			console.log(error);
+			return serverResponseError();
+		} finally {
+			await session.endSession();
+		}
+	}
 }
 
-export const { createNewItem, getUserItems, deleteItemByID } = ItemsHandlers;
+export const { createNewItem, getUserItems, deleteItemByID, updateItemByID } =
+	ItemsHandlers;

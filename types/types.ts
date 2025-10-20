@@ -96,6 +96,7 @@ export interface MyItem {
 	views: number;
 	matchCount: number;
 	image_url?: string;
+	images: any[];
 	category: string;
 }
 

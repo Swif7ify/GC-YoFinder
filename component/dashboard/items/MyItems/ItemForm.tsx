@@ -25,11 +25,14 @@ import { motion } from "framer-motion";
 interface ItemFormProps {
 	item: MyItem;
 	onClose: () => void;
-	onUpdate: (updatedItem: MyItem) => void;
-    handleUpdate: (updatedItem: MyItem) => Promise<void>;
+	handleUpdate: (formData: FormData) => Promise<void>;
 }
 
-export default function ItemForm({ item, onClose, onUpdate, handleUpdate }: ItemFormProps) {
+export default function ItemForm({
+	item,
+	onClose,
+	handleUpdate,
+}: ItemFormProps) {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [itemType, setItemType] = useState<"lost" | "found">(item.type);
 	const [title, setTitle] = useState(item.title);
@@ -42,9 +45,12 @@ export default function ItemForm({ item, onClose, onUpdate, handleUpdate }: Item
 	const [status, setStatus] = useState<"active" | "claimed" | "removed">(
 		item.status
 	);
-	const [imagePreviews, setImagePreviews] = useState<string[]>(
-		item.image_url ? [item.image_url] : []
+	const [existingImages, setExistingImages] = useState<string[]>(
+		item.images || []
 	);
+	const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
+	const allImages = [...existingImages, ...newImagePreviews];
+
 	const [uploadError, setUploadError] = useState<string | null>(null);
 	const MAX_IMAGES = 5;
 	const MAX_BYTES = 5 * 1024 * 1024; // 5MB
@@ -93,7 +99,7 @@ export default function ItemForm({ item, onClose, onUpdate, handleUpdate }: Item
 			return;
 		}
 
-		const remaining = MAX_IMAGES - imagePreviews.length;
+		const remaining = MAX_IMAGES - allImages.length;
 		const toAdd = acceptedFiles.slice(0, remaining);
 
 		const readers = toAdd.map(
@@ -109,7 +115,7 @@ export default function ItemForm({ item, onClose, onUpdate, handleUpdate }: Item
 		Promise.all(readers).then((results) => {
 			const urls = results.filter(Boolean) as string[];
 			if (urls.length) {
-				setImagePreviews((prev) =>
+				setNewImagePreviews((prev) =>
 					[...prev, ...urls].slice(0, MAX_IMAGES)
 				);
 				setUploadError(
@@ -123,7 +129,16 @@ export default function ItemForm({ item, onClose, onUpdate, handleUpdate }: Item
 	};
 
 	const removeImage = (index: number) => {
-		setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+		const existingCount = existingImages.length;
+
+		if (index < existingCount) {
+			setExistingImages((prev) => prev.filter((_, i) => i !== index));
+		} else {
+			const newIndex = index - existingCount;
+			setNewImagePreviews((prev) =>
+				prev.filter((_, i) => i !== newIndex)
+			);
+		}
 	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -154,45 +169,34 @@ export default function ItemForm({ item, onClose, onUpdate, handleUpdate }: Item
 		try {
 			setIsSubmitting(true);
 
-			// // Create updated item object
-			// const updatedItem: MyItem = {
-			// 	...item,
-			// 	type: itemType,
-			// 	title: title.trim(),
-			// 	description: description.trim(),
-			// 	category,
-			// 	location: location.trim(),
-			// 	dateReported: date ? date.toISOString() : item.dateReported,
-			// 	status,
-			// 	image_url: imagePreviews[0] || item.image_url,
-			// };
-
-            const form = new FormData();
-            form.append("type", itemType);
-            form.append("status", status);
-            form.append("title", title.trim());
-            form.append("description", description.trim());
-            form.append("category", category);
-            form.append("location", location.trim());
-            form.append("date_lost_or_found", date ? date.toISOString() : item.dateReported);
-
-            imagePreviews.forEach((dataUrl, idx) => {
-                const blob = dataURLtoBlob(dataUrl);
-                const file = new File([blob], `image_${idx}.png`, { type: blob.type });
-                form.append("images", file);
-            });
-
-            await handleUpdate(form);
-			toastSuccess(
-				"Item Updated",
-				"Your item has been successfully updated."
+			const form = new FormData();
+			form.append("type", itemType);
+			form.append("status", status);
+			form.append("title", title.trim());
+			form.append("description", description.trim());
+			form.append("category", category);
+			form.append("location", location.trim());
+			form.append(
+				"date_lost_or_found",
+				date ? date.toISOString() : item.dateReported
 			);
+
+			existingImages.forEach((url) => {
+				form.append("existing_images", url);
+			});
+
+			newImagePreviews.forEach((dataUrl, idx) => {
+				const blob = dataURLtoBlob(dataUrl);
+				const file = new File([blob], `image_${idx}.png`, {
+					type: blob.type,
+				});
+				form.append("photos", file);
+			});
+
+			await handleUpdate(form);
+
 			onClose();
 		} catch (error) {
-			toastError(
-				"Update Error",
-				"An error occurred while updating your item. Please try again."
-			);
 			console.error("Update error:", error);
 		} finally {
 			setIsSubmitting(false);
@@ -481,7 +485,7 @@ export default function ItemForm({ item, onClose, onUpdate, handleUpdate }: Item
 						</label>
 						<div className="space-y-3">
 							{/* Upload Button */}
-							{imagePreviews.length < MAX_IMAGES && (
+							{allImages.length < MAX_IMAGES && (
 								<button
 									type="button"
 									onClick={() =>
@@ -496,7 +500,7 @@ export default function ItemForm({ item, onClose, onUpdate, handleUpdate }: Item
 									/>
 									<span className="text-sm text-gray-600 dark:text-gray-400">
 										Click to upload photos (
-										{imagePreviews.length}/{MAX_IMAGES})
+										{newImagePreviews.length}/{MAX_IMAGES})
 									</span>
 								</button>
 							)}
@@ -518,9 +522,9 @@ export default function ItemForm({ item, onClose, onUpdate, handleUpdate }: Item
 							)}
 
 							{/* Image Previews */}
-							{imagePreviews.length > 0 && (
+							{allImages.length > 0 && (
 								<div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-									{imagePreviews.map((src, idx) => (
+									{allImages.map((src, idx) => (
 										<div
 											key={idx}
 											className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 group"
