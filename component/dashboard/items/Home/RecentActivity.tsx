@@ -64,6 +64,11 @@ export default function RecentItemsComponent({
 						</div>
 					</li>
 				))}
+				{recentActivity.length === 0 && (
+					<p className="text-gray-600 dark:text-gray-400">
+						No recent activity found.
+					</p>
+				)}
 			</ul>
 		</section>
 	);

@@ -1,7 +1,7 @@
 import { AlertCircle, CheckCircle2, MapPin, Search } from "lucide-react";
+import Link from "next/link";
 
 export default function QuickActions() {
-
 	const quickActions = [
 		{
 			label: "Report Lost Item",
@@ -56,7 +56,7 @@ export default function QuickActions() {
 				{quickActions.map((action, index) => {
 					const Icon = action.icon;
 					return (
-						<a
+						<Link
 							key={index}
 							href={action.href}
 							className={`${action.bgColor} rounded-lg p-6 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-${action.color}-500 dark:focus-visible:ring-${action.color}-400 focus-visible:ring-offset-2 group`}
@@ -83,7 +83,7 @@ export default function QuickActions() {
 									</p>
 								</div>
 							</div>
-						</a>
+						</Link>
 					);
 				})}
 			</div>

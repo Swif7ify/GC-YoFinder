@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
 	Search,
 	MapPin,
@@ -50,6 +51,9 @@ export default function SearchItemsComponent({
 	paginationMeta,
 	onPageChange,
 }: SearchItemsComponentProps) {
+	const searchParams = useSearchParams();
+	const pathname = usePathname();
+	const router = useRouter();
 	const [items, setItems] = useState<AllItem[]>([]);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [filterType, setFilterType] = useState<"all" | "lost" | "found">(
@@ -66,6 +70,12 @@ export default function SearchItemsComponent({
 	const [mounted, setMounted] = useState(false);
 	const [isLoadingPage, setIsLoadingPage] = useState(false);
 	const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+
+	useEffect(() => {
+		const itemTitle = searchParams.get("item");
+		if (!itemTitle) return;
+		setSearchQuery(decodeURIComponent(itemTitle));
+	}, [searchParams]);
 
 	useEffect(() => {
 		try {
@@ -159,6 +169,12 @@ export default function SearchItemsComponent({
 		setFilterCategory("all");
 		setFilterLocation("all");
 		setSortBy("latest");
+		if (!searchParams.get("item")) return;
+		try {
+			router.replace(`${pathname}?tab=search-items`);
+		} catch {
+			router.replace("/dashboard?tab=search-items");
+		}
 	};
 
 	// Client-side sorting only (search and filter now happen server-side)

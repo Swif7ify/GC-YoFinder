@@ -5,6 +5,7 @@ import { RecentItems, RecentActivity } from "@/types/types";
 
 interface HomeComponentProps {
 	userFullName: string;
+	recentItems: RecentItems[];
 }
 import Stats from "@/component/dashboard/items/Home/Stats";
 
@@ -32,89 +33,96 @@ const RecentActivityComponent = Dynamic(
 	{ ssr: false }
 );
 
-export default function HomeComponent({ userFullName }: HomeComponentProps) {
+export default function HomeComponent({
+	userFullName,
+	recentItems,
+}: HomeComponentProps) {
 	const [stats, setStats] = useState<StatsCard[]>([]);
-	const [recentItems, setRecentItems] = useState<RecentItems[]>([]);
+	const [recentItems_n, setRecentItems_n] = useState<RecentItems[]>([]);
 	const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
 
 	useEffect(() => {
-		setRecentItems([
-			{
-				id: "1",
-				title: "Black Laptop Bag",
-				description: "A black laptop bag with a silver logo",
-				type: "lost",
-				location: "Library 2nd Floor",
-				date: "2 hours ago",
-				status: "active",
-				image_url:
-					"https://images.unsplash.com/photo-1654965778976-409444e9826b?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NDB8fGl0ZW1zJTIwcGxhY2Vob2xkZXJ8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=500",
-			},
-			{
-				id: "2",
-				title: "Blue Water Bottle",
-				description: "A blue water bottle with a flip-top lid",
-				type: "found",
-				location: "Cafeteria",
-				date: "5 hours ago",
-				status: "claimed",
-				image_url:
-					"https://images.unsplash.com/photo-1654965778976-409444e9826b?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NDB8fGl0ZW1zJTIwcGxhY2Vob2xkZXJ8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=500",
-			},
-			{
-				id: "3",
-				title: "Student ID Card",
-				description: "A college student ID card with photo",
-				type: "found",
-				location: "Gym",
-				date: "1 day ago",
-				status: "active",
-				image_url:
-					"https://images.unsplash.com/photo-1654965778976-409444e9826b?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NDB8fGl0ZW1zJTIwcGxhY2Vob2xkZXJ8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=500",
-			},
-			{
-				id: "4",
-				title: "Red Umbrella",
-				description: "A red umbrella with a wooden handle",
-				type: "lost",
-				location: "Building A",
-				date: "2 days ago",
-				status: "active",
-				image_url:
-					"https://images.unsplash.com/photo-1654965778976-409444e9826b?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NDB8fGl0ZW1zJTIwcGxhY2Vob2xkZXJ8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=500",
-			},
-		]);
+		setRecentItems_n(recentItems);
+	}, [recentItems]);
 
-		setRecentActivity([
-			{
-				id: "1",
-				action: "New match found for your lost item",
-				item: "Black Laptop Bag",
-				time: "10 minutes ago",
-				type: "match",
-			},
-			{
-				id: "2",
-				action: "Your item was claimed",
-				item: "Blue Water Bottle",
-				time: "2 hours ago",
-				type: "claimed",
-			},
-			{
-				id: "3",
-				action: "New message received",
-				item: "Student ID Card",
-				time: "5 hours ago",
-				type: "message",
-			},
-			{
-				id: "4",
-				action: "Item status updated",
-				item: "Red Umbrella",
-				time: "1 day ago",
-				type: "update",
-			},
-		]);
+	useEffect(() => {
+		// setRecentItems([
+		// 	{
+		// 		id: "1",
+		// 		title: "Black Laptop Bag",
+		// 		description: "A black laptop bag with a silver logo",
+		// 		type: "lost",
+		// 		location: "Library 2nd Floor",
+		// 		date: "2 hours ago",
+		// 		status: "active",
+		// 		image_url:
+		// 			"https://images.unsplash.com/photo-1654965778976-409444e9826b?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NDB8fGl0ZW1zJTIwcGxhY2Vob2xkZXJ8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=500",
+		// 	},
+		// 	{
+		// 		id: "2",
+		// 		title: "Blue Water Bottle",
+		// 		description: "A blue water bottle with a flip-top lid",
+		// 		type: "found",
+		// 		location: "Cafeteria",
+		// 		date: "5 hours ago",
+		// 		status: "claimed",
+		// 		image_url:
+		// 			"https://images.unsplash.com/photo-1654965778976-409444e9826b?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NDB8fGl0ZW1zJTIwcGxhY2Vob2xkZXJ8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=500",
+		// 	},
+		// 	{
+		// 		id: "3",
+		// 		title: "Student ID Card",
+		// 		description: "A college student ID card with photo",
+		// 		type: "found",
+		// 		location: "Gym",
+		// 		date: "1 day ago",
+		// 		status: "active",
+		// 		image_url:
+		// 			"https://images.unsplash.com/photo-1654965778976-409444e9826b?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NDB8fGl0ZW1zJTIwcGxhY2Vob2xkZXJ8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=500",
+		// 	},
+		// 	{
+		// 		id: "4",
+		// 		title: "Red Umbrella",
+		// 		description: "A red umbrella with a wooden handle",
+		// 		type: "lost",
+		// 		location: "Building A",
+		// 		date: "2 days ago",
+		// 		status: "active",
+		// 		image_url:
+		// 			"https://images.unsplash.com/photo-1654965778976-409444e9826b?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NDB8fGl0ZW1zJTIwcGxhY2Vob2xkZXJ8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=500",
+		// 	},
+		// ]);
+
+		// setRecentActivity([
+		// 	{
+		// 		id: "1",
+		// 		action: "New match found for your lost item",
+		// 		item: "Black Laptop Bag",
+		// 		time: "10 minutes ago",
+		// 		type: "match",
+		// 	},
+		// 	{
+		// 		id: "2",
+		// 		action: "Your item was claimed",
+		// 		item: "Blue Water Bottle",
+		// 		time: "2 hours ago",
+		// 		type: "claimed",
+		// 	},
+		// 	{
+		// 		id: "3",
+		// 		action: "New message received",
+		// 		item: "Student ID Card",
+		// 		time: "5 hours ago",
+		// 		type: "message",
+		// 	},
+		// 	{
+		// 		id: "4",
+		// 		action: "Item status updated",
+		// 		item: "Red Umbrella",
+		// 		time: "1 day ago",
+		// 		type: "update",
+		// 	},
+		// ]);
 
 		setStats([
 			{
@@ -188,7 +196,7 @@ export default function HomeComponent({ userFullName }: HomeComponentProps) {
 			{/* Recent Items and Activity - Two Columns */}
 			<div className="flex flex-col gap-6">
 				{/* Recent Items */}
-				<RecentItemsComponent recentItems={recentItems} />
+				<RecentItemsComponent recentItems_n={recentItems_n} />
 
 				{/* Recent Activity */}
 				<RecentActivityComponent recentActivity={recentActivity} />

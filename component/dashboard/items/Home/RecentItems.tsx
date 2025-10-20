@@ -2,12 +2,17 @@ import Link from "next/link";
 import { RecentItems } from "@/types/types";
 import Image from "next/image";
 import { MapPin, Clock } from "lucide-react";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+dayjs.extend(relativeTime);
 
 interface QuickActionsProps {
-    recentItems: RecentItems[];
+	recentItems_n: RecentItems[];
 }
 
-export default function RecentItemsComponent({ recentItems }: QuickActionsProps) {
+export default function RecentItemsComponent({
+	recentItems_n,
+}: QuickActionsProps) {
 	return (
 		<section
 			aria-labelledby="recent-items-heading"
@@ -28,8 +33,9 @@ export default function RecentItemsComponent({ recentItems }: QuickActionsProps)
 				</Link>
 			</div>
 			<ul className="space-y-3 h-full" role="list">
-				{recentItems.map((item) => (
-					<li
+				{recentItems_n.map((item) => (
+					<Link
+						href={`/dashboard?tab=search-items&item=${item.title}`}
 						key={item.id}
 						className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
 					>
@@ -72,7 +78,12 @@ export default function RecentItemsComponent({ recentItems }: QuickActionsProps)
 										aria-hidden="true"
 									/>
 									<p className="text-sm text-gray-600 dark:text-gray-400 truncate ">
-										{item.date}
+										{dayjs(item.date).format(
+											"MMMM D, YYYY"
+										)}
+										<span className="text-xs text-gray-500 dark:text-gray-500 ml-2">
+											({dayjs(item.date).fromNow()})
+										</span>
 									</p>
 								</div>
 							</div>
@@ -86,8 +97,13 @@ export default function RecentItemsComponent({ recentItems }: QuickActionsProps)
 						>
 							{item.type.toUpperCase()}
 						</span>
-					</li>
+					</Link>
 				))}
+				{recentItems_n.length === 0 && (
+					<p className="text-gray-600 dark:text-gray-400">
+						No recent items found.
+					</p>
+				)}
 			</ul>
 		</section>
 	);

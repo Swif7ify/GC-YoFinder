@@ -24,7 +24,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import CloudinaryImagePreview from "@/ui/CloudinaryImagePreview";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-import { useRouter } from "next/navigation";
 
 dayjs.extend(relativeTime);
 
@@ -39,7 +38,6 @@ export default function DetailsModal({
 	onClose,
 	isOwnItem,
 }: DetailsModalProps) {
-	const router = useRouter();
 	const [isSaved, setIsSaved] = useState(false);
 	const [isLiked, setIsLiked] = useState(false);
 
