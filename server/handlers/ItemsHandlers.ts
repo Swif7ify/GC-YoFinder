@@ -20,7 +20,7 @@ interface ItemData {
 	location: string;
 	date_lost_or_found: string;
 	photos: File[];
-	existing_images: string[];
+	existing_images?: string[] | null;
 	status?: string;
 }
 

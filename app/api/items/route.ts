@@ -63,7 +63,6 @@ export async function POST(request: NextRequest) {
 		};
 
 		const response = await createNewItem(userID, extractedFields);
-		console.log("Create New Item Response:", response);
 		const message = response.status.message;
 		const statusCode = response.status_code;
 		if (statusCode !== 200)
