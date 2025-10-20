@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import dayjs from "dayjs";
 import {
 	Package,
@@ -34,6 +35,9 @@ export default function MyItemsComponent({
 	userItems,
 	onUpdate,
 }: MyItemsComponentProps) {
+	const searchParams = useSearchParams();
+	const pathname = usePathname();
+	const router = useRouter();
 	const { withLoading } = useApiLoading();
 	const confirm = useConfirm();
 	const [isUpdating, setIsUpdating] = useState(false);
@@ -42,6 +46,17 @@ export default function MyItemsComponent({
 	const [activeMenu, setActiveMenu] = useState<string | null>(null);
 	const [searchQuery, setSearchQuery] = useState<string>("");
 	const [editingItem, setEditingItem] = useState<MyItem | null>(null);
+
+	useEffect(() => {
+		const editId = searchParams.get("edit");
+		if (!editId) return;
+		if (!items || items.length === 0) return;
+		const match = items.find((it) => it.id === editId);
+		if (match) {
+			setEditingItem(match);
+			setActiveMenu(null);
+		}
+	}, [searchParams, items]);
 
 	useEffect(() => {
 		setItems(userItems || []);
@@ -140,6 +155,12 @@ export default function MyItemsComponent({
 
 	const handleCloseForm = () => {
 		setEditingItem(null);
+		if (!searchParams.get("edit")) return;
+		try {
+			router.replace(`${pathname}?tab=my-items`);
+		} catch {
+			router.replace("/dashboard?tab=my-items");
+		}
 	};
 
 	return (

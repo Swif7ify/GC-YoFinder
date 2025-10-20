@@ -17,6 +17,7 @@ interface IPhotoMetadata {
 }
 
 export interface IItems extends Document {
+	user_id: mongoose.Schema.Types.ObjectId; // User who posted this item
 	name: string;
 	description: string;
 	category: ItemCategory; // Electronics, Personal Items, etc.
@@ -27,7 +28,6 @@ export interface IItems extends Document {
 	matched: number;
 	views: number; // Number of times item has been viewed
 	photos: IPhotoMetadata[]; // Multiple photos support
-	user_id: mongoose.Schema.Types.ObjectId; // User who posted this item
 	contact_info?: {
 		phone?: string;
 		email?: string;
@@ -88,7 +88,7 @@ const ItemsSchema = new Schema<IItems>({
 	},
 	user_id: {
 		type: mongoose.Schema.Types.ObjectId,
-		ref: "Users",
+		ref: "User",
 		required: true,
 	},
 	contact_info: {
@@ -99,7 +99,7 @@ const ItemsSchema = new Schema<IItems>({
 	},
 	claimed_by: {
 		type: mongoose.Schema.Types.ObjectId,
-		ref: "Users",
+		ref: "User",
 		default: null,
 	},
 	claimed_at: { type: Date, default: null },

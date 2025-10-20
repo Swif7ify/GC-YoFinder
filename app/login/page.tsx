@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 
 import { EyeOff, Eye, Mail, Lock, Shield, Search } from "lucide-react";
@@ -13,6 +13,7 @@ export default function LoginPage() {
 	const { withLoading } = useApiLoading();
 	const router = useRouter();
 	const [showPassword, setShowPassword] = useState(false);
+	const [includesProceeding, setIncludesProceeding] = useState(true);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [form, setform] = useState({
 		email: "",
@@ -22,6 +23,7 @@ export default function LoginPage() {
 
 	const validateEmail = () => {
 		const email = form.email.trim();
+
 		if (!email) {
 			toastError("Email is required.", "Please enter your email.");
 			return false;
@@ -42,6 +44,12 @@ export default function LoginPage() {
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 
+		if (
+			!form.email.includes("@") &&
+			form.email.endsWith("@gordoncollege.edu.ph") === false
+		) {
+			form.email = form.email.concat("@gordoncollege.edu.ph");
+		}
 		if (!validateEmail()) {
 			setIsSubmitting(false);
 			return;
@@ -71,6 +79,17 @@ export default function LoginPage() {
 			setIsSubmitting(false);
 		}
 	};
+
+	useEffect(() => {
+		if (
+			form.email.includes("@") ||
+			form.email.includes("gordoncollege.edu.ph")
+		) {
+			setIncludesProceeding(false);
+		} else {
+			setIncludesProceeding(true);
+		}
+	}, [form.email, setform]);
 
 	return (
 		<div className="relative">
@@ -125,39 +144,46 @@ export default function LoginPage() {
 					</div>
 
 					<div className="space-y-4">
-						<label htmlFor="email" className="block">
-							<span className="text-sm font-medium text-gray-700">
-								Student ID / Email
-							</span>
-							<div className="relative mt-1">
-								<span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
-									<Mail size={20} aria-hidden="true" />
+						<div className="relative">
+							<label htmlFor="email" className="block">
+								<span className="text-sm font-medium text-gray-700">
+									Student ID / Email
 								</span>
-								<input
-									id="email"
-									name="email"
-									type="email"
-									onChange={(e) =>
-										setform({
-											...form,
-											email: e.target.value,
-										})
-									}
-									required
-									autoComplete="username"
-									placeholder="you@gordoncollege.edu.ph"
-									pattern="[A-Za-z0-9._%+-]+@gordoncollege\.edu\.ph"
-									title="Use your @gordoncollege.edu.ph email"
-									aria-describedby="emailHelp"
-									className="w-full pl-10 pr-3 py-2 border rounded-md border-gray-300 placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 transition"
-									aria-label="Student ID or Email"
-								/>
-							</div>
-							<p id="emailHelp" className="sr-only">
-								Use your Gordon College email:
-								username@gordoncollege.edu.ph
-							</p>
-						</label>
+								<div className="relative mt-1">
+									<span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+										<Mail size={20} aria-hidden="true" />
+									</span>
+									<input
+										id="email"
+										name="email"
+										type="text"
+										onChange={(e) =>
+											setform({
+												...form,
+												email: e.target.value,
+											})
+										}
+										required
+										autoComplete="username"
+										placeholder="xxxxxxxxx"
+										pattern="[A-Za-z0-9._%+-]+@gordoncollege\.edu\.ph"
+										title="Use your @gordoncollege.edu.ph email"
+										aria-describedby="emailHelp"
+										className="w-full pl-10 pr-3 py-2 border rounded-md border-gray-300 placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 transition"
+										aria-label="Student ID or Email"
+									/>
+								</div>
+								<p id="emailHelp" className="sr-only">
+									Use your Gordon College email:
+									username@gordoncollege.edu.ph
+								</p>
+							</label>
+							{includesProceeding && (
+								<span className="absolute text-gray-400 text-sm right-3 top-9.5 pointer-events-none	">
+									@gordoncollege.edu.ph
+								</span>
+							)}
+						</div>
 
 						<label htmlFor="password" className="block">
 							<span className="text-sm font-medium text-gray-700">

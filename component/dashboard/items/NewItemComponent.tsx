@@ -23,7 +23,11 @@ import { api } from "@/lib/api.config";
 import { useApiLoading } from "@/hooks/useApiLoading";
 import { useRouter } from "next/navigation";
 
-export default function NewItemComponent() {
+interface NewItemComponentProps {
+	onUpdate?: () => void;
+}
+
+export default function NewItemComponent({ onUpdate }: NewItemComponentProps) {
 	const { withLoading } = useApiLoading();
 	const router = useRouter();
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -160,6 +164,7 @@ export default function NewItemComponent() {
 			setLocation("");
 			setDate(null);
 			setImagePreviews([]);
+			onUpdate?.();
 			router.push("/dashboard?tab=my-items");
 		} catch (error) {
 			toastError(

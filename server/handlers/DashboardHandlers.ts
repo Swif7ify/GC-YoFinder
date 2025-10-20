@@ -1,4 +1,5 @@
 import UserSchema from "@/server/models/UserSchema";
+import ItemsSchema from "@/server/models/ItemsSchema";
 import {
 	responsePayload,
 	serverResponseError,
@@ -17,7 +18,7 @@ class DashboardHandlers {
 			if (!isValidUserID) return userNotFoundError();
 
 			const userData = await UserSchema.findById(userID).select(
-				"-_id -__v -password"
+				"-__v -password"
 			);
 			if (!userData) return userNotFoundError();
 
@@ -171,7 +172,76 @@ class DashboardHandlers {
 			await session.endSession();
 		}
 	}
+
+	static async getAllItems(userID: string) {
+		await connectToDatabase();
+		try {
+			const validateUserID = ValidateStringField(userID);
+			if (!validateUserID)
+				return responsePayload(null, "error", "Invalid user ID", 400);
+
+			const user = await UserSchema.findById(userID);
+			if (!user) return userNotFoundError();
+
+			const items = await ItemsSchema.find({})
+				.populate({
+					path: "user_id",
+					select: "firstname lastname username photo",
+				})
+				.sort({ created_at: -1 })
+				.lean()
+				.exec();
+
+			const itemsWithPhotoUrl = items.map((item: any) => {
+				// Extract user photo URL
+				let userPhoto = null;
+				if (item.user_id && item.user_id.photo) {
+					userPhoto =
+						typeof item.user_id.photo === "string"
+							? item.user_id.photo
+							: item.user_id.photo.url || null;
+				}
+
+				let itemPhotos = [];
+				if (item.photos && Array.isArray(item.photos)) {
+					itemPhotos = item.photos
+						.map((photo: any) => {
+							if (typeof photo === "string") {
+								return photo;
+							}
+							return photo.url || null;
+						})
+						.filter(Boolean);
+				}
+
+				return {
+					...item,
+					user_id: item.user_id
+						? {
+								...item.user_id,
+								photo: userPhoto,
+						  }
+						: null,
+					photos: itemPhotos,
+				};
+			});
+
+			return responsePayload(
+				itemsWithPhotoUrl,
+				"success",
+				"Items fetched successfully",
+				200
+			);
+		} catch (error) {
+			console.error("Error fetching all items:", error);
+			return serverResponseError();
+		}
+	}
 }
 
-export const { getUserDataByID, updateUserDataByID, updateUserPhotoByID } =
-	DashboardHandlers;
+export const {
+	getUserDataByID,
+	updateUserDataByID,
+	updateUserPhotoByID,
+	getAllItems,
+} = DashboardHandlers;

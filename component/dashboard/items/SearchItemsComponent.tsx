@@ -3,24 +3,32 @@
 import React, { useState, useEffect } from "react";
 import {
 	Search,
-	Filter,
 	MapPin,
 	Calendar,
 	AlertCircle,
 	CheckCircle2,
 	Eye,
 	MessageSquare,
-	X,
 	Grid3x3,
 	List,
 	RotateCcw,
 } from "lucide-react";
 import Image from "next/image";
-import { Items, ITEM_CATEGORIES } from "@/types/types";
+import { ITEM_CATEGORIES, AllItem } from "@/types/types";
 import CustomSelect from "@/ui/CustomSelect";
+import DetailsModal from "./SearchItems/detailsModal";
+import dayjs from "dayjs";
 
-export default function SearchItemsComponent() {
-	const [items, setItems] = useState<Items[]>([]);
+interface SearchItemsComponentProps {
+	allItems: AllItem[];
+	userID: string | null;
+}
+
+export default function SearchItemsComponent({
+	allItems,
+	userID,
+}: SearchItemsComponentProps) {
+	const [items, setItems] = useState<AllItem[]>([]);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [filterType, setFilterType] = useState<"all" | "lost" | "found">(
 		"all"
@@ -32,6 +40,29 @@ export default function SearchItemsComponent() {
 	const [filterLocation, setFilterLocation] = useState<string>("all");
 	const [sortBy, setSortBy] = useState<"latest" | "oldest">("latest");
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+	const [selectedItem, setSelectedItem] = useState<AllItem | null>(null);
+	const [mounted, setMounted] = useState(false);
+
+	useEffect(() => {
+		try {
+			const saved = localStorage.getItem("myitems_viewMode");
+			if (saved === "grid" || saved === "list") {
+				setViewMode(saved);
+			}
+		} catch (error) {
+		} finally {
+			setMounted(true);
+		}
+	}, []);
+
+	useEffect(() => {
+		if (!mounted) return;
+		try {
+			localStorage.setItem("myitems_viewMode", viewMode);
+		} catch (e) {
+			// ignore
+		}
+	}, [viewMode]);
 
 	const categories = ITEM_CATEGORIES;
 
@@ -47,88 +78,8 @@ export default function SearchItemsComponent() {
 	const filterTypeOptions = ["all", "lost", "found"];
 
 	useEffect(() => {
-		// Mock data with timestamps for sorting
-		// setItems([
-		// 	{
-		// 		id: "1",
-		// 		title: "Black Laptop Bag",
-		// 		description:
-		// 			"A black laptop bag with a silver logo on the front. Contains my laptop and charger.",
-		// 		type: "lost",
-		// 		location: "Library 2nd Floor",
-		// 		date: "2024-10-17T10:00:00",
-		// 		status: "active",
-		// 		image_url:
-		// 			"https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=400&fit=crop",
-		// 		category: "Bags & Accessories",
-		// 	},
-		// 	{
-		// 		id: "2",
-		// 		title: "Blue Water Bottle",
-		// 		description:
-		// 			"A blue Hydro Flask water bottle with a floral sticker.",
-		// 		type: "found",
-		// 		location: "Cafeteria",
-		// 		date: "2024-10-17T07:00:00",
-		// 		status: "claimed",
-		// 		image_url:
-		// 			"https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=400&h=400&fit=crop",
-		// 		category: "Personal Items",
-		// 	},
-		// 	{
-		// 		id: "3",
-		// 		title: "Student ID Card - John Smith",
-		// 		description:
-		// 			"A college student ID card with photo. Name: John Smith, ID: 2021-12345",
-		// 		type: "found",
-		// 		location: "Gym Locker Room",
-		// 		date: "2024-10-16T12:00:00",
-		// 		status: "active",
-		// 		image_url:
-		// 			"https://images.unsplash.com/photo-1589395937784-2f3a87df93e6?w=400&h=400&fit=crop",
-		// 		category: "Personal Items",
-		// 	},
-		// 	{
-		// 		id: "4",
-		// 		title: "Red Umbrella",
-		// 		description:
-		// 			"A red umbrella with a wooden handle and auto-open feature.",
-		// 		type: "lost",
-		// 		location: "Building A",
-		// 		date: "2024-10-15T09:00:00",
-		// 		status: "active",
-		// 		image_url:
-		// 			"https://images.unsplash.com/photo-1527693224088-e54750ee3ea9?w=400&h=400&fit=crop",
-		// 		category: "Personal Items",
-		// 	},
-		// 	{
-		// 		id: "5",
-		// 		title: "Organic Chemistry Textbook",
-		// 		description:
-		// 			"8th Edition Organic Chemistry textbook with notes inside.",
-		// 		type: "found",
-		// 		location: "Science Building 3rd Floor",
-		// 		date: "2024-10-14T15:00:00",
-		// 		status: "active",
-		// 		image_url:
-		// 			"https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=400&h=400&fit=crop",
-		// 		category: "Books & Supplies",
-		// 	},
-		// 	{
-		// 		id: "6",
-		// 		title: "Wireless Earbuds (AirPods)",
-		// 		description:
-		// 			"White Apple AirPods Pro with charging case. Left near the water fountain.",
-		// 		type: "found",
-		// 		location: "Admin Building Hallway",
-		// 		date: "2024-10-13T11:00:00",
-		// 		status: "active",
-		// 		image_url:
-		// 			"https://images.unsplash.com/photo-1606841837239-c5a1a4a07af7?w=400&h=400&fit=crop",
-		// 		category: "Personal Items",
-		// 	},
-		// ]);
-	}, []);
+		setItems(allItems);
+	}, [allItems]);
 
 	const resetFilters = () => {
 		setSearchQuery("");
@@ -142,7 +93,7 @@ export default function SearchItemsComponent() {
 	const filteredItems = items
 		.filter((item) => {
 			const matchesSearch =
-				item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+				item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
 				item.description
 					.toLowerCase()
 					.includes(searchQuery.toLowerCase()) ||
@@ -166,8 +117,8 @@ export default function SearchItemsComponent() {
 			);
 		})
 		.sort((a, b) => {
-			const dateA = new Date(a.date).getTime();
-			const dateB = new Date(b.date).getTime();
+			const dateA = new Date(a.date_lost_or_found).getTime();
+			const dateB = new Date(b.date_lost_or_found).getTime();
 			return sortBy === "latest" ? dateB - dateA : dateA - dateB;
 		});
 
@@ -410,10 +361,12 @@ export default function SearchItemsComponent() {
 									<div className="relative h-48 bg-gray-100 dark:bg-gray-700">
 										<Image
 											src={
-												item.image_url ||
-												"https://images.unsplash.com/photo-1654965778976-409444e9826b?w=400"
+												item.photos &&
+												item.photos.length > 0
+													? item.photos[0]
+													: "https://images.unsplash.com/photo-1654965778976-409444e9826b?w=400"
 											}
-											alt={item.title}
+											alt={item.name}
 											fill
 											className="object-cover"
 											sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -454,7 +407,7 @@ export default function SearchItemsComponent() {
 									{/* Content */}
 									<div className="p-4">
 										<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2 line-clamp-1 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-											{item.title}
+											{item.name}
 										</h3>
 
 										<p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
@@ -479,7 +432,9 @@ export default function SearchItemsComponent() {
 													className="flex-shrink-0"
 													aria-hidden="true"
 												/>
-												<span>{item.date}</span>
+												<span>
+													{item.date_lost_or_found}
+												</span>
 											</div>
 										</div>
 
@@ -487,8 +442,11 @@ export default function SearchItemsComponent() {
 										<div className="flex gap-2">
 											<button
 												type="button"
+												onClick={() =>
+													setSelectedItem(item)
+												}
 												className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white rounded-lg text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 flex items-center justify-center gap-2"
-												aria-label={`View details of ${item.title}`}
+												aria-label={`View details of ${item.name}`}
 											>
 												<Eye
 													size={16}
@@ -497,16 +455,18 @@ export default function SearchItemsComponent() {
 												View Details
 											</button>
 
-											<button
-												type="button"
-												className="px-4 py-2 border border-gray-300 dark:border-neutral-700  hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-												aria-label={`Contact about ${item.title}`}
-											>
-												<MessageSquare
-													size={16}
-													aria-hidden="true"
-												/>
-											</button>
+											{item.user_id.id !== userID && (
+												<button
+													type="button"
+													className="px-4 py-2 border border-gray-300 dark:border-neutral-700  hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+													aria-label={`Contact about ${item.name}`}
+												>
+													<MessageSquare
+														size={16}
+														aria-hidden="true"
+													/>
+												</button>
+											)}
 										</div>
 									</div>
 								</article>
@@ -520,10 +480,12 @@ export default function SearchItemsComponent() {
 										<div className="relative w-full sm:w-32 h-32 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
 											<Image
 												src={
-													item.image_url ||
-													"https://images.unsplash.com/photo-1654965778976-409444e9826b?w=400"
+													item.photos &&
+													item.photos.length > 0
+														? item.photos[0]
+														: "https://images.unsplash.com/photo-1654965778976-409444e9826b?w=400"
 												}
-												alt={item.title}
+												alt={item.name}
 												fill
 												className="object-cover"
 												sizes="(max-width: 768px) 100vw, 128px"
@@ -534,7 +496,7 @@ export default function SearchItemsComponent() {
 										<div className="flex-1 min-w-0">
 											<div className="flex items-start justify-between gap-4 mb-2">
 												<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">
-													{item.title}
+													{item.name}
 												</h3>
 
 												{/* Badges */}
@@ -595,7 +557,7 @@ export default function SearchItemsComponent() {
 													/>
 													<span>
 														{new Date(
-															item.date
+															item.date_lost_or_found
 														).toLocaleDateString(
 															"en-US",
 															{
@@ -612,8 +574,11 @@ export default function SearchItemsComponent() {
 											<div className="flex gap-2">
 												<button
 													type="button"
+													onClick={() =>
+														setSelectedItem(item)
+													}
 													className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 flex items-center gap-2"
-													aria-label={`View details of ${item.title}`}
+													aria-label={`View details of ${item.name}`}
 												>
 													<Eye
 														size={16}
@@ -622,16 +587,18 @@ export default function SearchItemsComponent() {
 													View Details
 												</button>
 
-												<button
-													type="button"
-													className="px-4 py-2 border border-gray-300 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-													aria-label={`Contact about ${item.title}`}
-												>
-													<MessageSquare
-														size={16}
-														aria-hidden="true"
-													/>
-												</button>
+												{item.user_id.id !== userID && (
+													<button
+														type="button"
+														className="px-4 py-2 border border-gray-300 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+														aria-label={`Contact about ${item.name}`}
+													>
+														<MessageSquare
+															size={16}
+															aria-hidden="true"
+														/>
+													</button>
+												)}
 											</div>
 										</div>
 									</div>
@@ -659,6 +626,15 @@ export default function SearchItemsComponent() {
 					</div>
 				)}
 			</section>
+
+			{/* Details Modal */}
+			{selectedItem && (
+				<DetailsModal
+					item={selectedItem}
+					onClose={() => setSelectedItem(null)}
+					isOwnItem={selectedItem.user_id.id === userID}
+				/>
+			)}
 		</div>
 	);
 }

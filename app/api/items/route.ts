@@ -27,7 +27,10 @@ export async function GET(request: NextRequest) {
 				{ status: statusCode }
 			);
 
-		return NextResponse.json({ items: response.payload }, { status: statusCode });
+		return NextResponse.json(
+			{ items: response.payload },
+			{ status: statusCode }
+		);
 	} catch (error) {
 		return NextResponse.json(
 			{ error: "Internal Server Error" },

@@ -19,6 +19,7 @@ import { motion } from "framer-motion";
 import { toastError } from "@/utils/toast";
 import { useApiLoading } from "@/hooks/useApiLoading";
 import { useConfirm } from "@/ui/ConfirmProvider";
+import { AllItem } from "@/types/types";
 
 const Sidebar = Dynamic(
 	() => import("@/component/dashboard/Sidebar").then((mod) => mod.default),
@@ -104,7 +105,9 @@ export default function DashboardPage() {
 	const [showMobileMenu, setShowMobileMenu] = useState(false);
 	const [showProfileMenu, setShowProfileMenu] = useState(false);
 	const [showNotifications, setShowNotifications] = useState(false);
+	const [userID, setUserID] = useState<string | null>(null);
 	const [userItems, setUserItems] = useState([]);
+	const [allItems, setAllItems] = useState<AllItem[]>([]);
 	const initialTab = searchParams.get("tab") || "dashboard";
 	const [activeTab, setActiveTab] = useState(initialTab);
 	const mainRef = useRef<HTMLElement | null>(null);
@@ -169,6 +172,7 @@ export default function DashboardPage() {
 
 			const data = await response.json();
 			setUserData(data.data);
+			setUserID(data.data._id);
 		} catch (error) {
 			console.error("Error fetching user data:", error);
 		}
@@ -199,8 +203,49 @@ export default function DashboardPage() {
 			}));
 
 			setUserItems(mappedItems);
+			fetchAllItems();
 		} catch (error) {
 			console.error("Error fetching user items:", error);
+		}
+	};
+
+	const fetchAllItems = async () => {
+		try {
+			const response = await api("/api/dashboard/items");
+			if (response.status !== 200) {
+				toastError("Server Error", "Unable to fetch items.");
+				return;
+			}
+			const data = await response.json();
+			const mappedItems = data.items.map((item: any) => ({
+				...item,
+				id: item._id,
+				category: item.category,
+				claimed_at: item.claimed_at,
+				claimed_by: item.claimed_by,
+				created_at: item.created_at,
+				date_lost_or_found: item.date_lost_or_found,
+				description: item.description,
+				location: item.location,
+				matched: item.matched,
+				name: item.name,
+				photos: item.photos,
+				status: item.status,
+				type: item.type,
+				updated_at: item.updated_at,
+				user_id: {
+					id: item.user_id._id,
+					firstname: item.user_id.firstname,
+					lastname: item.user_id.lastname,
+					username: item.user_id.username,
+					photo: item.user_id.photo,
+				},
+				views: item.views,
+			}));
+
+			setAllItems(mappedItems);
+		} catch (error) {
+			console.error("Error fetching items:", error);
 		}
 	};
 
@@ -210,8 +255,10 @@ export default function DashboardPage() {
 				userFullName={userData.firstname + " " + userData.lastname}
 			/>
 		),
-		"new-item": <NewItemComponent />,
-		"search-items": <SearchItemsComponent />,
+		"new-item": <NewItemComponent onUpdate={fetchUserItems} />,
+		"search-items": (
+			<SearchItemsComponent allItems={allItems} userID={userID} />
+		),
 		"my-items": (
 			<MyItemsComponent userItems={userItems} onUpdate={fetchUserItems} />
 		),
@@ -288,7 +335,11 @@ export default function DashboardPage() {
 	useEffect(() => {
 		const fetch = async () => {
 			await withLoading(() =>
-				Promise.all([fetchUserData(), fetchUserItems()])
+				Promise.all([
+					fetchUserData(),
+					fetchUserItems(),
+					fetchAllItems(),
+				])
 			);
 		};
 		fetch();

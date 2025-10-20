@@ -100,6 +100,35 @@ export interface MyItem {
 	category: string;
 }
 
+export interface AllItem {
+	id: string;
+	category: string;
+	claimed_at?: string;
+	claimed_by?: string;
+	// contact_info?: {
+	// 	show_email?: boolean;
+	// 	show_phone?: boolean;
+	// }
+	created_at: string;
+	date_lost_or_found: string;
+	description: string;
+	location: string;
+	matched: number;
+	name: string;
+	photos: any[];
+	status: "active" | "claimed" | "removed";
+	type: "lost" | "found";
+	updated_at: string;
+	user_id: {
+		id: string;
+		firstname: string;
+		lastname: string;
+		username: string;
+		photo?: string;
+	};
+	views: number;
+}
+
 export interface CloudinaryImagePreviewProps {
 	images: string[];
 	className?: string;
