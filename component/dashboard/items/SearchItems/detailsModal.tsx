@@ -15,9 +15,8 @@ import {
 	Tag,
 	AlertCircle,
 	CheckCircle2,
-	Heart,
-	Bookmark,
 	Edit,
+	Link as LinkIcon,
 } from "lucide-react";
 import { AllItem } from "@/types/types";
 import { motion, AnimatePresence } from "framer-motion";
@@ -45,10 +44,9 @@ export default function DetailsModal({
 	userID,
 	onItemUpdate,
 }: DetailsModalProps) {
-	const [isSaved, setIsSaved] = useState(false);
-	const [isLiked, setIsLiked] = useState(false);
 	const [currentItem, setCurrentItem] = useState<AllItem>(item);
 	const [isClaiming, setIsClaiming] = useState(false);
+	const [hasMatched, setHasMatched] = useState(false);
 	const [pendingUpdate, setPendingUpdate] = useState<AllItem | null>(null);
 	const router = useRouter();
 
@@ -62,6 +60,7 @@ export default function DetailsModal({
 					if (response.status === 200) {
 						return response.json();
 					}
+					return null;
 				})
 				.then((data) => {
 					// Use the updated item returned from the server
@@ -88,14 +87,49 @@ export default function DetailsModal({
 		}
 	}, [pendingUpdate, onItemUpdate]);
 
-	const handleSave = () => {
-		// TODO: Implement save/bookmark functionality
-		setIsSaved(!isSaved);
-	};
+	// Check if user has already matched this item
+	useEffect(() => {
+		if (!isOwnItem && userID) {
+			api(`/api/items/${item.id}/has-matched`)
+				.then((response) => {
+					if (response.status === 200) {
+						return response.json();
+					}
+					return null;
+				})
+				.then((data) => {
+					if (data?.hasMatched) {
+						setHasMatched(true);
+					}
+				})
+				.catch((error) => {
+					console.error("Error checking match status:", error);
+				});
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [item.id, isOwnItem, userID]);
 
-	const handleLike = () => {
-		// TODO: Implement like/favorite functionality
-		setIsLiked(!isLiked);
+	const copyLinkToClipboard = async (url: string) => {
+		try {
+			await navigator.clipboard.writeText(url);
+			toastSuccess("Success", "Link copied to clipboard!");
+		} catch (error) {
+			console.error("Failed to copy link:", error);
+			// Fallback for older browsers
+			const textArea = document.createElement("textarea");
+			textArea.value = url;
+			textArea.style.position = "fixed";
+			textArea.style.opacity = "0";
+			document.body.appendChild(textArea);
+			textArea.select();
+			try {
+				document.execCommand("copy");
+				toastSuccess("Success", "Link copied to clipboard!");
+			} catch (err) {
+				toastError("Error", "Failed to copy link");
+			}
+			document.body.removeChild(textArea);
+		}
 	};
 
 	const handleContact = async () => {
@@ -145,8 +179,31 @@ export default function DetailsModal({
 		}
 	};
 
-	const handleShare = () => {
-		// TODO: Implement share functionality (copy link, social media, etc.)
+	const handleShare = async () => {
+		const itemUrl = `${window.location.origin}/dashboard?tab=search-items&itemId=${currentItem.id}`;
+		const shareText = `Check out this ${currentItem.type} item: ${currentItem.name}`;
+
+		// Check if Web Share API is available
+		if (navigator.share) {
+			try {
+				await navigator.share({
+					title: `${currentItem.name} - GC Yofinder`,
+					text: shareText,
+					url: itemUrl,
+				});
+				toastSuccess("Success", "Item shared successfully");
+			} catch (error: any) {
+				// User cancelled or error occurred
+				if (error.name !== "AbortError") {
+					console.error("Error sharing:", error);
+					// Fallback to copying link
+					await copyLinkToClipboard(itemUrl);
+				}
+			}
+		} else {
+			// Fallback to copying link
+			await copyLinkToClipboard(itemUrl);
+		}
 	};
 
 	const handleReport = () => {
@@ -181,16 +238,25 @@ export default function DetailsModal({
 				return;
 			}
 
-			// Update match count locally
-			const updated = {
-				...currentItem,
-				matched: currentItem.matched + 1,
-			};
+			const data = await response.json();
 			
-			setCurrentItem(updated);
-			
-			// Mark for parent update
-			setPendingUpdate(updated);
+			// Mark as matched
+			setHasMatched(true);
+
+			// Update match count from server response
+			if (data?.item) {
+				const updated = data.item;
+				setCurrentItem(updated);
+				setPendingUpdate(updated);
+			} else {
+				// Fallback: update locally
+				const updated = {
+					...currentItem,
+					matched: currentItem.matched + 1,
+				};
+				setCurrentItem(updated);
+				setPendingUpdate(updated);
+			}
 
 			toastSuccess(
 				"Success",
@@ -245,42 +311,18 @@ export default function DetailsModal({
 						</div>
 						<div className="flex items-center gap-2">
 							{!isOwnItem && (
-								<>
-									<button
-										type="button"
-										onClick={handleSave}
-										className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${
-											isSaved
-												? "text-emerald-600 dark:text-emerald-400"
-												: "text-gray-600 dark:text-gray-400"
-										}`}
-										aria-label="Save item"
-									>
-										<Bookmark
-											size={20}
-											className={
-												isSaved ? "fill-current" : ""
-											}
-										/>
-									</button>
-									<button
-										type="button"
-										onClick={handleLike}
-										className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${
-											isLiked
-												? "text-red-600 dark:text-red-400"
-												: "text-gray-600 dark:text-gray-400"
-										}`}
-										aria-label="Like item"
-									>
-										<Heart
-											size={20}
-											className={
-												isLiked ? "fill-current" : ""
-											}
-										/>
-									</button>
-								</>
+								<button
+									type="button"
+									onClick={async () => {
+										const itemUrl = `${window.location.origin}/dashboard?tab=search-items&itemId=${currentItem.id}`;
+										await copyLinkToClipboard(itemUrl);
+									}}
+									className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
+									aria-label="Copy link"
+									title="Copy link"
+								>
+									<LinkIcon size={20} />
+								</button>
 							)}
 							{isOwnItem && (
 								<Link
@@ -296,6 +338,7 @@ export default function DetailsModal({
 								onClick={handleShare}
 								className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
 								aria-label="Share item"
+								title="Share item"
 							>
 								<Share2 size={20} />
 							</button>
@@ -518,7 +561,7 @@ export default function DetailsModal({
 									</div>
 								</div>
 								{/* Action Buttons */}
-								{currentItem.status === "active" && !isOwnItem && (
+								{currentItem.status === "active" && !isOwnItem && !hasMatched && (
 									<div className="space-y-3">
 										<button
 											type="button"

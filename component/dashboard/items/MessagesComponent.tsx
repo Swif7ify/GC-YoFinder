@@ -315,7 +315,7 @@ export default function MessagesComponent({
 			});
 			setNewMessage("");
 
-			// Update conversation list
+			// Update conversation list and reset unread count for this conversation
 			setConversations((prev) =>
 				prev.map((conv) => {
 					if (conv.id === selectedConversation.id) {
@@ -323,6 +323,7 @@ export default function MessagesComponent({
 							...conv,
 							lastMessage: data.message.content,
 							time: data.message.timestamp,
+							unreadCount: 0, // Reset unread count since user is actively viewing
 						};
 					}
 					return conv;

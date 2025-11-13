@@ -372,9 +372,11 @@ export default function DashboardPage() {
 	>([]);
 	const pusherRef = useRef<Pusher | null>(null);
 
+	// Notification bell should only show unread notifications, not unread messages
+	// Unread messages are shown separately in the sidebar badge
 	const unreadCount = notifications.filter(
 		(notification) => !notification.isRead
-	).length + unreadMessageCount;
+	).length;
 
 	// Fetch unread message count
 	const fetchUnreadCount = async () => {

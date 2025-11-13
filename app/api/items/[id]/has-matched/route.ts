@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/services/Access";
-import { trackItemMatch } from "@/server/handlers/ItemsHandlers";
+import { hasUserMatchedItem } from "@/server/handlers/ItemsHandlers";
 
-// POST: Track an item match (claim)
-export async function POST(
+// GET: Check if the current user has matched this item
+export async function GET(
 	request: NextRequest,
 	context: { params: Promise<{ id: string }> }
 ) {
@@ -25,26 +25,14 @@ export async function POST(
 		const params = await context.params;
 		const itemID = params.id;
 
-		const response = await trackItemMatch(userID, itemID);
-		const message = response.status.message;
-		const statusCode = response.status_code;
+		const hasMatched = await hasUserMatchedItem(userID, itemID);
 
-		if (statusCode !== 200)
-			return NextResponse.json(
-				{ error: message },
-				{ status: statusCode }
-			);
-
-		// Return the updated item with the new match count
 		return NextResponse.json(
-			{ 
-				message: "Match tracked successfully",
-				item: response.payload 
-			},
-			{ status: statusCode }
+			{ hasMatched },
+			{ status: 200 }
 		);
 	} catch (error) {
-		console.error("Error in POST /api/items/[id]/match:", error);
+		console.error("Error in GET /api/items/[id]/has-matched:", error);
 		return NextResponse.json(
 			{ error: "Internal Server Error" },
 			{ status: 500 }

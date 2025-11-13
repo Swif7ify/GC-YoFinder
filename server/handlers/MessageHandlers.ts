@@ -351,10 +351,14 @@ class MessageHandlers {
 				}
 			}
 			
-			// Increment unread count for other participants (not the sender)
+			// Update unread count: reset for sender (they're viewing/sending), increment for others
 			conversation.unread_count = conversation.unread_count.map((u) => {
 				const userId = u.user_id.toString();
-				if (otherParticipants.includes(userId)) {
+				if (userId === userID) {
+					// Reset unread count for sender (they're actively in the conversation)
+					return { ...u, count: 0 };
+				} else if (otherParticipants.includes(userId)) {
+					// Increment unread count for other participants
 					return { ...u, count: (u.count || 0) + 1 };
 				}
 				return u;
@@ -427,14 +431,13 @@ class MessageHandlers {
 						conversationId: conversationID,
 					}
 				);
-				// Also trigger unread count update for the recipient
-				if (participant.toString() !== userID) {
-					await pusher.trigger(
-						`private-user-${participant}`,
-						"unread-count-updated",
-						{}
-					);
-				}
+				// Trigger unread count update for both sender and recipient
+				// Sender's count should be 0 (they're viewing), recipient's should increment
+				await pusher.trigger(
+					`private-user-${participant}`,
+					"unread-count-updated",
+					{}
+				);
 			}
 
 			const formattedMessage = {
