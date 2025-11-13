@@ -6,12 +6,12 @@ import {
 	MenuIcon,
 	UserIcon,
 	XIcon,
-	Settings as SettingsIcon,
 	LogOut as LogOutIcon,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import DarkModeButton from "@/ui/DarkModeButton";
 import { UserData } from "@/types/types";
+import { useRouter } from "next/navigation";
 
 interface HeaderProps {
 	setShowMobileMenu: (show: boolean) => void;
@@ -44,6 +44,7 @@ export default function Header({
 	handleLogout,
 	userData,
 }: HeaderProps) {
+	const router = useRouter();
 	const notificationsRef = useRef<HTMLDivElement | null>(null);
 	const avatarRef = useRef<HTMLDivElement | null>(null);
 	const notificationButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -129,6 +130,11 @@ export default function Header({
 		showProfileMenu,
 		setShowProfileMenu,
 	]);
+
+	const handleProfileSettings = () => {
+		setShowProfileMenu(false);
+		router.push("/dashboard?tab=settings");
+	}
 
 	useEffect(() => {
 		setPhotoUrl(userData.photo?.url);
@@ -365,11 +371,7 @@ export default function Header({
 													type="button"
 													className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
 													role="menuitem"
-													onClick={() =>
-														setShowProfileMenu(
-															false
-														)
-													}
+													onClick={handleProfileSettings}
 												>
 													<div className="flex items-center">
 														<UserIcon
@@ -381,27 +383,7 @@ export default function Header({
 													</div>
 												</button>
 											</li>
-											<li>
-												<button
-													type="button"
-													className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-													role="menuitem"
-													onClick={() =>
-														setShowProfileMenu(
-															false
-														)
-													}
-												>
-													<div className="flex items-center">
-														<SettingsIcon
-															size={16}
-															className="mr-3"
-															aria-hidden="true"
-														/>
-														Account Settings
-													</div>
-												</button>
-											</li>
+											
 											<li className="border-t border-gray-100 dark:border-neutral-800 mt-1 pt-1">
 												<button
 													type="button"

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Moon } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 
 export default function DarkModeButton() {
 	const [isDarkMode, setIsDarkMode] = useState(false);
@@ -56,12 +56,7 @@ export default function DarkModeButton() {
 	return (
 		<>
 			<button disabled={isSwitch} onClick={handleToggleDarkMode}>
-				<Moon
-					fill={isDarkMode ? "white" : "black"}
-					stroke={isDarkMode ? "black" : "white"}
-					size={18}
-					className=" text-gray-900 dark:text-gray-300  rounded-md p-1 h-9 w-9 cursor-pointer"
-				/>
+				{isDarkMode ? <Moon className="text-gray-900 dark:text-gray-300" /> : <Sun className="text-yellow-500" />}
 			</button>
 		</>
 	);

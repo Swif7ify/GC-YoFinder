@@ -35,7 +35,7 @@ export default function RecentItemsComponent({
 			<ul className="space-y-3 h-full" role="list">
 				{recentItems_n.map((item) => (
 					<Link
-						href={`/dashboard?tab=search-items&item=${item.title}`}
+						href={`/dashboard?tab=search-items&itemId=${item.id}`}
 						key={item.id}
 						className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
 					>

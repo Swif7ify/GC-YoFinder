@@ -339,7 +339,7 @@ export default function DashboardPage() {
 		"my-items": (
 			<MyItemsComponent userItems={userItems} onUpdate={fetchUserItems} />
 		),
-		messages: <MessagesComponent />,
+		messages: <MessagesComponent userID={userID} />,
 		locations: <LocationsComponent />,
 		settings: (
 			<SettingsComponent userData={userData} onChange={fetchUserData} />

@@ -1,5 +1,6 @@
 import UserSchema from "@/server/models/UserSchema";
 import ItemsSchema from "@/server/models/ItemsSchema";
+import ItemViewSchema from "@/server/models/ItemViewSchema";
 import {
 	responsePayload,
 	serverResponseError,
@@ -11,6 +12,48 @@ import { connectToDatabase } from "@/server/lib/mongodb";
 import { deleteFiles } from "@/server/config/cloudinary.config";
 
 import { handleImagesUpload } from "@/server/utils/MultipleImageHandler";
+
+// Helper function to format item for response (matches getAllItems format)
+function formatItemForResponse(item: any) {
+	if (!item) return null;
+
+	// Extract user photo URL
+	let userPhoto = null;
+	if (item.user_id && item.user_id.photo) {
+		userPhoto =
+			typeof item.user_id.photo === "string"
+				? item.user_id.photo
+				: item.user_id.photo.url || null;
+	}
+
+	// Extract item photos URLs
+	let itemPhotos: string[] = [];
+	if (item.photos && Array.isArray(item.photos)) {
+		itemPhotos = item.photos
+			.map((photo: any) => {
+				if (typeof photo === "string") {
+					return photo;
+				}
+				return photo.url || null;
+			})
+			.filter(Boolean);
+	}
+
+	return {
+		...item,
+		id: item._id?.toString() || item.id,
+		user_id: item.user_id
+			? {
+					id: item.user_id._id?.toString() || item.user_id.id,
+					firstname: item.user_id.firstname,
+					lastname: item.user_id.lastname,
+					username: item.user_id.username,
+					photo: userPhoto,
+			  }
+			: null,
+		photos: itemPhotos,
+	};
+}
 
 interface ItemData {
 	type: string;
@@ -324,7 +367,228 @@ class ItemsHandlers {
 			await session.endSession();
 		}
 	}
+
+	// Track item view (only if not own item and not already viewed)
+	static async trackItemView(userID: string, itemID: string) {
+		await connectToDatabase();
+		try {
+			const validateFields = ValidateStringField(userID, itemID);
+			if (!validateFields)
+				return responsePayload(
+					null,
+					"error",
+					"Invalid user ID or item ID",
+					400
+				);
+
+			const user = await UserSchema.findById(userID);
+			if (!user) return userNotFoundError();
+
+			const item = await ItemsSchema.findById(itemID);
+			if (!item)
+				return responsePayload(null, "error", "Item not found", 404);
+
+			// Don't track views for own items
+			if (item.user_id.toString() === userID) {
+				return responsePayload(
+					null,
+					"success",
+					"View not tracked (own item)",
+					200
+				);
+			}
+
+			// Check if user has already viewed this item (without transaction to avoid conflicts)
+			const existingView = await ItemViewSchema.findOne({
+				item_id: itemID,
+				user_id: userID,
+			});
+
+			if (existingView) {
+				// Return the current item even if view was already tracked
+				const currentItem = await ItemsSchema.findById(itemID)
+					.populate("user_id", "firstname lastname username photo")
+					.lean();
+				
+				// Format the item to match AllItem structure
+				const formattedItem = formatItemForResponse(currentItem);
+				return responsePayload(
+					formattedItem,
+					"success",
+					"View already tracked",
+					200
+				);
+			}
+
+			// Try to create view record atomically using upsert
+			// This handles race conditions where multiple requests come in simultaneously
+			try {
+				const result = await ItemViewSchema.findOneAndUpdate(
+					{
+						item_id: itemID,
+						user_id: userID,
+					},
+					{
+						$setOnInsert: {
+							item_id: itemID,
+							user_id: userID,
+							viewed_at: new Date(),
+						},
+					},
+					{
+						upsert: true,
+						new: true,
+						rawResult: true,
+					}
+				);
+
+				// Check if document was actually created (not just found and updated)
+				// If upserted field exists, it means a new document was created
+				const wasCreated = result.lastErrorObject?.upserted !== undefined;
+
+				if (wasCreated) {
+					// Only increment view count if we actually created a new view record
+					await ItemsSchema.findByIdAndUpdate(itemID, {
+						$inc: { views: 1 },
+					});
+				}
+			} catch (createError: any) {
+				// Handle duplicate key error (E11000) or write conflict gracefully
+				if (
+					createError.code === 11000 ||
+					createError.codeName === "WriteConflict" ||
+					createError.code === 112
+				) {
+					// View was already created by another concurrent request
+					// Return the current item with updated view count
+					const currentItem = await ItemsSchema.findById(itemID)
+						.populate("user_id", "firstname lastname username photo")
+						.lean();
+					
+					// Format the item to match AllItem structure
+					const formattedItem = formatItemForResponse(currentItem);
+					return responsePayload(
+						formattedItem,
+						"success",
+						"View already tracked",
+						200
+					);
+				}
+				throw createError; // Re-throw if it's a different error
+			}
+
+			// Fetch the updated item with the new view count
+			const updatedItem = await ItemsSchema.findById(itemID)
+				.populate("user_id", "firstname lastname username photo")
+				.lean();
+
+			// Format the item to match AllItem structure
+			const formattedItem = formatItemForResponse(updatedItem);
+			return responsePayload(
+				formattedItem,
+				"success",
+				"View tracked successfully",
+				200
+			);
+		} catch (error: any) {
+			// Handle write conflicts gracefully
+			if (
+				error.code === 11000 ||
+				error.codeName === "WriteConflict" ||
+				error.code === 112
+			) {
+				// Return the current item even if view was already tracked
+				const currentItem = await ItemsSchema.findById(itemID)
+					.populate("user_id", "firstname lastname username photo")
+					.lean();
+				
+				// Format the item to match AllItem structure
+				const formattedItem = formatItemForResponse(currentItem);
+				return responsePayload(
+					formattedItem,
+					"success",
+					"View already tracked",
+					200
+				);
+			}
+			console.error("Error tracking item view:", error);
+			return serverResponseError();
+		}
+	}
+
+	// Track item match (when someone claims they found/lost this item)
+	static async trackItemMatch(userID: string, itemID: string) {
+		await connectToDatabase();
+		const session = await mongoose.startSession();
+		try {
+			const validateFields = ValidateStringField(userID, itemID);
+			if (!validateFields)
+				return responsePayload(
+					null,
+					"error",
+					"Invalid user ID or item ID",
+					400
+				);
+
+			const user = await UserSchema.findById(userID);
+			if (!user) return userNotFoundError();
+
+			const item = await ItemsSchema.findById(itemID);
+			if (!item)
+				return responsePayload(null, "error", "Item not found", 404);
+
+			// Don't allow matching own items
+			if (item.user_id.toString() === userID) {
+				return responsePayload(
+					null,
+					"error",
+					"Cannot match your own item",
+					400
+				);
+			}
+
+			// Don't allow matching if already claimed
+			if (item.status === "claimed") {
+				return responsePayload(
+					null,
+					"error",
+					"Item has already been claimed",
+					400
+				);
+			}
+
+			session.startTransaction();
+
+			// Increment match count
+			await ItemsSchema.findByIdAndUpdate(
+				itemID,
+				{ $inc: { matched: 1 } },
+				{ session }
+			);
+
+			await session.commitTransaction();
+
+			return responsePayload(
+				null,
+				"success",
+				"Match tracked successfully",
+				200
+			);
+		} catch (error) {
+			await session.abortTransaction();
+			console.error("Error tracking item match:", error);
+			return serverResponseError();
+		} finally {
+			await session.endSession();
+		}
+	}
 }
 
-export const { createNewItem, getUserItems, deleteItemByID, updateItemByID } =
-	ItemsHandlers;
+export const {
+	createNewItem,
+	getUserItems,
+	deleteItemByID,
+	updateItemByID,
+	trackItemView,
+	trackItemMatch,
+} = ItemsHandlers;
