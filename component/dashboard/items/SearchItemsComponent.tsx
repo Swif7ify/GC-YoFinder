@@ -247,8 +247,15 @@ export default function SearchItemsComponent({
 				return;
 			}
 
-			// Navigate to messages tab
-			router.push("/dashboard?tab=messages");
+			const data = await response.json();
+			const conversationId = data.conversation?._id || data.conversation?.id;
+
+			// Navigate to messages tab with conversation ID for auto-selection
+			if (conversationId) {
+				router.push(`/dashboard?tab=messages&conversationId=${conversationId}`);
+			} else {
+				router.push("/dashboard?tab=messages");
+			}
 			toastSuccess("Success", "Conversation started");
 		} catch (error) {
 			console.error("Error starting conversation:", error);

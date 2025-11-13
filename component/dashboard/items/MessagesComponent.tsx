@@ -8,6 +8,7 @@ import { useApiLoading } from "@/hooks/useApiLoading";
 import { toastError, toastSuccess } from "@/utils/toast";
 import Pusher from "pusher-js";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 
 interface MessagesComponentProps {
 	userID: string | null;
@@ -16,6 +17,7 @@ interface MessagesComponentProps {
 export default function MessagesComponent({
 	userID,
 }: MessagesComponentProps) {
+	const searchParams = useSearchParams();
 	const [conversations, setConversations] = useState<Conversation[]>([]);
 	const [selectedConversation, setSelectedConversation] =
 		useState<Conversation | null>(null);
@@ -51,6 +53,7 @@ export default function MessagesComponent({
 
 		// Subscribe to user-specific channel for conversation updates
 		const userChannel = pusher.subscribe(`private-user-${userID}`);
+		
 		const handleConversationUpdate = () => {
 			// Refresh conversations when updated
 			if (userID) {
@@ -62,7 +65,14 @@ export default function MessagesComponent({
 					})
 					.then((data) => {
 						if (data?.conversations) {
-							setConversations(data.conversations);
+							// Ensure unreadCount is a number
+							const formattedConversations = data.conversations.map((conv: any) => ({
+								...conv,
+								unreadCount: typeof conv.unreadCount === 'number' ? conv.unreadCount : (conv.unreadCount || 0),
+							}));
+							setConversations(formattedConversations);
+							// Trigger custom event to update unread count in parent
+							window.dispatchEvent(new CustomEvent("unreadCountUpdate"));
 						}
 					})
 					.catch((error) => {
@@ -72,9 +82,29 @@ export default function MessagesComponent({
 		};
 
 		userChannel.bind("conversation-updated", handleConversationUpdate);
+		userChannel.bind("new-message", handleConversationUpdate);
+		
+		// Listen for unread count updates
+		const handleUnreadCountUpdate = () => {
+			// Trigger custom event to update unread count in parent
+			window.dispatchEvent(new CustomEvent("unreadCountUpdate"));
+		};
+		userChannel.bind("unread-count-updated", handleUnreadCountUpdate);
+		
+		// Listen for new notifications
+		const handleNewNotification = (data: { notification: any }) => {
+			// Trigger custom event to update notifications in parent with the notification data
+			window.dispatchEvent(new CustomEvent("notificationUpdate", { detail: data.notification }));
+			// Also trigger unread count update since a new notification means potentially new unread messages
+			window.dispatchEvent(new CustomEvent("unreadCountUpdate"));
+		};
+		userChannel.bind("new-notification", handleNewNotification);
 
 		return () => {
 			userChannel.unbind("conversation-updated", handleConversationUpdate);
+			userChannel.unbind("new-message", handleConversationUpdate);
+			userChannel.unbind("unread-count-updated", handleUnreadCountUpdate);
+			userChannel.unbind("new-notification", handleNewNotification);
 			pusher.disconnect();
 		};
 	}, [userID]);
@@ -95,7 +125,13 @@ export default function MessagesComponent({
 			}
 
 			const data = await response.json();
-			setConversations(data.conversations || []);
+			const conversationsData = data.conversations || [];
+			// Ensure unreadCount is a number
+			const formattedConversations = conversationsData.map((conv: any) => ({
+				...conv,
+				unreadCount: typeof conv.unreadCount === 'number' ? conv.unreadCount : (conv.unreadCount || 0),
+			}));
+			setConversations(formattedConversations);
 		} catch (error) {
 			console.error("Error fetching conversations:", error);
 			toastError("Error", "Failed to load conversations");
@@ -110,6 +146,22 @@ export default function MessagesComponent({
 			fetchConversations();
 		}
 	}, [userID]);
+
+	// Auto-select conversation from URL parameter
+	useEffect(() => {
+		const conversationId = searchParams.get("conversationId");
+		if (conversationId && conversations.length > 0) {
+			const conversation = conversations.find((c) => c.id === conversationId);
+			if (conversation && (!selectedConversation || selectedConversation.id !== conversationId)) {
+				handleConversationClick(conversation);
+				// Clean up URL parameter
+				const url = new URL(window.location.href);
+				url.searchParams.delete("conversationId");
+				window.history.replaceState({}, "", url.toString());
+			}
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [conversations, searchParams]);
 
 	// Fetch messages for a conversation
 	const fetchMessages = async (conversationID: string) => {
@@ -141,6 +193,10 @@ export default function MessagesComponent({
 						: conv
 				)
 			);
+
+			// Trigger custom event to update unread count in parent
+			// This ensures the sidebar badge updates when messages are marked as read
+			window.dispatchEvent(new CustomEvent("unreadCountUpdate"));
 		} catch (error) {
 			console.error("Error fetching messages:", error);
 			toastError("Error", "Failed to load messages");
@@ -195,12 +251,16 @@ export default function MessagesComponent({
 								unreadCount:
 									selectedConversation?.id === conversation.id
 										? 0
-										: conv.unreadCount + 1,
+										: (conv.unreadCount || 0) + 1,
 							};
 						}
 						return conv;
 					})
 				);
+
+				// Trigger custom event to update unread count in parent
+				// This ensures the sidebar badge updates when conversations change
+				window.dispatchEvent(new CustomEvent("unreadCountUpdate"));
 
 				// Scroll to bottom
 				setTimeout(() => {
@@ -268,6 +328,9 @@ export default function MessagesComponent({
 					return conv;
 				})
 			);
+
+			// Trigger custom event to update unread count in parent
+			window.dispatchEvent(new CustomEvent("unreadCountUpdate"));
 
 			// Scroll to bottom
 			setTimeout(() => {
@@ -411,9 +474,19 @@ export default function MessagesComponent({
 													<p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
 														{conversation.name}
 													</p>
-													<span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
-														{conversation.time}
-													</span>
+													<div className="flex items-center gap-2 flex-shrink-0">
+														{conversation.unreadCount > 0 && (
+															<span
+																className="bg-red-500 text-white text-xs font-medium px-2 py-0.5 rounded-full min-w-[20px] text-center"
+																aria-label={`${conversation.unreadCount} new messages`}
+															>
+																{conversation.unreadCount > 99 ? "99+" : conversation.unreadCount}
+															</span>
+														)}
+														<span className="text-xs text-gray-500 dark:text-gray-400">
+															{conversation.time}
+														</span>
+													</div>
 												</div>
 												<p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mb-1 truncate">
 													{conversation.subject}
@@ -422,16 +495,6 @@ export default function MessagesComponent({
 													{conversation.lastMessage}
 												</p>
 											</div>
-
-											{/* Unread Badge */}
-											{conversation.unreadCount > 0 && (
-												<span
-													className="flex-shrink-0 bg-emerald-500 text-white text-xs font-medium px-2 py-0.5 rounded-full"
-													aria-label={`${conversation.unreadCount} new messages`}
-												>
-													{conversation.unreadCount}
-												</span>
-											)}
 										</div>
 									</button>
 								</li>

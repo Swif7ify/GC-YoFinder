@@ -11,6 +11,7 @@ import { ValidateStringField } from "@/server/utils/DataValitdation";
 import mongoose from "mongoose";
 import { connectToDatabase } from "@/server/lib/mongodb";
 import pusher from "@/server/config/pusher.config";
+import { createNotification } from "./NotificationHandlers";
 
 class MessageHandlers {
 	// Get or create a conversation between two users (optionally about an item)
@@ -74,6 +75,23 @@ class MessageHandlers {
 				.populate("participants", "firstname lastname username photo")
 				.populate("item_id", "name photos")
 				.lean();
+
+			// Create notification for the other user about the new conversation
+			if (itemID) {
+				const item = await ItemsSchema.findById(itemID).lean();
+				const itemName = item ? (item as any).name : "an item";
+				const initiatorName = `${user.firstname} ${user.lastname}`;
+				
+				await createNotification(
+					otherUserID,
+					"message",
+					"New Message",
+					`${initiatorName} started a conversation about your item: ${itemName}`,
+					itemID,
+					newConversation._id.toString(),
+					userID
+				);
+			}
 
 			return responsePayload(
 				populated,
@@ -315,12 +333,29 @@ class MessageHandlers {
 			conversation.updated_at = new Date();
 
 			// Update unread count for other participants
-			const otherParticipants = conversation.participants.filter(
-				(p) => p.toString() !== userID
-			);
+			const otherParticipants = conversation.participants
+				.filter((p) => p.toString() !== userID)
+				.map((p) => p.toString());
+			
+			// Ensure unread_count entries exist for all participants
+			for (const participant of conversation.participants) {
+				const participantId = participant.toString();
+				const existingUnread = conversation.unread_count.find(
+					(u) => u.user_id.toString() === participantId
+				);
+				if (!existingUnread) {
+					conversation.unread_count.push({
+						user_id: participant as any,
+						count: 0,
+					});
+				}
+			}
+			
+			// Increment unread count for other participants (not the sender)
 			conversation.unread_count = conversation.unread_count.map((u) => {
-				if (otherParticipants.includes(u.user_id as any)) {
-					return { ...u, count: u.count + 1 };
+				const userId = u.user_id.toString();
+				if (otherParticipants.includes(userId)) {
+					return { ...u, count: (u.count || 0) + 1 };
 				}
 				return u;
 			});
@@ -328,6 +363,30 @@ class MessageHandlers {
 			await conversation.save({ session });
 
 			await session.commitTransaction();
+
+			// Create notification for other participants if this is the first message
+			const messageCount = await MessageSchema.countDocuments({
+				conversation_id: conversationID,
+			});
+
+			if (messageCount === 1 && conversation.item_id) {
+				// First message in conversation - notify the other participant
+				const item = await ItemsSchema.findById(conversation.item_id).lean();
+				const itemName = item ? (item as any).name : "an item";
+				const senderName = `${user.firstname} ${user.lastname}`;
+				
+				for (const participantID of otherParticipants) {
+					await createNotification(
+						participantID.toString(),
+						"message",
+						"New Message",
+						`${senderName} sent you a message about ${itemName}`,
+						conversation.item_id.toString(),
+						conversationID,
+						userID
+					);
+				}
+			}
 
 			// Populate message for Pusher
 			const populatedMessage = await MessageSchema.findById(
@@ -359,14 +418,23 @@ class MessageHandlers {
 			});
 
 			// Also trigger conversation update for both participants
+			// This will update the unread count in real-time
 			for (const participant of conversation.participants) {
 				await pusher.trigger(
-					`user-${participant}`,
+					`private-user-${participant}`,
 					"conversation-updated",
 					{
 						conversationId: conversationID,
 					}
 				);
+				// Also trigger unread count update for the recipient
+				if (participant.toString() !== userID) {
+					await pusher.trigger(
+						`private-user-${participant}`,
+						"unread-count-updated",
+						{}
+					);
+				}
 			}
 
 			const formattedMessage = {
@@ -468,6 +536,21 @@ class MessageHandlers {
 			await conversation.save({ session });
 
 			await session.commitTransaction();
+
+			// Trigger conversation update for the user who marked messages as read
+			await pusher.trigger(
+				`private-user-${userID}`,
+				"conversation-updated",
+				{
+					conversationId: conversationID,
+				}
+			);
+			// Also trigger unread count update
+			await pusher.trigger(
+				`private-user-${userID}`,
+				"unread-count-updated",
+				{}
+			);
 
 			return responsePayload(
 				null,

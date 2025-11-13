@@ -128,9 +128,16 @@ export default function DetailsModal({
 				return;
 			}
 
-			// Close modal and navigate to messages
+			const data = await response.json();
+			const conversationId = data.conversation?._id || data.conversation?.id;
+
+			// Close modal and navigate to messages with conversation ID
 			onClose();
-			router.push("/dashboard?tab=messages");
+			if (conversationId) {
+				router.push(`/dashboard?tab=messages&conversationId=${conversationId}`);
+			} else {
+				router.push("/dashboard?tab=messages");
+			}
 			toastSuccess("Success", "Conversation started");
 		} catch (error) {
 			console.error("Error starting conversation:", error);
