@@ -1,6 +1,73 @@
 let isRefreshing = false;
 let refreshPromise: Promise<string> | null = null;
 
+const simpleCache = new Map<string, { ts: number; data: any }>();
+const CACHE_TTL = 30_000; // 30s
+const MAX_CACHE_SIZE = 100; // Prevent memory leaks
+
+// Stable cache key generation
+function getCacheKey(url: string, options: any): string {
+	const sortedOptions = options
+		? JSON.stringify(options, Object.keys(options).sort())
+		: "{}";
+	return `${url}::${sortedOptions}`;
+}
+
+// Clean old entries when cache gets too large
+function cleanCache() {
+	if (simpleCache.size <= MAX_CACHE_SIZE) return;
+
+	const entries = Array.from(simpleCache.entries());
+	const sorted = entries.sort((a, b) => a[1].ts - b[1].ts);
+
+	// Remove oldest 20% of entries
+	const toRemove = Math.floor(MAX_CACHE_SIZE * 0.2);
+	for (let i = 0; i < toRemove; i++) {
+		simpleCache.delete(sorted[i][0]);
+	}
+}
+
+// Cache invalidation helper
+export function invalidateCache(pattern?: string | RegExp) {
+	if (!pattern) {
+		simpleCache.clear();
+		return;
+	}
+
+	const keys = Array.from(simpleCache.keys());
+	const regex = typeof pattern === "string" ? new RegExp(pattern) : pattern;
+
+	keys.forEach((key) => {
+		if (regex.test(key)) {
+			simpleCache.delete(key);
+		}
+	});
+}
+
+export async function apiCached(url: string, options = {}, useCache = true) {
+	const key = getCacheKey(url, options);
+
+	if (useCache) {
+		const hit = simpleCache.get(key);
+		if (hit && Date.now() - hit.ts < CACHE_TTL) {
+			return new Response(JSON.stringify(hit.data), { status: 200 });
+		}
+	}
+
+	const res = await api(url, options);
+	const payload = await res
+		.clone()
+		.json()
+		.catch(() => null);
+
+	if (useCache && payload) {
+		simpleCache.set(key, { ts: Date.now(), data: payload });
+		cleanCache(); // Prevent memory leaks
+	}
+
+	return res;
+}
+
 async function refreshAccessToken(): Promise<string> {
 	if (isRefreshing && refreshPromise) {
 		return refreshPromise;
