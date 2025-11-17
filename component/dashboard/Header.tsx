@@ -6,12 +6,12 @@ import {
 	MenuIcon,
 	UserIcon,
 	XIcon,
-	Settings as SettingsIcon,
 	LogOut as LogOutIcon,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import DarkModeButton from "@/ui/DarkModeButton";
 import { UserData } from "@/types/types";
+import { useRouter } from "next/navigation";
 
 interface HeaderProps {
 	setShowMobileMenu: (show: boolean) => void;
@@ -22,11 +22,12 @@ interface HeaderProps {
 	setShowProfileMenu: (show: boolean) => void;
 	unreadCount: number;
 	mockNotifications: {
-		id: number;
+		id: string;
 		title: string;
 		message: string;
 		time: string;
 		isRead: boolean;
+		conversationId?: string;
 	}[];
 	handleLogout: () => void;
 	userData: UserData;
@@ -44,6 +45,7 @@ export default function Header({
 	handleLogout,
 	userData,
 }: HeaderProps) {
+	const router = useRouter();
 	const notificationsRef = useRef<HTMLDivElement | null>(null);
 	const avatarRef = useRef<HTMLDivElement | null>(null);
 	const notificationButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -130,6 +132,11 @@ export default function Header({
 		setShowProfileMenu,
 	]);
 
+	const handleProfileSettings = () => {
+		setShowProfileMenu(false);
+		router.push("/dashboard?tab=settings");
+	}
+
 	useEffect(() => {
 		setPhotoUrl(userData.photo?.url);
 	}, [userData])
@@ -186,13 +193,15 @@ export default function Header({
 								unreadCount > 0 ? `(${unreadCount} unread)` : ""
 							}`}
 						>
-							<BellIcon size={20} aria-hidden="true" />
-							{unreadCount > 0 && (
-								<span
-									className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500"
-									aria-hidden="true"
-								></span>
-							)}
+						<BellIcon size={20} aria-hidden="true" />
+						{unreadCount > 0 && (
+							<span
+								className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-medium px-1.5 py-0.5 rounded-full min-w-[18px] text-center"
+								aria-label={`${unreadCount} unread notifications`}
+							>
+								{unreadCount > 99 ? "99+" : unreadCount}
+							</span>
+						)}
 						</button>
 						<AnimatePresence>
 							{showNotifications && (
@@ -231,6 +240,23 @@ export default function Header({
 																	? "bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30"
 																	: "hover:bg-gray-100 dark:hover:bg-gray-700/50"
 															} border-b border-gray-100 dark:border-neutral-800`}
+															onClick={async () => {
+																if (notification.conversationId) {
+																	router.push(`/dashboard?tab=messages&conversationId=${notification.conversationId}`);
+																	setShowNotifications(false);
+																	// Mark notification as read
+																	if (!notification.isRead) {
+																		try {
+																			await fetch(`/api/notifications/${notification.id}`, {
+																				method: "PUT",
+																			});
+																			window.dispatchEvent(new CustomEvent("notificationUpdate"));
+																		} catch (error) {
+																			console.error("Error marking notification as read:", error);
+																		}
+																	}
+																}
+															}}
 														>
 															<div className="flex">
 																<div
@@ -294,7 +320,22 @@ export default function Header({
 										)}
 									</div>
 									<div className="px-4 py-2 border-t border-gray-100 dark:border-neutral-800 mt-1">
-										<button className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium w-full text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded py-1">
+										<button
+											onClick={async () => {
+												try {
+													const response = await fetch("/api/notifications", {
+														method: "PUT",
+													});
+													if (response.ok) {
+														// Refresh notifications
+														window.dispatchEvent(new CustomEvent("unreadCountUpdate"));
+													}
+												} catch (error) {
+													console.error("Error marking notifications as read:", error);
+												}
+											}}
+											className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium w-full text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded py-1"
+										>
 											Mark all as read
 										</button>
 									</div>
@@ -365,11 +406,7 @@ export default function Header({
 													type="button"
 													className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
 													role="menuitem"
-													onClick={() =>
-														setShowProfileMenu(
-															false
-														)
-													}
+													onClick={handleProfileSettings}
 												>
 													<div className="flex items-center">
 														<UserIcon
@@ -381,27 +418,7 @@ export default function Header({
 													</div>
 												</button>
 											</li>
-											<li>
-												<button
-													type="button"
-													className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-													role="menuitem"
-													onClick={() =>
-														setShowProfileMenu(
-															false
-														)
-													}
-												>
-													<div className="flex items-center">
-														<SettingsIcon
-															size={16}
-															className="mr-3"
-															aria-hidden="true"
-														/>
-														Account Settings
-													</div>
-												</button>
-											</li>
+											
 											<li className="border-t border-gray-100 dark:border-neutral-800 mt-1 pt-1">
 												<button
 													type="button"

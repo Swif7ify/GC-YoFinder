@@ -8,6 +8,7 @@ interface SidebarProps {
 	navItems: { name: string; icon: React.ReactNode }[];
 	showMobileMenu: boolean;
 	setShowMobileMenu: (show: boolean) => void;
+	unreadMessageCount?: number;
 }
 
 export default function Sidebar({
@@ -17,6 +18,7 @@ export default function Sidebar({
 	navItems,
 	showMobileMenu,
 	setShowMobileMenu,
+	unreadMessageCount = 0,
 }: SidebarProps) {
 	return (
 		<>
@@ -67,7 +69,15 @@ export default function Sidebar({
 											>
 												{item.icon}
 											</span>
-											<span>{item.name}</span>
+											<span className="flex-1">{item.name}</span>
+											{item.name === "Messages" && unreadMessageCount > 0 && (
+												<span
+													className="ml-2 bg-red-500 text-white text-xs font-medium px-2 py-0.5 rounded-full min-w-[20px] text-center flex-shrink-0"
+													aria-label={`${unreadMessageCount} unread messages`}
+												>
+													{unreadMessageCount > 99 ? "99+" : unreadMessageCount}
+												</span>
+											)}
 										</button>
 									</li>
 								);
@@ -171,7 +181,15 @@ export default function Sidebar({
 													>
 														{item.icon}
 													</span>
-													<span>{item.name}</span>
+													<span className="flex-1">{item.name}</span>
+													{item.name === "Messages" && unreadMessageCount > 0 && (
+														<span
+															className="ml-2 bg-red-500 text-white text-xs font-medium px-2 py-0.5 rounded-full min-w-[20px] text-center"
+															aria-label={`${unreadMessageCount} unread messages`}
+														>
+															{unreadMessageCount > 99 ? "99+" : unreadMessageCount}
+														</span>
+													)}
 												</button>
 											</li>
 										);

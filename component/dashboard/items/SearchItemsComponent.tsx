@@ -21,6 +21,8 @@ import { ITEM_CATEGORIES, AllItem } from "@/types/types";
 import CustomSelect from "@/ui/CustomSelect";
 import DetailsModal from "./SearchItems/detailsModal";
 import dayjs from "dayjs";
+import { api } from "@/lib/api.config";
+import { toastError, toastSuccess } from "@/utils/toast";
 
 interface SearchItemsComponentProps {
 	allItems: AllItem[];
@@ -72,10 +74,21 @@ export default function SearchItemsComponent({
 	const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 
 	useEffect(() => {
-		const itemTitle = searchParams.get("item");
-		if (!itemTitle) return;
-		setSearchQuery(decodeURIComponent(itemTitle));
-	}, [searchParams]);
+		const itemId = searchParams.get("itemId");
+		if (!itemId || allItems.length === 0) return;
+		
+		// Find the item by ID and open the modal
+		const foundItem = allItems.find((item) => item.id === itemId);
+		if (foundItem) {
+			setSelectedItem(foundItem);
+			// Clean up the URL parameter after opening the modal
+			try {
+				router.replace(`${pathname}?tab=search-items`);
+			} catch {
+				router.replace("/dashboard?tab=search-items");
+			}
+		}
+	}, [searchParams, allItems, pathname, router]);
 
 	useEffect(() => {
 		try {
@@ -169,7 +182,7 @@ export default function SearchItemsComponent({
 		setFilterCategory("all");
 		setFilterLocation("all");
 		setSortBy("latest");
-		if (!searchParams.get("item")) return;
+		if (!searchParams.get("itemId") && !searchParams.get("item")) return;
 		try {
 			router.replace(`${pathname}?tab=search-items`);
 		} catch {
@@ -201,6 +214,52 @@ export default function SearchItemsComponent({
 			await onPageChange(newPage, paginationMeta.limit, false, filters);
 		} finally {
 			setIsLoadingPage(false);
+		}
+	};
+
+	const handleStartConversation = async (item: AllItem) => {
+		if (!userID) {
+			toastError("Error", "You must be logged in to send messages");
+			return;
+		}
+
+		if (item.user_id.id === userID) {
+			toastError("Error", "Cannot message yourself");
+			return;
+		}
+
+		try {
+			// Create or get conversation
+			const response = await api("/api/messages/conversations", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					otherUserID: item.user_id.id,
+					itemID: item.id,
+				}),
+			});
+
+			if (response.status !== 200 && response.status !== 201) {
+				const data = await response.json();
+				toastError("Error", data.error || "Failed to start conversation");
+				return;
+			}
+
+			const data = await response.json();
+			const conversationId = data.conversation?._id || data.conversation?.id;
+
+			// Navigate to messages tab with conversation ID for auto-selection
+			if (conversationId) {
+				router.push(`/dashboard?tab=messages&conversationId=${conversationId}`);
+			} else {
+				router.push("/dashboard?tab=messages");
+			}
+			toastSuccess("Success", "Conversation started");
+		} catch (error) {
+			console.error("Error starting conversation:", error);
+			toastError("Error", "Failed to start conversation");
 		}
 	};
 
@@ -525,7 +584,7 @@ export default function SearchItemsComponent({
 					<div
 						className={
 							viewMode === "grid"
-								? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6"
+								? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
 								: "space-y-4"
 						}
 					>
@@ -644,6 +703,7 @@ export default function SearchItemsComponent({
 											{item.user_id.id !== userID && (
 												<button
 													type="button"
+													onClick={() => handleStartConversation(item)}
 													className="px-4 py-2 border border-gray-300 dark:border-neutral-700  hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
 													aria-label={`Contact about ${item.name}`}
 												>
@@ -776,6 +836,7 @@ export default function SearchItemsComponent({
 												{item.user_id.id !== userID && (
 													<button
 														type="button"
+														onClick={() => handleStartConversation(item)}
 														className="px-4 py-2 border border-gray-300 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
 														aria-label={`Contact about ${item.name}`}
 													>
@@ -851,6 +912,15 @@ export default function SearchItemsComponent({
 					item={selectedItem}
 					onClose={() => setSelectedItem(null)}
 					isOwnItem={selectedItem.user_id.id === userID}
+					userID={userID}
+					onItemUpdate={(updatedItem) => {
+						setItems((prev) =>
+							prev.map((i) =>
+								i.id === updatedItem.id ? updatedItem : i
+							)
+						);
+						setSelectedItem(updatedItem);
+					}}
 				/>
 			)}
 		</div>

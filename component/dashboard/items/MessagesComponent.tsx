@@ -1,112 +1,356 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { MessageSquare, Send, Search } from "lucide-react";
 import { Conversation, Message } from "@/types/types";
+import { api } from "@/lib/api.config";
+import { useApiLoading } from "@/hooks/useApiLoading";
+import { toastError, toastSuccess } from "@/utils/toast";
+import Pusher from "pusher-js";
+import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 
-export default function MessagesComponent() {
+interface MessagesComponentProps {
+	userID: string | null;
+}
+
+export default function MessagesComponent({
+	userID,
+}: MessagesComponentProps) {
+	const searchParams = useSearchParams();
 	const [conversations, setConversations] = useState<Conversation[]>([]);
 	const [selectedConversation, setSelectedConversation] =
 		useState<Conversation | null>(null);
 	const [messages, setMessages] = useState<Message[]>([]);
 	const [newMessage, setNewMessage] = useState("");
 	const [searchQuery, setSearchQuery] = useState("");
+	const [isLoading, setIsLoading] = useState(false);
+	const [isSending, setIsSending] = useState(false);
+	const { withLoading } = useApiLoading();
+	const pusherRef = useRef<Pusher | null>(null);
+	const channelRef = useRef<any>(null);
+	const messagesEndRef = useRef<HTMLDivElement>(null);
 
+	// Initialize Pusher
 	useEffect(() => {
-		// Mock conversation data
-		setConversations([
-			{
-				id: "1",
-				name: "Emily Johnson",
-				subject: "Re: Water Bottle",
-				lastMessage:
-					"Hi, I found your water bottle at the gym yesterday.",
-				time: "14:30",
-				unreadCount: 2,
-			},
-			{
-				id: "2",
-				name: "Michael Chen",
-				subject: "Re: Textbook - Organic Chemistry",
-				lastMessage: "Is this textbook still available?",
-				time: "09:15",
-				unreadCount: 0,
-			},
-			{
-				id: "3",
-				name: "Sarah Williams",
-				subject: "Re: Student ID Card",
-				lastMessage: "Thank you for finding my student ID!",
-				time: "16:45",
-				unreadCount: 0,
-			},
-		]);
-	}, []);
+		if (!userID) return;
 
-	const handleConversationClick = (conversation: Conversation) => {
-		setSelectedConversation(conversation);
+		const pusherKey = process.env.NEXT_PUBLIC_PUSHER_KEY;
+		const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER || "us2";
 
-		// Mock messages for the selected conversation
-		if (conversation.id === "1") {
-			setMessages([
-				{
-					id: "1",
-					senderId: "1",
-					senderName: "Emily Johnson",
-					content:
-						"Hi, I found your water bottle at the gym yesterday.",
-					timestamp: "14:25",
-					isOwn: false,
-				},
-				{
-					id: "2",
-					senderId: "me",
-					senderName: "You",
-					content:
-						"That's great! Can you describe what it looks like?",
-					timestamp: "14:28",
-					isOwn: true,
-				},
-				{
-					id: "3",
-					senderId: "1",
-					senderName: "Emily Johnson",
-					content:
-						"It's a blue Hydro Flask with a sticker on it. Does that sound right?",
-					timestamp: "14:30",
-					isOwn: false,
-				},
-			]);
+		if (!pusherKey) {
+			console.error("Pusher key not configured");
+			return;
 		}
 
-		// Mark as read
-		setConversations((prev) =>
-			prev.map((conv) =>
-				conv.id === conversation.id ? { ...conv, unreadCount: 0 } : conv
-			)
-		);
-	};
+		const pusher = new Pusher(pusherKey, {
+			cluster: pusherCluster,
+			authEndpoint: "/api/pusher/auth",
+			// Don't set Content-Type header - let Pusher use its default form-encoded format
+		});
 
-	const handleSendMessage = (e: React.FormEvent) => {
-		e.preventDefault();
-		if (!newMessage.trim() || !selectedConversation) return;
+		pusherRef.current = pusher;
 
-		const message: Message = {
-			id: Date.now().toString(),
-			senderId: "me",
-			senderName: "You",
-			content: newMessage,
-			timestamp: new Date().toLocaleTimeString("en-US", {
-				hour: "2-digit",
-				minute: "2-digit",
-				hour12: false,
-			}),
-			isOwn: true,
+		// Subscribe to user-specific channel for conversation updates
+		const userChannel = pusher.subscribe(`private-user-${userID}`);
+		
+		const handleConversationUpdate = () => {
+			// Refresh conversations when updated
+			if (userID) {
+				api("/api/messages/conversations")
+					.then((response) => {
+						if (response.status === 200) {
+							return response.json();
+						}
+					})
+					.then((data) => {
+						if (data?.conversations) {
+							// Ensure unreadCount is a number
+							const formattedConversations = data.conversations.map((conv: any) => ({
+								...conv,
+								unreadCount: typeof conv.unreadCount === 'number' ? conv.unreadCount : (conv.unreadCount || 0),
+							}));
+							setConversations(formattedConversations);
+							// Trigger custom event to update unread count in parent
+							window.dispatchEvent(new CustomEvent("unreadCountUpdate"));
+						}
+					})
+					.catch((error) => {
+						console.error("Error refreshing conversations:", error);
+					});
+			}
 		};
 
-		setMessages([...messages, message]);
-		setNewMessage("");
+		userChannel.bind("conversation-updated", handleConversationUpdate);
+		userChannel.bind("new-message", handleConversationUpdate);
+		
+		// Listen for unread count updates
+		const handleUnreadCountUpdate = () => {
+			// Trigger custom event to update unread count in parent
+			window.dispatchEvent(new CustomEvent("unreadCountUpdate"));
+		};
+		userChannel.bind("unread-count-updated", handleUnreadCountUpdate);
+		
+		// Listen for new notifications
+		const handleNewNotification = (data: { notification: any }) => {
+			// Trigger custom event to update notifications in parent with the notification data
+			window.dispatchEvent(new CustomEvent("notificationUpdate", { detail: data.notification }));
+			// Also trigger unread count update since a new notification means potentially new unread messages
+			window.dispatchEvent(new CustomEvent("unreadCountUpdate"));
+		};
+		userChannel.bind("new-notification", handleNewNotification);
+
+		return () => {
+			userChannel.unbind("conversation-updated", handleConversationUpdate);
+			userChannel.unbind("new-message", handleConversationUpdate);
+			userChannel.unbind("unread-count-updated", handleUnreadCountUpdate);
+			userChannel.unbind("new-notification", handleNewNotification);
+			pusher.disconnect();
+		};
+	}, [userID]);
+
+	// Fetch conversations
+	const fetchConversations = async () => {
+		if (!userID) return;
+
+		try {
+			setIsLoading(true);
+			const response = await withLoading(() =>
+				api("/api/messages/conversations")
+			);
+
+			if (response.status !== 200) {
+				toastError("Error", "Failed to load conversations");
+				return;
+			}
+
+			const data = await response.json();
+			const conversationsData = data.conversations || [];
+			// Ensure unreadCount is a number
+			const formattedConversations = conversationsData.map((conv: any) => ({
+				...conv,
+				unreadCount: typeof conv.unreadCount === 'number' ? conv.unreadCount : (conv.unreadCount || 0),
+			}));
+			setConversations(formattedConversations);
+		} catch (error) {
+			console.error("Error fetching conversations:", error);
+			toastError("Error", "Failed to load conversations");
+		} finally {
+			setIsLoading(false);
+		}
 	};
+
+	// Fetch conversations on mount
+	useEffect(() => {
+		if (userID) {
+			fetchConversations();
+		}
+	}, [userID]);
+
+	// Auto-select conversation from URL parameter
+	useEffect(() => {
+		const conversationId = searchParams.get("conversationId");
+		if (conversationId && conversations.length > 0) {
+			const conversation = conversations.find((c) => c.id === conversationId);
+			if (conversation && (!selectedConversation || selectedConversation.id !== conversationId)) {
+				handleConversationClick(conversation);
+				// Clean up URL parameter
+				const url = new URL(window.location.href);
+				url.searchParams.delete("conversationId");
+				window.history.replaceState({}, "", url.toString());
+			}
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [conversations, searchParams]);
+
+	// Fetch messages for a conversation
+	const fetchMessages = async (conversationID: string) => {
+		if (!userID) return;
+
+		try {
+			const response = await api(
+				`/api/messages/conversations/${conversationID}`
+			);
+
+			if (response.status !== 200) {
+				toastError("Error", "Failed to load messages");
+				return;
+			}
+
+			const data = await response.json();
+			setMessages(data.messages || []);
+
+			// Mark messages as read
+			await api(`/api/messages/conversations/${conversationID}`, {
+				method: "PUT",
+			});
+
+			// Update unread count in conversations list
+			setConversations((prev) =>
+				prev.map((conv) =>
+					conv.id === conversationID
+						? { ...conv, unreadCount: 0 }
+						: conv
+				)
+			);
+
+			// Trigger custom event to update unread count in parent
+			// This ensures the sidebar badge updates when messages are marked as read
+			window.dispatchEvent(new CustomEvent("unreadCountUpdate"));
+		} catch (error) {
+			console.error("Error fetching messages:", error);
+			toastError("Error", "Failed to load messages");
+		}
+	};
+
+	const handleConversationClick = async (conversation: Conversation) => {
+		setSelectedConversation(conversation);
+		setMessages([]);
+
+		// Unsubscribe from previous channel
+		if (channelRef.current) {
+			channelRef.current.unbind_all();
+			channelRef.current.unsubscribe();
+		}
+
+		// Subscribe to conversation channel for real-time messages
+		if (pusherRef.current) {
+			const channel = pusherRef.current.subscribe(
+				`conversation-${conversation.id}`
+			);
+
+			channel.bind("new-message", (data: { message: Message }) => {
+				// Check if this message is from the current user
+				// If so, don't add it (it was already added when they sent it)
+				if (data.message.senderId === userID) {
+					return; // Don't add duplicate message
+				}
+
+				// Set isOwn based on whether the sender is the current user
+				const messageToAdd: Message = {
+					...data.message,
+					isOwn: data.message.senderId === userID,
+				};
+
+				setMessages((prev) => {
+					// Check if message already exists to avoid duplicates
+					if (prev.some((m) => m.id === messageToAdd.id)) {
+						return prev;
+					}
+					return [...prev, messageToAdd];
+				});
+
+				// Update conversation list with new message
+				setConversations((prev) =>
+					prev.map((conv) => {
+						if (conv.id === conversation.id) {
+							return {
+								...conv,
+								lastMessage: messageToAdd.content,
+								time: messageToAdd.timestamp,
+								unreadCount:
+									selectedConversation?.id === conversation.id
+										? 0
+										: (conv.unreadCount || 0) + 1,
+							};
+						}
+						return conv;
+					})
+				);
+
+				// Trigger custom event to update unread count in parent
+				// This ensures the sidebar badge updates when conversations change
+				window.dispatchEvent(new CustomEvent("unreadCountUpdate"));
+
+				// Scroll to bottom
+				setTimeout(() => {
+					messagesEndRef.current?.scrollIntoView({
+						behavior: "smooth",
+					});
+				}, 100);
+			});
+
+			channelRef.current = channel;
+		}
+
+		// Fetch messages
+		await fetchMessages(conversation.id);
+	};
+
+	const handleSendMessage = async (e: React.FormEvent) => {
+		e.preventDefault();
+		if (!newMessage.trim() || !selectedConversation || isSending) return;
+
+		try {
+			setIsSending(true);
+			const response = await api("/api/messages/send", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					conversationID: selectedConversation.id,
+					content: newMessage,
+				}),
+			});
+
+			if (response.status !== 201) {
+				const data = await response.json();
+				toastError("Error", data.error || "Failed to send message");
+				return;
+			}
+
+			const data = await response.json();
+			// Add the message to the list (it's from the current user)
+			const sentMessage: Message = {
+				...data.message,
+				isOwn: true,
+			};
+			setMessages((prev) => {
+				// Check if message already exists to avoid duplicates
+				if (prev.some((m) => m.id === sentMessage.id)) {
+					return prev;
+				}
+				return [...prev, sentMessage];
+			});
+			setNewMessage("");
+
+			// Update conversation list and reset unread count for this conversation
+			setConversations((prev) =>
+				prev.map((conv) => {
+					if (conv.id === selectedConversation.id) {
+						return {
+							...conv,
+							lastMessage: data.message.content,
+							time: data.message.timestamp,
+							unreadCount: 0, // Reset unread count since user is actively viewing
+						};
+					}
+					return conv;
+				})
+			);
+
+			// Trigger custom event to update unread count in parent
+			window.dispatchEvent(new CustomEvent("unreadCountUpdate"));
+
+			// Scroll to bottom
+			setTimeout(() => {
+				messagesEndRef.current?.scrollIntoView({
+					behavior: "smooth",
+				});
+			}, 100);
+		} catch (error) {
+			console.error("Error sending message:", error);
+			toastError("Error", "Failed to send message");
+		} finally {
+			setIsSending(false);
+		}
+	};
+
+	// Scroll to bottom when messages change
+	useEffect(() => {
+		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+	}, [messages]);
 
 	const filteredConversations = conversations.filter(
 		(conv) =>
@@ -161,6 +405,16 @@ export default function MessagesComponent() {
 					{/* Conversations */}
 					<nav className="flex-1 overflow-y-auto">
 						<ul role="list">
+							{isLoading && conversations.length === 0 && (
+								<li className="px-4 py-3 text-center text-gray-500 dark:text-gray-400">
+									Loading conversations...
+								</li>
+							)}
+							{!isLoading && filteredConversations.length === 0 && (
+								<li className="px-4 py-3 text-center text-gray-500 dark:text-gray-400">
+									No conversations yet
+								</li>
+							)}
 							{filteredConversations.map((conversation) => (
 								<li key={conversation.id}>
 									<button
@@ -186,13 +440,34 @@ export default function MessagesComponent() {
 										<div className="flex items-start gap-3">
 											{/* Avatar */}
 											<div
-												className="flex-shrink-0 w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-medium"
+												className="flex-shrink-0 w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-medium overflow-hidden"
 												aria-hidden="true"
 											>
-												{conversation.name
-													.split(" ")
-													.map((n) => n[0])
-													.join("")}
+												{(() => {
+													const photo = (conversation as any).otherParticipant?.photo;
+													const photoUrl = typeof photo === "string" 
+														? photo 
+														: photo?.url;
+													
+													if (photoUrl && photoUrl.trim() !== "") {
+														return (
+															<Image
+																src={photoUrl}
+																alt={conversation.name}
+																width={40}
+																height={40}
+																className="w-full h-full object-cover"
+															/>
+														);
+													}
+													
+													return conversation.name
+														.split(" ")
+														.map((n) => n[0])
+														.slice(0, 2)
+														.join("")
+														.toUpperCase();
+												})()}
 											</div>
 
 											<div className="flex-1 min-w-0">
@@ -200,9 +475,19 @@ export default function MessagesComponent() {
 													<p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
 														{conversation.name}
 													</p>
-													<span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
-														{conversation.time}
-													</span>
+													<div className="flex items-center gap-2 flex-shrink-0">
+														{conversation.unreadCount > 0 && (
+															<span
+																className="bg-red-500 text-white text-xs font-medium px-2 py-0.5 rounded-full min-w-[20px] text-center"
+																aria-label={`${conversation.unreadCount} new messages`}
+															>
+																{conversation.unreadCount > 99 ? "99+" : conversation.unreadCount}
+															</span>
+														)}
+														<span className="text-xs text-gray-500 dark:text-gray-400">
+															{conversation.time}
+														</span>
+													</div>
 												</div>
 												<p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mb-1 truncate">
 													{conversation.subject}
@@ -211,16 +496,6 @@ export default function MessagesComponent() {
 													{conversation.lastMessage}
 												</p>
 											</div>
-
-											{/* Unread Badge */}
-											{conversation.unreadCount > 0 && (
-												<span
-													className="flex-shrink-0 bg-emerald-500 text-white text-xs font-medium px-2 py-0.5 rounded-full"
-													aria-label={`${conversation.unreadCount} new messages`}
-												>
-													{conversation.unreadCount}
-												</span>
-											)}
 										</div>
 									</button>
 								</li>
@@ -240,13 +515,34 @@ export default function MessagesComponent() {
 							<header className="p-4 border-b border-gray-200 dark:border-neutral-800">
 								<div className="flex items-center gap-3">
 									<div
-										className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-medium"
+										className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-medium overflow-hidden"
 										aria-hidden="true"
 									>
-										{selectedConversation.name
-											.split(" ")
-											.map((n) => n[0])
-											.join("")}
+										{(() => {
+											const photo = (selectedConversation as any).otherParticipant?.photo;
+											const photoUrl = typeof photo === "string" 
+												? photo 
+												: photo?.url;
+											
+											if (photoUrl && photoUrl.trim() !== "") {
+												return (
+													<Image
+														src={photoUrl}
+														alt={selectedConversation.name}
+														width={40}
+														height={40}
+														className="w-full h-full object-cover"
+													/>
+												);
+											}
+											
+											return selectedConversation.name
+												.split(" ")
+												.map((n) => n[0])
+												.slice(0, 2)
+												.join("")
+												.toUpperCase();
+										})()}
 									</div>
 									<div>
 										<h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
@@ -266,6 +562,11 @@ export default function MessagesComponent() {
 								aria-live="polite"
 								aria-label="Messages"
 							>
+								{messages.length === 0 && (
+									<div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+										<p>No messages yet. Start the conversation!</p>
+									</div>
+								)}
 								{messages.map((message) => (
 									<div
 										key={message.id}
@@ -305,6 +606,7 @@ export default function MessagesComponent() {
 										</div>
 									</div>
 								))}
+								<div ref={messagesEndRef} />
 							</div>
 
 							{/* Message Input */}
@@ -325,7 +627,7 @@ export default function MessagesComponent() {
 									/>
 									<button
 										type="submit"
-										disabled={!newMessage.trim()}
+										disabled={!newMessage.trim() || isSending}
 										className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-colors"
 										aria-label="Send message"
 									>

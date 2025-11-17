@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
 	X,
 	MapPin,
@@ -15,15 +15,17 @@ import {
 	Tag,
 	AlertCircle,
 	CheckCircle2,
-	Heart,
-	Bookmark,
 	Edit,
+	Link as LinkIcon,
 } from "lucide-react";
 import { AllItem } from "@/types/types";
 import { motion, AnimatePresence } from "framer-motion";
 import CloudinaryImagePreview from "@/ui/CloudinaryImagePreview";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import { api } from "@/lib/api.config";
+import { toastError, toastSuccess } from "@/utils/toast";
+import { useRouter } from "next/navigation";
 
 dayjs.extend(relativeTime);
 
@@ -31,40 +33,241 @@ interface DetailsModalProps {
 	item: AllItem;
 	onClose: () => void;
 	isOwnItem: boolean;
+	userID: string | null;
+	onItemUpdate?: (updatedItem: AllItem) => void;
 }
 
 export default function DetailsModal({
 	item,
 	onClose,
 	isOwnItem,
+	userID,
+	onItemUpdate,
 }: DetailsModalProps) {
-	const [isSaved, setIsSaved] = useState(false);
-	const [isLiked, setIsLiked] = useState(false);
+	const [currentItem, setCurrentItem] = useState<AllItem>(item);
+	const [isClaiming, setIsClaiming] = useState(false);
+	const [hasMatched, setHasMatched] = useState(false);
+	const [pendingUpdate, setPendingUpdate] = useState<AllItem | null>(null);
+	const router = useRouter();
 
-	const handleSave = () => {
-		// TODO: Implement save/bookmark functionality
-		setIsSaved(!isSaved);
+	// Track view when modal opens (only if not own item)
+	useEffect(() => {
+		if (!isOwnItem && userID) {
+			api(`/api/items/${item.id}/view`, {
+				method: "POST",
+			})
+				.then((response) => {
+					if (response.status === 200) {
+						return response.json();
+					}
+					return null;
+				})
+				.then((data) => {
+					// Use the updated item returned from the server
+					if (data?.item) {
+						const updatedItem = data.item;
+						setCurrentItem(updatedItem);
+						if (onItemUpdate) {
+							setPendingUpdate(updatedItem);
+						}
+					}
+				})
+				.catch((error) => {
+					console.error("Error tracking view:", error);
+				});
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []); // Only run once when modal opens
+
+	// Update parent component when item changes (deferred to avoid render issues)
+	useEffect(() => {
+		if (pendingUpdate && onItemUpdate) {
+			onItemUpdate(pendingUpdate);
+			setPendingUpdate(null);
+		}
+	}, [pendingUpdate, onItemUpdate]);
+
+	// Check if user has already matched this item
+	useEffect(() => {
+		if (!isOwnItem && userID) {
+			api(`/api/items/${item.id}/has-matched`)
+				.then((response) => {
+					if (response.status === 200) {
+						return response.json();
+					}
+					return null;
+				})
+				.then((data) => {
+					if (data?.hasMatched) {
+						setHasMatched(true);
+					}
+				})
+				.catch((error) => {
+					console.error("Error checking match status:", error);
+				});
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [item.id, isOwnItem, userID]);
+
+	const copyLinkToClipboard = async (url: string) => {
+		try {
+			await navigator.clipboard.writeText(url);
+			toastSuccess("Success", "Link copied to clipboard!");
+		} catch (error) {
+			console.error("Failed to copy link:", error);
+			// Fallback for older browsers
+			const textArea = document.createElement("textarea");
+			textArea.value = url;
+			textArea.style.position = "fixed";
+			textArea.style.opacity = "0";
+			document.body.appendChild(textArea);
+			textArea.select();
+			try {
+				document.execCommand("copy");
+				toastSuccess("Success", "Link copied to clipboard!");
+			} catch (err) {
+				toastError("Error", "Failed to copy link");
+			}
+			document.body.removeChild(textArea);
+		}
 	};
 
-	const handleLike = () => {
-		// TODO: Implement like/favorite functionality
-		setIsLiked(!isLiked);
+	const handleContact = async () => {
+		if (!userID) {
+			toastError("Error", "You must be logged in to send messages");
+			return;
+		}
+
+		if (isOwnItem) {
+			toastError("Error", "Cannot message yourself");
+			return;
+		}
+
+		try {
+			// Create or get conversation
+			const response = await api("/api/messages/conversations", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					otherUserID: currentItem.user_id.id,
+					itemID: currentItem.id,
+				}),
+			});
+
+			if (response.status !== 200 && response.status !== 201) {
+				const data = await response.json();
+				toastError("Error", data.error || "Failed to start conversation");
+				return;
+			}
+
+			const data = await response.json();
+			const conversationId = data.conversation?._id || data.conversation?.id;
+
+			// Close modal and navigate to messages with conversation ID
+			onClose();
+			if (conversationId) {
+				router.push(`/dashboard?tab=messages&conversationId=${conversationId}`);
+			} else {
+				router.push("/dashboard?tab=messages");
+			}
+			toastSuccess("Success", "Conversation started");
+		} catch (error) {
+			console.error("Error starting conversation:", error);
+			toastError("Error", "Failed to start conversation");
+		}
 	};
 
-	const handleContact = () => {
-		// TODO: Implement contact/message functionality
-	};
+	const handleShare = async () => {
+		const itemUrl = `${window.location.origin}/dashboard?tab=search-items&itemId=${currentItem.id}`;
+		const shareText = `Check out this ${currentItem.type} item: ${currentItem.name}`;
 
-	const handleShare = () => {
-		// TODO: Implement share functionality (copy link, social media, etc.)
+		// Check if Web Share API is available
+		if (navigator.share) {
+			try {
+				await navigator.share({
+					title: `${currentItem.name} - GC Yofinder`,
+					text: shareText,
+					url: itemUrl,
+				});
+				toastSuccess("Success", "Item shared successfully");
+			} catch (error: any) {
+				// User cancelled or error occurred
+				if (error.name !== "AbortError") {
+					console.error("Error sharing:", error);
+					// Fallback to copying link
+					await copyLinkToClipboard(itemUrl);
+				}
+			}
+		} else {
+			// Fallback to copying link
+			await copyLinkToClipboard(itemUrl);
+		}
 	};
 
 	const handleReport = () => {
 		// TODO: Implement report functionality
 	};
 
-	const handleClaim = () => {
-		// TODO: Implement claim item functionality
+	const handleClaim = async () => {
+		if (!userID) {
+			toastError("Error", "You must be logged in to claim items");
+			return;
+		}
+
+		if (isOwnItem) {
+			toastError("Error", "Cannot claim your own item");
+			return;
+		}
+
+		if (currentItem.status === "claimed") {
+			toastError("Error", "This item has already been claimed");
+			return;
+		}
+
+		try {
+			setIsClaiming(true);
+			const response = await api(`/api/items/${currentItem.id}/match`, {
+				method: "POST",
+			});
+
+			if (response.status !== 200) {
+				const data = await response.json();
+				toastError("Error", data.error || "Failed to track match");
+				return;
+			}
+
+			const data = await response.json();
+			
+			// Mark as matched
+			setHasMatched(true);
+
+			// Update match count from server response
+			if (data?.item) {
+				const updated = data.item;
+				setCurrentItem(updated);
+				setPendingUpdate(updated);
+			} else {
+				// Fallback: update locally
+				const updated = {
+					...currentItem,
+					matched: currentItem.matched + 1,
+				};
+				setCurrentItem(updated);
+				setPendingUpdate(updated);
+			}
+
+			toastSuccess(
+				"Success",
+				`Match recorded! The owner will be notified.`
+			);
+		} catch (error) {
+			console.error("Error tracking match:", error);
+			toastError("Error", "Failed to track match");
+		} finally {
+			setIsClaiming(false);
+		}
 	};
 
 	return (
@@ -83,12 +286,12 @@ export default function DetailsModal({
 						<div className="flex items-center gap-3">
 							<div
 								className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1.5 ${
-									item.type === "lost"
+									currentItem.type === "lost"
 										? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300"
 										: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"
 								}`}
 							>
-								{item.type === "lost" ? (
+								{currentItem.type === "lost" ? (
 									<AlertCircle size={16} aria-hidden="true" />
 								) : (
 									<CheckCircle2
@@ -96,11 +299,11 @@ export default function DetailsModal({
 										aria-hidden="true"
 									/>
 								)}
-								{item.type === "lost"
+								{currentItem.type === "lost"
 									? "Lost Item"
 									: "Found Item"}
 							</div>
-							{item.status === "claimed" && (
+							{currentItem.status === "claimed" && (
 								<div className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
 									Claimed
 								</div>
@@ -108,42 +311,18 @@ export default function DetailsModal({
 						</div>
 						<div className="flex items-center gap-2">
 							{!isOwnItem && (
-								<>
-									<button
-										type="button"
-										onClick={handleSave}
-										className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${
-											isSaved
-												? "text-emerald-600 dark:text-emerald-400"
-												: "text-gray-600 dark:text-gray-400"
-										}`}
-										aria-label="Save item"
-									>
-										<Bookmark
-											size={20}
-											className={
-												isSaved ? "fill-current" : ""
-											}
-										/>
-									</button>
-									<button
-										type="button"
-										onClick={handleLike}
-										className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${
-											isLiked
-												? "text-red-600 dark:text-red-400"
-												: "text-gray-600 dark:text-gray-400"
-										}`}
-										aria-label="Like item"
-									>
-										<Heart
-											size={20}
-											className={
-												isLiked ? "fill-current" : ""
-											}
-										/>
-									</button>
-								</>
+								<button
+									type="button"
+									onClick={async () => {
+										const itemUrl = `${window.location.origin}/dashboard?tab=search-items&itemId=${currentItem.id}`;
+										await copyLinkToClipboard(itemUrl);
+									}}
+									className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
+									aria-label="Copy link"
+									title="Copy link"
+								>
+									<LinkIcon size={20} />
+								</button>
 							)}
 							{isOwnItem && (
 								<Link
@@ -159,6 +338,7 @@ export default function DetailsModal({
 								onClick={handleShare}
 								className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
 								aria-label="Share item"
+								title="Share item"
 							>
 								<Share2 size={20} />
 							</button>
@@ -180,84 +360,84 @@ export default function DetailsModal({
 							<div className="space-y-6">
 								{/* Images */}
 								<div>
-									<CloudinaryImagePreview
-										images={item.photos || []}
-										gridCols="3"
-										aspectRatio="square"
-										showCount={true}
-										allowDownload={false}
+								<CloudinaryImagePreview
+									images={currentItem.photos || []}
+									gridCols="3"
+									aspectRatio="square"
+									showCount={true}
+									allowDownload={false}
+								/>
+							</div>
+
+							{/* Item Details */}
+							<div>
+								<h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+									{currentItem.name}
+								</h2>
+
+								{/* Category */}
+								<div className="flex items-center gap-2 mb-4">
+									<Tag
+										size={16}
+										className="text-gray-500 dark:text-gray-400"
 									/>
+									<span className="text-sm text-gray-600 dark:text-gray-400">
+										{currentItem.category}
+									</span>
 								</div>
 
-								{/* Item Details */}
-								<div>
-									<h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-										{item.name}
-									</h2>
+								{/* Description */}
+								<div className="mb-4">
+									<h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+										Description
+									</h3>
+									<p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+										{currentItem.description}
+									</p>
+								</div>
 
-									{/* Category */}
-									<div className="flex items-center gap-2 mb-4">
-										<Tag
-											size={16}
-											className="text-gray-500 dark:text-gray-400"
-										/>
-										<span className="text-sm text-gray-600 dark:text-gray-400">
-											{item.category}
-										</span>
-									</div>
-
-									{/* Description */}
-									<div className="mb-4">
-										<h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-											Description
+								{/* Location */}
+								<div className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-neutral-800 rounded-lg mb-4">
+									<MapPin
+										size={20}
+										className="text-gray-500 dark:text-gray-400 flex-shrink-0 mt-0.5"
+									/>
+									<div>
+										<h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
+											Location
 										</h3>
-										<p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
-											{item.description}
+										<p className="text-sm text-gray-600 dark:text-gray-400">
+											{currentItem.location}
 										</p>
 									</div>
+								</div>
 
-									{/* Location */}
-									<div className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-neutral-800 rounded-lg mb-4">
-										<MapPin
-											size={20}
-											className="text-gray-500 dark:text-gray-400 flex-shrink-0 mt-0.5"
-										/>
-										<div>
-											<h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-												Location
-											</h3>
-											<p className="text-sm text-gray-600 dark:text-gray-400">
-												{item.location}
-											</p>
-										</div>
-									</div>
-
-									{/* Date */}
-									<div className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-neutral-800 rounded-lg">
-										<Calendar
-											size={20}
-											className="text-gray-500 dark:text-gray-400 flex-shrink-0 mt-0.5"
-										/>
-										<div>
-											<h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-												{item.type === "lost"
-													? "Date Lost"
-													: "Date Found"}
-											</h3>
-											<p className="text-sm text-gray-600 dark:text-gray-400">
+								{/* Date */}
+								<div className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-neutral-800 rounded-lg">
+									<Calendar
+										size={20}
+										className="text-gray-500 dark:text-gray-400 flex-shrink-0 mt-0.5"
+									/>
+									<div>
+										<h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
+											{currentItem.type === "lost"
+												? "Date Lost"
+												: "Date Found"}
+										</h3>
+										<p className="text-sm text-gray-600 dark:text-gray-400">
+											{dayjs(
+												currentItem.date_lost_or_found
+											).format("MMMM D, YYYY")}
+											<span className="text-xs text-gray-500 dark:text-gray-500 ml-2">
+												(
 												{dayjs(
-													item.date_lost_or_found
-												).format("MMMM D, YYYY")}
-												<span className="text-xs text-gray-500 dark:text-gray-500 ml-2">
-													(
-													{dayjs(
-														item.date_lost_or_found
-													).fromNow()}
-													)
-												</span>
-											</p>
-										</div>
+													currentItem.date_lost_or_found
+												).fromNow()}
+												)
+											</span>
+										</p>
 									</div>
+								</div>
 								</div>
 							</div>
 
@@ -266,7 +446,7 @@ export default function DetailsModal({
 								{/* Owner Information */}
 								<div className="bg-white dark:bg-neutral-800 rounded-lg border border-gray-200 dark:border-neutral-700 p-6">
 									<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-										{item.type === "lost"
+										{currentItem.type === "lost"
 											? "Posted By"
 											: "Found By"}
 									</h3>
@@ -274,10 +454,10 @@ export default function DetailsModal({
 									{/* User Avatar and Name */}
 									<div className="flex items-center gap-4 mb-4">
 										<div className="relative w-16 h-16 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
-											{item.user_id.photo ? (
+											{currentItem.user_id.photo ? (
 												<img
-													src={item.user_id.photo}
-													alt={`${item.user_id.firstname} ${item.user_id.lastname}`}
+													src={currentItem.user_id.photo}
+													alt={`${currentItem.user_id.firstname} ${currentItem.user_id.lastname}`}
 													className="w-full h-full object-cover"
 												/>
 											) : (
@@ -288,11 +468,11 @@ export default function DetailsModal({
 										</div>
 										<div>
 											<p className="font-semibold text-gray-900 dark:text-gray-100">
-												{item.user_id.firstname}{" "}
-												{item.user_id.lastname}
+												{currentItem.user_id.firstname}{" "}
+												{currentItem.user_id.lastname}
 											</p>
 											<p className="text-sm text-gray-600 dark:text-gray-400">
-												@{item.user_id.username}
+												@{currentItem.user_id.username}
 											</p>
 										</div>
 									</div>
@@ -334,7 +514,7 @@ export default function DetailsModal({
 												</span>
 											</div>
 											<span className="font-medium text-gray-900 dark:text-gray-100">
-												{item.views || 0}
+												{currentItem.views || 0}
 											</span>
 										</div>
 										<div className="flex items-center justify-between">
@@ -345,7 +525,7 @@ export default function DetailsModal({
 												</span>
 											</div>
 											<span className="font-medium text-gray-900 dark:text-gray-100">
-												{item.matched || 0}
+												{currentItem.matched || 0}
 											</span>
 										</div>
 										<div className="flex items-center justify-between">
@@ -381,15 +561,18 @@ export default function DetailsModal({
 									</div>
 								</div>
 								{/* Action Buttons */}
-								{item.status === "active" && !isOwnItem && (
+								{currentItem.status === "active" && !isOwnItem && !hasMatched && (
 									<div className="space-y-3">
 										<button
 											type="button"
 											onClick={handleClaim}
-											className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
+											disabled={isClaiming}
+											className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
 										>
 											<CheckCircle2 size={18} />
-											{item.type === "lost"
+											{isClaiming
+												? "Processing..."
+												: currentItem.type === "lost"
 												? "I Found This Item"
 												: "This is My Item"}
 										</button>
@@ -405,8 +588,8 @@ export default function DetailsModal({
 									</div>
 								)}{" "}
 								{/* Claimed Info */}
-								{item.status === "claimed" &&
-									item.claimed_at && (
+								{currentItem.status === "claimed" &&
+									currentItem.claimed_at && (
 										<div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
 											<div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 mb-2">
 												<CheckCircle2 size={18} />
@@ -416,7 +599,7 @@ export default function DetailsModal({
 											</div>
 											<p className="text-xs text-blue-600 dark:text-blue-400">
 												This item was claimed on{" "}
-												{dayjs(item.claimed_at).format(
+												{dayjs(currentItem.claimed_at).format(
 													"MMMM D, YYYY"
 												)}
 											</p>
@@ -439,11 +622,11 @@ export default function DetailsModal({
 					{/* Footer */}
 					<div className="flex items-center justify-between p-6 border-t border-gray-200 dark:border-neutral-800 bg-gray-50 dark:bg-neutral-800/50">
 						<div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-							<span>Item ID: {item.id}</span>
+							<span>Item ID: {currentItem.id}</span>
 							<span>•</span>
 							<span>
 								Posted{" "}
-								{dayjs(item.created_at).format("MMM D, YYYY")}
+								{dayjs(currentItem.created_at).format("MMM D, YYYY")}
 							</span>
 						</div>
 						<button
