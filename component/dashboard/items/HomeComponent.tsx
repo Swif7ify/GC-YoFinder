@@ -1,37 +1,21 @@
 import React, { useEffect, useState } from "react";
 import Dynamic from "next/dynamic";
 import { PackageSearch, PackagePlus, MessageSquare, Clock } from "lucide-react";
-import { RecentItems, RecentActivity } from "@/types/types";
+import { RecentItems, RecentActivity, StatsCard } from "@/types/types";
+import { StatsGrid, QuickActionsGrid, RecentItemsList } from "@/components/organisms";
 
-interface HomeComponentProps {
-	userFullName: string;
-	recentItems: RecentItems[];
-}
-import Stats from "@/component/dashboard/items/Home/Stats";
-
-import { StatsCard } from "@/types/types";
-const QuickActions = Dynamic(
-	() =>
-		import("@/component/dashboard/items/Home/QuickActions").then(
-			(mod) => mod.default
-		),
-	{ ssr: false }
-);
-const RecentItemsComponent = Dynamic(
-	() =>
-		import("@/component/dashboard/items/Home/RecentItems").then(
-			(mod) => mod.default
-		),
-	{ ssr: false }
-);
 const RecentActivityComponent = Dynamic(
 	() =>
 		import("@/component/dashboard/items/Home/RecentActivity").then(
 			(mod) => mod.default
 		),
-
 	{ ssr: false }
 );
+
+interface HomeComponentProps {
+	userFullName: string;
+	recentItems: RecentItems[];
+}
 
 export default function HomeComponent({
 	userFullName,
@@ -188,15 +172,15 @@ export default function HomeComponent({
 			</section>
 
 			{/* Stats Grid */}
-			<Stats stats={stats} />
+			<StatsGrid stats={stats} />
 
 			{/* Quick Actions */}
-			<QuickActions />
+			<QuickActionsGrid />
 
 			{/* Recent Items and Activity - Two Columns */}
 			<div className="flex flex-col gap-6">
 				{/* Recent Items */}
-				<RecentItemsComponent recentItems_n={recentItems_n} />
+				<RecentItemsList recentItems={recentItems_n} />
 
 				{/* Recent Activity */}
 				<RecentActivityComponent recentActivity={recentActivity} />
