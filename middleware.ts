@@ -17,48 +17,33 @@ export async function middleware(request: NextRequest, response: NextResponse) {
 		if (rememberToken) {
 			try {
 				const { selector, token } = JSON.parse(rememberToken);
-				const response = await fetch(
-					new URL("/api/auth/remember", request.url),
-					{
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ selector, token }),
-					}
-				);
+				const response = await fetch(new URL("/api/auth/remember", request.url), {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ selector, token }),
+				});
 
 				if (response.ok) {
 					const data = await response.json();
-					const redirectResponse = NextResponse.redirect(
-						new URL("/dashboard", request.url)
-					);
+					const redirectResponse = NextResponse.redirect(new URL("/dashboard", request.url));
 
-					redirectResponse.cookies.set(
-						"accessToken",
-						data.payload.accessToken,
-						{
-							httpOnly: true,
-							secure: true,
-							path: "/",
-							maxAge: 60 * 30,
-						}
-					);
+					redirectResponse.cookies.set("accessToken", data.payload.accessToken, {
+						httpOnly: true,
+						secure: true,
+						path: "/",
+						maxAge: 60 * 30,
+					});
 
-					redirectResponse.cookies.set(
-						"refreshToken",
-						data.payload.refreshToken,
-						{
-							httpOnly: true,
-							secure: true,
-							path: "/",
-							maxAge: 60 * 60 * 24,
-						}
-					);
+					redirectResponse.cookies.set("refreshToken", data.payload.refreshToken, {
+						httpOnly: true,
+						secure: true,
+						path: "/",
+						maxAge: 60 * 60 * 24,
+					});
 
 					return redirectResponse;
 				} else {
-					const redirectResponse = NextResponse.redirect(
-						new URL("/login", request.url)
-					);
+					const redirectResponse = NextResponse.redirect(new URL("/login", request.url));
 					redirectResponse.cookies.set("rememberToken", "", {
 						maxAge: 0,
 						path: "/",
@@ -95,9 +80,7 @@ export async function middleware(request: NextRequest, response: NextResponse) {
 				return NextResponse.redirect(new URL(`/`, request.url));
 			}
 
-			const { exp } = jwtDecode<{ exp: number; role: string }>(
-				accessToken
-			);
+			const { exp } = jwtDecode<{ exp: number; role: string }>(accessToken);
 			const now = dayjs().unix();
 
 			if (exp < now) {
@@ -116,25 +99,13 @@ export async function middleware(request: NextRequest, response: NextResponse) {
 				return NextResponse.redirect(new URL(`/`, request.url));
 			}
 
-			const { role } = jwtDecode<{ exp?: number; role?: string }>(
-				accessToken
-			);
+			const { role } = jwtDecode<{ exp?: number; role?: string }>(accessToken);
 
-			if (
-				request.nextUrl.pathname.startsWith("/admin-dashboard") &&
-				role !== "admin"
-			)
-				return NextResponse.redirect(
-					new URL("/login-admin", request.url)
-				);
+			if (request.nextUrl.pathname.startsWith("/admin-dashboard") && role !== "admin")
+				return NextResponse.redirect(new URL("/login-admin", request.url));
 
-			if (
-				request.nextUrl.pathname.startsWith("/dashboard") &&
-				role !== "student"
-			)
-				return NextResponse.redirect(
-					new URL("/login", request.url)
-				);
+			if (request.nextUrl.pathname.startsWith("/dashboard") && role !== "student")
+				return NextResponse.redirect(new URL("/login", request.url));
 
 			return NextResponse.next();
 		} catch {
