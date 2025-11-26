@@ -11,7 +11,11 @@ export async function middleware(request: NextRequest, response: NextResponse) {
 		const accessTokenRaw = request.cookies.get("accessToken")?.value;
 		const rememberToken = request.cookies.get("rememberToken")?.value;
 		if (accessTokenRaw) {
-			return NextResponse.redirect(new URL("/dashboard", request.url));
+			try {
+				const { role } = jwtDecode<{ role?: string }>(accessTokenRaw);
+				if (role === "admin") return NextResponse.redirect(new URL("/dashboard-admin", request.url));
+				return NextResponse.redirect(new URL("/dashboard", request.url));
+			} catch {}
 		}
 
 		if (rememberToken) {
@@ -120,5 +124,5 @@ export async function middleware(request: NextRequest, response: NextResponse) {
 }
 
 export const config = {
-	matcher: ["/login", "/dashboard/:path*"],
+	matcher: ["/login", "/login-admin", "/dashboard/:path*"],
 };
