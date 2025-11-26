@@ -2,11 +2,7 @@ import UserSchema from "@/server/models/UserSchema";
 import ConversationSchema from "@/server/models/ConversationSchema";
 import MessageSchema from "@/server/models/MessageSchema";
 import ItemsSchema from "@/server/models/ItemsSchema";
-import {
-	responsePayload,
-	serverResponseError,
-	userNotFoundError,
-} from "@/server/utils/responsePayload";
+import { responsePayload, serverResponseError, userNotFoundError } from "@/server/utils/responsePayload";
 import { ValidateStringField } from "@/server/utils/DataValitdation";
 import mongoose from "mongoose";
 import { connectToDatabase } from "@/server/lib/mongodb";
@@ -15,21 +11,11 @@ import { createNotification } from "./NotificationHandlers";
 
 class MessageHandlers {
 	// Get or create a conversation between two users (optionally about an item)
-	static async getOrCreateConversation(
-		userID: string,
-		otherUserID: string,
-		itemID?: string
-	) {
+	static async getOrCreateConversation(userID: string, otherUserID: string, itemID?: string) {
 		await connectToDatabase();
 		try {
 			const validateUserID = ValidateStringField(userID, otherUserID);
-			if (!validateUserID)
-				return responsePayload(
-					null,
-					"error",
-					"Invalid user IDs",
-					400
-				);
+			if (!validateUserID) return responsePayload(null, "error", "Invalid user IDs", 400);
 
 			const user = await UserSchema.findById(userID);
 			const otherUser = await UserSchema.findById(otherUserID);
@@ -42,19 +28,12 @@ class MessageHandlers {
 			}).populate("last_message");
 
 			if (existingConversation) {
-				const populated = await ConversationSchema.findById(
-					existingConversation._id
-				)
+				const populated = await ConversationSchema.findById(existingConversation._id)
 					.populate("participants", "firstname lastname username photo")
 					.populate("item_id", "name photos")
 					.lean();
 
-				return responsePayload(
-					populated,
-					"success",
-					"Conversation retrieved successfully",
-					200
-				);
+				return responsePayload(populated, "success", "Conversation retrieved successfully", 200);
 			}
 
 			// Create new conversation
@@ -69,9 +48,7 @@ class MessageHandlers {
 
 			await newConversation.save();
 
-			const populated = await ConversationSchema.findById(
-				newConversation._id
-			)
+			const populated = await ConversationSchema.findById(newConversation._id)
 				.populate("participants", "firstname lastname username photo")
 				.populate("item_id", "name photos")
 				.lean();
@@ -81,7 +58,7 @@ class MessageHandlers {
 				const item = await ItemsSchema.findById(itemID).lean();
 				const itemName = item ? (item as any).name : "an item";
 				const initiatorName = `${user.firstname} ${user.lastname}`;
-				
+
 				await createNotification(
 					otherUserID,
 					"message",
@@ -93,12 +70,7 @@ class MessageHandlers {
 				);
 			}
 
-			return responsePayload(
-				populated,
-				"success",
-				"Conversation created successfully",
-				201
-			);
+			return responsePayload(populated, "success", "Conversation created successfully", 201);
 		} catch (error) {
 			console.error("Error in getOrCreateConversation:", error);
 			return serverResponseError();
@@ -110,8 +82,7 @@ class MessageHandlers {
 		await connectToDatabase();
 		try {
 			const validateUserID = ValidateStringField(userID);
-			if (!validateUserID)
-				return responsePayload(null, "error", "Invalid user ID", 400);
+			if (!validateUserID) return responsePayload(null, "error", "Invalid user ID", 400);
 
 			const user = await UserSchema.findById(userID);
 			if (!user) return userNotFoundError();
@@ -127,12 +98,8 @@ class MessageHandlers {
 
 			// Format conversations for frontend
 			const formattedConversations = conversations.map((conv: any) => {
-				const otherParticipant = conv.participants.find(
-					(p: any) => p._id.toString() !== userID
-				);
-				const unreadData = conv.unread_count.find(
-					(u: any) => u.user_id.toString() === userID
-				);
+				const otherParticipant = conv.participants.find((p: any) => p._id.toString() !== userID);
+				const unreadData = conv.unread_count.find((u: any) => u.user_id.toString() === userID);
 				const lastMessage = conv.last_message;
 
 				return {
@@ -140,19 +107,14 @@ class MessageHandlers {
 					name: otherParticipant
 						? `${otherParticipant.firstname} ${otherParticipant.lastname}`
 						: "Unknown User",
-					subject: conv.item_id
-						? `Re: ${conv.item_id.name}`
-						: "General Conversation",
+					subject: conv.item_id ? `Re: ${conv.item_id.name}` : "General Conversation",
 					lastMessage: lastMessage?.content || "",
 					time: lastMessage?.created_at
-						? new Date(lastMessage.created_at).toLocaleTimeString(
-								"en-US",
-								{
-									hour: "2-digit",
-									minute: "2-digit",
-									hour12: false,
-								}
-						  )
+						? new Date(lastMessage.created_at).toLocaleTimeString("en-US", {
+								hour: "2-digit",
+								minute: "2-digit",
+								hour12: false,
+						  })
 						: "",
 					unreadCount: unreadData?.count || 0,
 					otherParticipant: otherParticipant,
@@ -160,12 +122,7 @@ class MessageHandlers {
 				};
 			});
 
-			return responsePayload(
-				formattedConversations,
-				"success",
-				"Conversations retrieved successfully",
-				200
-			);
+			return responsePayload(formattedConversations, "success", "Conversations retrieved successfully", 200);
 		} catch (error) {
 			console.error("Error in getUserConversations:", error);
 			return serverResponseError();
@@ -173,48 +130,21 @@ class MessageHandlers {
 	}
 
 	// Get messages for a conversation
-	static async getConversationMessages(
-		userID: string,
-		conversationID: string,
-		page = 1,
-		limit = 50
-	) {
+	static async getConversationMessages(userID: string, conversationID: string, page = 1, limit = 50) {
 		await connectToDatabase();
 		try {
-			const validateUserID = ValidateStringField(
-				userID,
-				conversationID
-			);
-			if (!validateUserID)
-				return responsePayload(
-					null,
-					"error",
-					"Invalid user ID or conversation ID",
-					400
-				);
+			const validateUserID = ValidateStringField(userID, conversationID);
+			if (!validateUserID) return responsePayload(null, "error", "Invalid user ID or conversation ID", 400);
 
 			const user = await UserSchema.findById(userID);
 			if (!user) return userNotFoundError();
 
-			const conversation = await ConversationSchema.findById(
-				conversationID
-			);
-			if (!conversation)
-				return responsePayload(
-					null,
-					"error",
-					"Conversation not found",
-					404
-				);
+			const conversation = await ConversationSchema.findById(conversationID);
+			if (!conversation) return responsePayload(null, "error", "Conversation not found", 404);
 
 			// Check if user is a participant
 			if (!conversation.participants.includes(userID as any))
-				return responsePayload(
-					null,
-					"error",
-					"Unauthorized access to conversation",
-					403
-				);
+				return responsePayload(null, "error", "Unauthorized access to conversation", 403);
 
 			page = Math.max(1, Number(page) || 1);
 			limit = Math.max(1, Math.min(100, Number(limit) || 50));
@@ -229,33 +159,23 @@ class MessageHandlers {
 				.lean();
 
 			// Format messages for frontend
-			const formattedMessages = messages
-				.reverse()
-				.map((msg: any) => ({
-					id: msg._id.toString(),
-					senderId: msg.sender_id._id.toString(),
-					senderName:
-						msg.sender_id._id.toString() === userID
-							? "You"
-							: `${msg.sender_id.firstname} ${msg.sender_id.lastname}`,
-					content: msg.content,
-					timestamp: new Date(msg.created_at).toLocaleTimeString(
-						"en-US",
-						{
-							hour: "2-digit",
-							minute: "2-digit",
-							hour12: false,
-						}
-					),
-					isOwn: msg.sender_id._id.toString() === userID,
-				}));
+			const formattedMessages = messages.reverse().map((msg: any) => ({
+				id: msg._id.toString(),
+				senderId: msg.sender_id._id.toString(),
+				senderName:
+					msg.sender_id._id.toString() === userID
+						? "You"
+						: `${msg.sender_id.firstname} ${msg.sender_id.lastname}`,
+				content: msg.content,
+				timestamp: new Date(msg.created_at).toLocaleTimeString("en-US", {
+					hour: "2-digit",
+					minute: "2-digit",
+					hour12: false,
+				}),
+				isOwn: msg.sender_id._id.toString() === userID,
+			}));
 
-			return responsePayload(
-				formattedMessages,
-				"success",
-				"Messages retrieved successfully",
-				200
-			);
+			return responsePayload(formattedMessages, "success", "Messages retrieved successfully", 200);
 		} catch (error) {
 			console.error("Error in getConversationMessages:", error);
 			return serverResponseError();
@@ -263,57 +183,24 @@ class MessageHandlers {
 	}
 
 	// Send a message
-	static async sendMessage(
-		userID: string,
-		conversationID: string,
-		content: string
-	) {
+	static async sendMessage(userID: string, conversationID: string, content: string) {
 		await connectToDatabase();
 		const session = await mongoose.startSession();
 		try {
-			const validateUserID = ValidateStringField(
-				userID,
-				conversationID,
-				content
-			);
-			if (!validateUserID)
-				return responsePayload(
-					null,
-					"error",
-					"Invalid input data",
-					400
-				);
+			const validateUserID = ValidateStringField(userID, conversationID, content);
+			if (!validateUserID) return responsePayload(null, "error", "Invalid input data", 400);
 
-			if (!content.trim())
-				return responsePayload(
-					null,
-					"error",
-					"Message content cannot be empty",
-					400
-				);
+			if (!content.trim()) return responsePayload(null, "error", "Message content cannot be empty", 400);
 
 			const user = await UserSchema.findById(userID);
 			if (!user) return userNotFoundError();
 
-			const conversation = await ConversationSchema.findById(
-				conversationID
-			);
-			if (!conversation)
-				return responsePayload(
-					null,
-					"error",
-					"Conversation not found",
-					404
-				);
+			const conversation = await ConversationSchema.findById(conversationID);
+			if (!conversation) return responsePayload(null, "error", "Conversation not found", 404);
 
 			// Check if user is a participant
 			if (!conversation.participants.includes(userID as any))
-				return responsePayload(
-					null,
-					"error",
-					"Unauthorized access to conversation",
-					403
-				);
+				return responsePayload(null, "error", "Unauthorized access to conversation", 403);
 
 			session.startTransaction();
 
@@ -334,14 +221,14 @@ class MessageHandlers {
 
 			// Update unread count for other participants
 			const otherParticipants = conversation.participants
-				.filter((p) => p.toString() !== userID)
-				.map((p) => p.toString());
-			
+				.filter((p: any) => p.toString() !== userID)
+				.map((p: any) => p.toString());
+
 			// Ensure unread_count entries exist for all participants
 			for (const participant of conversation.participants) {
-				const participantId = participant.toString();
+				const participantId = (participant as any).toString();
 				const existingUnread = conversation.unread_count.find(
-					(u) => u.user_id.toString() === participantId
+					(u: any) => u.user_id.toString() === participantId
 				);
 				if (!existingUnread) {
 					conversation.unread_count.push({
@@ -350,14 +237,14 @@ class MessageHandlers {
 					});
 				}
 			}
-			
+
 			// Update unread count: reset for sender (they're viewing/sending), increment for others
-			conversation.unread_count = conversation.unread_count.map((u) => {
-				const userId = u.user_id.toString();
-				if (userId === userID) {
+			conversation.unread_count = conversation.unread_count.map((u: any) => {
+				const odUserId = u.user_id.toString();
+				if (odUserId === userID) {
 					// Reset unread count for sender (they're actively in the conversation)
 					return { ...u, count: 0 };
-				} else if (otherParticipants.includes(userId)) {
+				} else if (otherParticipants.includes(odUserId)) {
 					// Increment unread count for other participants
 					return { ...u, count: (u.count || 0) + 1 };
 				}
@@ -378,7 +265,7 @@ class MessageHandlers {
 				const item = await ItemsSchema.findById(conversation.item_id).lean();
 				const itemName = item ? (item as any).name : "an item";
 				const senderName = `${user.firstname} ${user.lastname}`;
-				
+
 				for (const participantID of otherParticipants) {
 					await createNotification(
 						participantID.toString(),
@@ -393,26 +280,24 @@ class MessageHandlers {
 			}
 
 			// Populate message for Pusher
-			const populatedMessage = await MessageSchema.findById(
-				newMessage._id
-			)
+			const populatedMessageDoc = await MessageSchema.findById(newMessage._id)
 				.populate("sender_id", "firstname lastname username photo")
 				.lean();
+
+			const populatedMessage = populatedMessageDoc as any;
 
 			// Trigger Pusher event for real-time updates
 			// Only send to other participants, not the sender (they already have the message)
 			const channelName = `conversation-${conversationID}`;
-			const senderIdStr = (populatedMessage!.sender_id as any)._id.toString();
-			
+			const senderIdStr = populatedMessage.sender_id._id.toString();
+
 			await pusher.trigger(channelName, "new-message", {
 				message: {
-					id: populatedMessage!._id.toString(),
+					id: populatedMessage._id.toString(),
 					senderId: senderIdStr,
-					senderName: `${(populatedMessage!.sender_id as any).firstname} ${(populatedMessage!.sender_id as any).lastname}`,
-					content: populatedMessage!.content,
-					timestamp: new Date(
-						populatedMessage!.created_at
-					).toLocaleTimeString("en-US", {
+					senderName: `${populatedMessage.sender_id.firstname} ${populatedMessage.sender_id.lastname}`,
+					content: populatedMessage.content,
+					timestamp: new Date(populatedMessage.created_at).toLocaleTimeString("en-US", {
 						hour: "2-digit",
 						minute: "2-digit",
 						hour12: false,
@@ -424,30 +309,20 @@ class MessageHandlers {
 			// Also trigger conversation update for both participants
 			// This will update the unread count in real-time
 			for (const participant of conversation.participants) {
-				await pusher.trigger(
-					`private-user-${participant}`,
-					"conversation-updated",
-					{
-						conversationId: conversationID,
-					}
-				);
+				await pusher.trigger(`private-user-${participant}`, "conversation-updated", {
+					conversationId: conversationID,
+				});
 				// Trigger unread count update for both sender and recipient
 				// Sender's count should be 0 (they're viewing), recipient's should increment
-				await pusher.trigger(
-					`private-user-${participant}`,
-					"unread-count-updated",
-					{}
-				);
+				await pusher.trigger(`private-user-${participant}`, "unread-count-updated", {});
 			}
 
 			const formattedMessage = {
-				id: populatedMessage!._id.toString(),
-				senderId: (populatedMessage!.sender_id as any)._id.toString(),
+				id: populatedMessage._id.toString(),
+				senderId: populatedMessage.sender_id._id.toString(),
 				senderName: "You",
-				content: populatedMessage!.content,
-				timestamp: new Date(
-					populatedMessage!.created_at
-				).toLocaleTimeString("en-US", {
+				content: populatedMessage.content,
+				timestamp: new Date(populatedMessage.created_at).toLocaleTimeString("en-US", {
 					hour: "2-digit",
 					minute: "2-digit",
 					hour12: false,
@@ -455,12 +330,7 @@ class MessageHandlers {
 				isOwn: true,
 			};
 
-			return responsePayload(
-				formattedMessage,
-				"success",
-				"Message sent successfully",
-				201
-			);
+			return responsePayload(formattedMessage, "success", "Message sent successfully", 201);
 		} catch (error) {
 			await session.abortTransaction();
 			console.error("Error in sendMessage:", error);
@@ -471,47 +341,22 @@ class MessageHandlers {
 	}
 
 	// Mark messages as read
-	static async markMessagesAsRead(
-		userID: string,
-		conversationID: string
-	) {
+	static async markMessagesAsRead(userID: string, conversationID: string) {
 		await connectToDatabase();
 		const session = await mongoose.startSession();
 		try {
-			const validateUserID = ValidateStringField(
-				userID,
-				conversationID
-			);
-			if (!validateUserID)
-				return responsePayload(
-					null,
-					"error",
-					"Invalid user ID or conversation ID",
-					400
-				);
+			const validateUserID = ValidateStringField(userID, conversationID);
+			if (!validateUserID) return responsePayload(null, "error", "Invalid user ID or conversation ID", 400);
 
 			const user = await UserSchema.findById(userID);
 			if (!user) return userNotFoundError();
 
-			const conversation = await ConversationSchema.findById(
-				conversationID
-			);
-			if (!conversation)
-				return responsePayload(
-					null,
-					"error",
-					"Conversation not found",
-					404
-				);
+			const conversation = await ConversationSchema.findById(conversationID);
+			if (!conversation) return responsePayload(null, "error", "Conversation not found", 404);
 
 			// Check if user is a participant
 			if (!conversation.participants.includes(userID as any))
-				return responsePayload(
-					null,
-					"error",
-					"Unauthorized access to conversation",
-					403
-				);
+				return responsePayload(null, "error", "Unauthorized access to conversation", 403);
 
 			session.startTransaction();
 
@@ -529,7 +374,7 @@ class MessageHandlers {
 			);
 
 			// Reset unread count for this user
-			conversation.unread_count = conversation.unread_count.map((u) => {
+			conversation.unread_count = conversation.unread_count.map((u: any) => {
 				if (u.user_id.toString() === userID) {
 					return { ...u, count: 0 };
 				}
@@ -541,26 +386,13 @@ class MessageHandlers {
 			await session.commitTransaction();
 
 			// Trigger conversation update for the user who marked messages as read
-			await pusher.trigger(
-				`private-user-${userID}`,
-				"conversation-updated",
-				{
-					conversationId: conversationID,
-				}
-			);
+			await pusher.trigger(`private-user-${userID}`, "conversation-updated", {
+				conversationId: conversationID,
+			});
 			// Also trigger unread count update
-			await pusher.trigger(
-				`private-user-${userID}`,
-				"unread-count-updated",
-				{}
-			);
+			await pusher.trigger(`private-user-${userID}`, "unread-count-updated", {});
 
-			return responsePayload(
-				null,
-				"success",
-				"Messages marked as read",
-				200
-			);
+			return responsePayload(null, "success", "Messages marked as read", 200);
 		} catch (error) {
 			await session.abortTransaction();
 			console.error("Error in markMessagesAsRead:", error);
@@ -578,4 +410,3 @@ export const {
 	sendMessage,
 	markMessagesAsRead,
 } = MessageHandlers;
-

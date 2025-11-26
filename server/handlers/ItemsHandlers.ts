@@ -3,11 +3,7 @@ import ItemsSchema from "@/server/models/ItemsSchema";
 import ItemViewSchema from "@/server/models/ItemViewSchema";
 import ItemMatchSchema from "@/server/models/ItemMatchSchema";
 import { createNotification } from "@/server/handlers/NotificationHandlers";
-import {
-	responsePayload,
-	serverResponseError,
-	userNotFoundError,
-} from "@/server/utils/responsePayload";
+import { responsePayload, serverResponseError, userNotFoundError } from "@/server/utils/responsePayload";
 import { ValidateStringField } from "@/server/utils/DataValitdation";
 import mongoose from "mongoose";
 import { connectToDatabase } from "@/server/lib/mongodb";
@@ -22,10 +18,7 @@ function formatItemForResponse(item: any) {
 	// Extract user photo URL
 	let userPhoto = null;
 	if (item.user_id && item.user_id.photo) {
-		userPhoto =
-			typeof item.user_id.photo === "string"
-				? item.user_id.photo
-				: item.user_id.photo.url || null;
+		userPhoto = typeof item.user_id.photo === "string" ? item.user_id.photo : item.user_id.photo.url || null;
 	}
 
 	// Extract item photos URLs
@@ -85,13 +78,7 @@ class ItemsHandlers {
 				itemData.location
 			);
 
-			if (!validateFields)
-				return responsePayload(
-					null,
-					"error",
-					"Invalid input data",
-					400
-				);
+			if (!validateFields) return responsePayload(null, "error", "Invalid input data", 400);
 
 			const user = await UserSchema.findById(userID);
 			if (!user) return userNotFoundError();
@@ -102,20 +89,11 @@ class ItemsHandlers {
 			session.startTransaction();
 
 			if (itemData.photos && itemData.photos.length > 0) {
-				const uploadResult = await handleImagesUpload(
-					itemData.photos,
-					userID,
-					5
-				);
+				const uploadResult = await handleImagesUpload(itemData.photos, userID, 5);
 
 				if (!uploadResult) {
 					await session.abortTransaction();
-					return responsePayload(
-						null,
-						"error",
-						"Failed to upload images",
-						500
-					);
+					return responsePayload(null, "error", "Failed to upload images", 500);
 				}
 
 				uploadedPublicIds = uploadResult.uploadedPublicIds;
@@ -129,9 +107,7 @@ class ItemsHandlers {
 				description: itemData.description,
 				category: itemData.category,
 				location: itemData.location,
-				date_lost_or_found: itemData.date_lost_or_found
-					? new Date(itemData.date_lost_or_found)
-					: new Date(),
+				date_lost_or_found: itemData.date_lost_or_found ? new Date(itemData.date_lost_or_found) : new Date(),
 				photos: imageMetadata,
 			};
 
@@ -142,20 +118,10 @@ class ItemsHandlers {
 					await deleteFiles(uploadedPublicIds);
 				}
 				await session.abortTransaction();
-				return responsePayload(
-					null,
-					"error",
-					"Failed to create new item",
-					500
-				);
+				return responsePayload(null, "error", "Failed to create new item", 500);
 			}
 			await session.commitTransaction();
-			return responsePayload(
-				null,
-				"success",
-				"Item created successfully",
-				201
-			);
+			return responsePayload(null, "success", "Item created successfully", 201);
 		} catch (error) {
 			console.log(error);
 			await session.abortTransaction();
@@ -169,8 +135,7 @@ class ItemsHandlers {
 		await connectToDatabase();
 		try {
 			const validateUserID = ValidateStringField(userID);
-			if (!validateUserID)
-				return responsePayload(null, "error", "Invalid user ID", 400);
+			if (!validateUserID) return responsePayload(null, "error", "Invalid user ID", 400);
 
 			const user = await UserSchema.findById(userID);
 			if (!user) return userNotFoundError();
@@ -179,12 +144,7 @@ class ItemsHandlers {
 				created_at: -1,
 			});
 
-			return responsePayload(
-				items,
-				"success",
-				"User items fetched successfully",
-				200
-			);
+			return responsePayload(items, "success", "User items fetched successfully", 200);
 		} catch (error) {
 			console.log(error);
 			return serverResponseError();
@@ -196,22 +156,17 @@ class ItemsHandlers {
 		const session = await mongoose.startSession();
 		try {
 			const validateItemID = ValidateStringField(itemID, userID);
-			if (!validateItemID)
-				return responsePayload(null, "error", "Invalid item ID", 400);
+			if (!validateItemID) return responsePayload(null, "error", "Invalid item ID", 400);
 
 			const user = await UserSchema.findById(userID);
 			if (!user) return userNotFoundError();
 
 			session.startTransaction();
 
-			const itemImageToDelete = await ItemsSchema.findById(itemID).select(
-				"photos"
-			);
+			const itemImageToDelete = await ItemsSchema.findById(itemID).select("photos");
 
 			if (itemImageToDelete && itemImageToDelete.photos.length > 0) {
-				const publicIds = itemImageToDelete.photos
-					.map((img: any) => img.publicId)
-					.filter(Boolean);
+				const publicIds = itemImageToDelete.photos.map((img: any) => img.publicId).filter(Boolean);
 
 				if (publicIds.length > 0) {
 					const deleteResult = await deleteFiles(publicIds);
@@ -223,21 +178,11 @@ class ItemsHandlers {
 			});
 			if (!deleteItem) {
 				await session.abortTransaction();
-				return responsePayload(
-					null,
-					"error",
-					"Failed to delete item",
-					500
-				);
+				return responsePayload(null, "error", "Failed to delete item", 500);
 			}
 
 			await session.commitTransaction();
-			return responsePayload(
-				null,
-				"success",
-				"Item deleted successfully",
-				200
-			);
+			return responsePayload(null, "success", "Item deleted successfully", 200);
 		} catch (error) {
 			await session.abortTransaction();
 			console.log(error);
@@ -247,11 +192,7 @@ class ItemsHandlers {
 		}
 	}
 
-	static async updateItemByID(
-		userID: string,
-		itemID: string,
-		itemData: ItemData
-	) {
+	static async updateItemByID(userID: string, itemID: string, itemData: ItemData) {
 		await connectToDatabase();
 		const session = await mongoose.startSession();
 		try {
@@ -265,13 +206,11 @@ class ItemsHandlers {
 				itemData.location,
 				itemData.status
 			);
-			if (!validateFields)
-				return responsePayload(null, "error", "Invalid item data", 400);
+			if (!validateFields) return responsePayload(null, "error", "Invalid item data", 400);
 			const user = await UserSchema.findById(userID);
 			if (!user) return userNotFoundError();
 			const item = await ItemsSchema.findById(itemID);
-			if (!item)
-				return responsePayload(null, "error", "Item not found", 404);
+			if (!item) return responsePayload(null, "error", "Item not found", 404);
 
 			let uploadedPublicIds: string[] = [];
 
@@ -288,10 +227,7 @@ class ItemsHandlers {
 				});
 			}
 
-			if (
-				itemData.existing_images &&
-				itemData.existing_images.length > 0
-			) {
+			if (itemData.existing_images && itemData.existing_images.length > 0) {
 				const existingPhotos = item.photos.filter((photo: any) =>
 					itemData.existing_images!.includes(photo.url)
 				);
@@ -299,19 +235,10 @@ class ItemsHandlers {
 			}
 
 			if (itemData.photos && itemData.photos.length > 0) {
-				const uploadResult = await handleImagesUpload(
-					itemData.photos,
-					userID,
-					5 - finalPhotos.length
-				);
+				const uploadResult = await handleImagesUpload(itemData.photos, userID, 5 - finalPhotos.length);
 
 				if (!uploadResult) {
-					return responsePayload(
-						null,
-						"error",
-						"Failed to upload images",
-						500
-					);
+					return responsePayload(null, "error", "Failed to upload images", 500);
 				}
 
 				finalPhotos.push(...uploadResult.imageMetadata);
@@ -324,45 +251,26 @@ class ItemsHandlers {
 				category: itemData.category,
 				location: itemData.location,
 				status: itemData.status,
-				date_lost_or_found: itemData.date_lost_or_found
-					? new Date(itemData.date_lost_or_found)
-					: new Date(),
+				date_lost_or_found: itemData.date_lost_or_found ? new Date(itemData.date_lost_or_found) : new Date(),
 				photos: finalPhotos,
 			};
 
-			const updatedItem = await ItemsSchema.findByIdAndUpdate(
-				itemID,
-				doc,
-				{ new: true, session }
-			);
+			const updatedItem = await ItemsSchema.findByIdAndUpdate(itemID, doc, { new: true, session });
 			if (!updatedItem) {
 				if (uploadedPublicIds.length > 0) {
 					await deleteFiles(uploadedPublicIds);
 				}
 				await session.abortTransaction();
-				return responsePayload(
-					null,
-					"error",
-					"Failed to update item",
-					500
-				);
+				return responsePayload(null, "error", "Failed to update item", 500);
 			}
 
 			await session.commitTransaction();
 			if (imagesToDelete.length > 0) {
 				await deleteFiles(imagesToDelete).catch((err) =>
-					console.error(
-						"Failed to delete old images from Cloudinary:",
-						err
-					)
+					console.error("Failed to delete old images from Cloudinary:", err)
 				);
 			}
-			return responsePayload(
-				null,
-				"success",
-				"Item updated successfully",
-				200
-			);
+			return responsePayload(null, "success", "Item updated successfully", 200);
 		} catch (error) {
 			await session.abortTransaction();
 			console.log(error);
@@ -377,35 +285,21 @@ class ItemsHandlers {
 		await connectToDatabase();
 		try {
 			const validateFields = ValidateStringField(userID, itemID);
-			if (!validateFields)
-				return responsePayload(
-					null,
-					"error",
-					"Invalid user ID or item ID",
-					400
-				);
+			if (!validateFields) return responsePayload(null, "error", "Invalid user ID or item ID", 400);
 
 			const user = await UserSchema.findById(userID);
 			if (!user) return userNotFoundError();
 
 			const item = await ItemsSchema.findById(itemID);
-			if (!item)
-				return responsePayload(null, "error", "Item not found", 404);
+			if (!item) return responsePayload(null, "error", "Item not found", 404);
 
 			// Don't track views for own items
 			if (item.user_id.toString() === userID) {
 				// Still return the formatted item so the view count is displayed correctly
 				const formattedItem = formatItemForResponse(
-					await ItemsSchema.findById(itemID)
-						.populate("user_id", "firstname lastname username photo")
-						.lean()
+					await ItemsSchema.findById(itemID).populate("user_id", "firstname lastname username photo").lean()
 				);
-				return responsePayload(
-					formattedItem,
-					"success",
-					"View not tracked (own item)",
-					200
-				);
+				return responsePayload(formattedItem, "success", "View not tracked (own item)", 200);
 			}
 
 			// Check if user has already viewed this item (without transaction to avoid conflicts)
@@ -419,15 +313,10 @@ class ItemsHandlers {
 				const currentItem = await ItemsSchema.findById(itemID)
 					.populate("user_id", "firstname lastname username photo")
 					.lean();
-				
+
 				// Format the item to match AllItem structure
 				const formattedItem = formatItemForResponse(currentItem);
-				return responsePayload(
-					formattedItem,
-					"success",
-					"View already tracked",
-					200
-				);
+				return responsePayload(formattedItem, "success", "View already tracked", 200);
 			}
 
 			// Try to create view record atomically using upsert
@@ -474,15 +363,10 @@ class ItemsHandlers {
 					const currentItem = await ItemsSchema.findById(itemID)
 						.populate("user_id", "firstname lastname username photo")
 						.lean();
-					
+
 					// Format the item to match AllItem structure
 					const formattedItem = formatItemForResponse(currentItem);
-					return responsePayload(
-						formattedItem,
-						"success",
-						"View already tracked",
-						200
-					);
+					return responsePayload(formattedItem, "success", "View already tracked", 200);
 				}
 				throw createError; // Re-throw if it's a different error
 			}
@@ -494,32 +378,18 @@ class ItemsHandlers {
 
 			// Format the item to match AllItem structure
 			const formattedItem = formatItemForResponse(updatedItem);
-			return responsePayload(
-				formattedItem,
-				"success",
-				"View tracked successfully",
-				200
-			);
+			return responsePayload(formattedItem, "success", "View tracked successfully", 200);
 		} catch (error: any) {
 			// Handle write conflicts gracefully
-			if (
-				error.code === 11000 ||
-				error.codeName === "WriteConflict" ||
-				error.code === 112
-			) {
+			if (error.code === 11000 || error.codeName === "WriteConflict" || error.code === 112) {
 				// Return the current item even if view was already tracked
 				const currentItem = await ItemsSchema.findById(itemID)
 					.populate("user_id", "firstname lastname username photo")
 					.lean();
-				
+
 				// Format the item to match AllItem structure
 				const formattedItem = formatItemForResponse(currentItem);
-				return responsePayload(
-					formattedItem,
-					"success",
-					"View already tracked",
-					200
-				);
+				return responsePayload(formattedItem, "success", "View already tracked", 200);
 			}
 			console.error("Error tracking item view:", error);
 			return serverResponseError();
@@ -532,44 +402,29 @@ class ItemsHandlers {
 		const session = await mongoose.startSession();
 		try {
 			const validateFields = ValidateStringField(userID, itemID);
-			if (!validateFields)
-				return responsePayload(
-					null,
-					"error",
-					"Invalid user ID or item ID",
-					400
-				);
+			if (!validateFields) return responsePayload(null, "error", "Invalid user ID or item ID", 400);
 
 			const user = await UserSchema.findById(userID);
 			if (!user) return userNotFoundError();
 
-			const item = await ItemsSchema.findById(itemID)
+			const itemDoc = await ItemsSchema.findById(itemID)
 				.populate("user_id", "firstname lastname username")
 				.lean();
-			if (!item)
-				return responsePayload(null, "error", "Item not found", 404);
+			if (!itemDoc) return responsePayload(null, "error", "Item not found", 404);
+
+			const item = itemDoc as any;
 
 			// Get item owner ID (handle both populated and non-populated cases)
-			const itemOwnerID = (item.user_id as any)._id?.toString() || item.user_id.toString();
+			const itemOwnerID = item.user_id?._id?.toString() || item.user_id?.toString();
 
 			// Don't allow matching own items
 			if (itemOwnerID === userID) {
-				return responsePayload(
-					null,
-					"error",
-					"Cannot match your own item",
-					400
-				);
+				return responsePayload(null, "error", "Cannot match your own item", 400);
 			}
 
 			// Don't allow matching if already claimed
 			if (item.status === "claimed") {
-				return responsePayload(
-					null,
-					"error",
-					"Item has already been claimed",
-					400
-				);
+				return responsePayload(null, "error", "Item has already been claimed", 400);
 			}
 
 			// Check if user has already matched this item
@@ -579,12 +434,7 @@ class ItemsHandlers {
 			});
 
 			if (existingMatch) {
-				return responsePayload(
-					null,
-					"error",
-					"You have already matched this item",
-					400
-				);
+				return responsePayload(null, "error", "You have already matched this item", 400);
 			}
 
 			session.startTransaction();
@@ -597,11 +447,7 @@ class ItemsHandlers {
 			await newMatch.save({ session });
 
 			// Increment match count
-			await ItemsSchema.findByIdAndUpdate(
-				itemID,
-				{ $inc: { matched: 1 } },
-				{ session }
-			);
+			await ItemsSchema.findByIdAndUpdate(itemID, { $inc: { matched: 1 } }, { session });
 
 			await session.commitTransaction();
 
@@ -635,24 +481,14 @@ class ItemsHandlers {
 			const updatedItem = await ItemsSchema.findById(itemID)
 				.populate("user_id", "firstname lastname username photo")
 				.lean();
-			
+
 			const formattedItem = formatItemForResponse(updatedItem);
-			return responsePayload(
-				formattedItem,
-				"success",
-				"Match tracked successfully",
-				200
-			);
+			return responsePayload(formattedItem, "success", "Match tracked successfully", 200);
 		} catch (error: any) {
 			await session.abortTransaction();
 			// Handle duplicate key error (user already matched)
 			if (error.code === 11000) {
-				return responsePayload(
-					null,
-					"error",
-					"You have already matched this item",
-					400
-				);
+				return responsePayload(null, "error", "You have already matched this item", 400);
 			}
 			console.error("Error tracking item match:", error);
 			return serverResponseError();

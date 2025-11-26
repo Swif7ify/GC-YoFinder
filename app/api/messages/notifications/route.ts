@@ -12,18 +12,10 @@ dayjs.extend(relativeTime);
 export async function GET(request: NextRequest) {
 	try {
 		const user = await getUserFromRequest(request);
-		if (!user)
-			return NextResponse.json(
-				{ error: "Unauthorized" },
-				{ status: 401 }
-			);
+		if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
 		const userID = user.userID;
-		if (!userID)
-			return NextResponse.json(
-				{ error: "Unauthorized" },
-				{ status: 401 }
-			);
+		if (!userID) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
 		await connectToDatabase();
 
@@ -48,30 +40,26 @@ export async function GET(request: NextRequest) {
 		}[] = [];
 
 		for (const conv of conversations) {
-			const unreadData = conv.unread_count.find(
-				(u: any) => u.user_id.toString() === userID
-			);
+			const unreadData = conv.unread_count.find((u: any) => u.user_id.toString() === userID);
 			const unreadCount = unreadData?.count || 0;
 
 			if (unreadCount > 0 && conv.last_message) {
-				const otherParticipant = conv.participants.find(
-					(p: any) => p._id.toString() !== userID
-				);
+				const otherParticipant = conv.participants.find((p: any) => p._id.toString() !== userID);
 				const participantName = otherParticipant
 					? `${otherParticipant.firstname} ${otherParticipant.lastname}`
 					: "Someone";
-				const itemName = conv.item_id
-					? (conv.item_id as any).name
-					: "an item";
+				const itemName = conv.item_id ? (conv.item_id as any).name : "an item";
 				const lastMessageTime = (conv.last_message as any).created_at || conv.last_message_at;
 
 				notifications.push({
-					id: `msg-${conv._id.toString()}`,
+					id: `msg-${(conv._id as any).toString()}`,
 					title: "New Message",
-					message: `${participantName} sent you ${unreadCount} ${unreadCount === 1 ? "message" : "messages"} about ${itemName}`,
+					message: `${participantName} sent you ${unreadCount} ${
+						unreadCount === 1 ? "message" : "messages"
+					} about ${itemName}`,
 					time: lastMessageTime ? dayjs(lastMessageTime).fromNow() : "Recently",
 					isRead: false,
-					conversationId: conv._id.toString(),
+					conversationId: (conv._id as any).toString(),
 				});
 			}
 		}
@@ -85,16 +73,9 @@ export async function GET(request: NextRequest) {
 			return timeB - timeA;
 		});
 
-		return NextResponse.json(
-			{ notifications },
-			{ status: 200 }
-		);
+		return NextResponse.json({ notifications }, { status: 200 });
 	} catch (error) {
 		console.error("Error in GET /api/messages/notifications:", error);
-		return NextResponse.json(
-			{ error: "Internal Server Error" },
-			{ status: 500 }
-		);
+		return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
 	}
 }
-
