@@ -464,16 +464,28 @@ export default function DashboardPage() {
 				fetchNotifications();
 			};
 
-			window.addEventListener("unreadCountUpdate", handleUnreadCountUpdate);
-			window.addEventListener("notificationUpdate", handleNotificationUpdate);
+			window.addEventListener(
+				"unreadCountUpdate",
+				handleUnreadCountUpdate
+			);
+			window.addEventListener(
+				"notificationUpdate",
+				handleNotificationUpdate
+			);
 
 			// Cleanup
 			return () => {
 				userChannel.unbind("unread-count-updated");
 				userChannel.unbind("new-notification");
 				userChannel.unbind("conversation-updated");
-				window.removeEventListener("unreadCountUpdate", handleUnreadCountUpdate);
-				window.removeEventListener("notificationUpdate", handleNotificationUpdate);
+				window.removeEventListener(
+					"unreadCountUpdate",
+					handleUnreadCountUpdate
+				);
+				window.removeEventListener(
+					"notificationUpdate",
+					handleNotificationUpdate
+				);
 				pusher.disconnect();
 			};
 		} else {
@@ -509,12 +521,24 @@ export default function DashboardPage() {
 				fetchNotifications();
 			};
 
-			window.addEventListener("unreadCountUpdate", handleUnreadCountUpdate);
-			window.addEventListener("notificationUpdate", handleNotificationUpdate);
+			window.addEventListener(
+				"unreadCountUpdate",
+				handleUnreadCountUpdate
+			);
+			window.addEventListener(
+				"notificationUpdate",
+				handleNotificationUpdate
+			);
 
 			return () => {
-				window.removeEventListener("unreadCountUpdate", handleUnreadCountUpdate);
-				window.removeEventListener("notificationUpdate", handleNotificationUpdate);
+				window.removeEventListener(
+					"unreadCountUpdate",
+					handleUnreadCountUpdate
+				);
+				window.removeEventListener(
+					"notificationUpdate",
+					handleNotificationUpdate
+				);
 			};
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
