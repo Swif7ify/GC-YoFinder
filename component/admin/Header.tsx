@@ -6,12 +6,24 @@ import Image from "next/image";
 import { BellIcon, MenuIcon, AlertTriangleIcon, ShieldIcon, UserIcon, LogOutIcon, SettingsIcon } from "lucide-react";
 import DarkModeButton from "@/ui/DarkModeButton";
 
-interface AdminHeaderProps {
+interface Notification {
+	id: string;
 	title: string;
-	onMenuClick: () => void;
+	message: string;
+	time: string;
+	isRead: boolean;
+	type: string;
+	conversationId?: string;
 }
 
-export default function AdminHeader({ title, onMenuClick }: AdminHeaderProps) {
+interface AdminHeaderProps {
+	onMenuClick: () => void;
+	adminData?: any;
+	notifications?: Notification[];
+	onMarkAllRead?: () => void;
+}
+
+export default function AdminHeader({ onMenuClick, adminData, notifications = [], onMarkAllRead }: AdminHeaderProps) {
 	const [notificationsOpen, setNotificationsOpen] = useState(false);
 	const [profileOpen, setProfileOpen] = useState(false);
 	const notificationsRef = useRef<HTMLDivElement>(null);
@@ -42,7 +54,7 @@ export default function AdminHeader({ title, onMenuClick }: AdminHeaderProps) {
 	}, []);
 
 	return (
-		<header className="h-16 bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between px-4 shadow-sm z-10">
+		<header className="h-16 bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between px-4 shadow-sm z-10 select-none">
 			<div className="flex items-center">
 				<button
 					onClick={onMenuClick}
@@ -51,7 +63,7 @@ export default function AdminHeader({ title, onMenuClick }: AdminHeaderProps) {
 				>
 					<MenuIcon size={20} />
 				</button>
-				<Link href="/admin" className="flex items-center">
+				<Link href="/dashboard-admin?tab=dashboard" className="flex items-center">
 					<Image
 						src="/logo.png"
 						alt="GC YoFinder Logo"
@@ -77,9 +89,13 @@ export default function AdminHeader({ title, onMenuClick }: AdminHeaderProps) {
 						aria-label="Notifications"
 					>
 						<BellIcon size={20} />
-						<span className="absolute top-1 right-1 h-4 w-4 bg-red-500 rounded-full flex items-center justify-center text-white text-xs">
-							3
-						</span>
+						{notifications.filter((n) => !n.isRead).length > 0 && (
+							<span className="absolute top-1 right-1 h-4 w-4 bg-red-500 rounded-full flex items-center justify-center text-white text-xs">
+								{notifications.filter((n) => !n.isRead).length > 9
+									? "9+"
+									: notifications.filter((n) => !n.isRead).length}
+							</span>
+						)}
 					</button>
 
 					{notificationsOpen && (
@@ -87,73 +103,87 @@ export default function AdminHeader({ title, onMenuClick }: AdminHeaderProps) {
 							<div className="p-3 border-b border-gray-200 dark:border-neutral-800">
 								<div className="flex justify-between items-center">
 									<h3 className="font-medium text-gray-900 dark:text-gray-100">Notifications</h3>
-									<span className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 text-xs px-2 py-0.5 rounded-full">
-										3 new
-									</span>
+									{notifications.filter((n) => !n.isRead).length > 0 && (
+										<span className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 text-xs px-2 py-0.5 rounded-full">
+											{notifications.filter((n) => !n.isRead).length} new
+										</span>
+									)}
 								</div>
 							</div>
 							<div className="max-h-80 overflow-y-auto">
-								<div className="p-3 border-l-4 border-red-500 hover:bg-gray-50 dark:hover:bg-neutral-800 cursor-pointer">
-									<div className="flex items-start">
-										<div className="bg-red-100 dark:bg-red-900/30 p-2 rounded-full mr-3">
-											<AlertTriangleIcon size={16} className="text-red-600 dark:text-red-400" />
-										</div>
-										<div>
-											<p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-												Critical: Failed login attempts
-											</p>
-											<p className="text-xs text-gray-500 dark:text-gray-400">
-												Multiple failed login attempts detected
-											</p>
-											<p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-												10 minutes ago
-											</p>
-										</div>
+								{notifications.length === 0 ? (
+									<div className="p-4 text-center text-gray-500 dark:text-gray-400">
+										<BellIcon size={24} className="mx-auto mb-2 opacity-50" />
+										<p className="text-sm">No notifications</p>
 									</div>
-								</div>
-								<div className="p-3 border-l-4 border-orange-500 hover:bg-gray-50 dark:hover:bg-neutral-800 cursor-pointer">
-									<div className="flex items-start">
-										<div className="bg-orange-100 dark:bg-orange-900/30 p-2 rounded-full mr-3">
-											<AlertTriangleIcon
-												size={16}
-												className="text-orange-600 dark:text-orange-400"
-											/>
-										</div>
-										<div>
-											<p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-												Flagged item requires review
-											</p>
-											<p className="text-xs text-gray-500 dark:text-gray-400">
-												High-value item needs verification
-											</p>
-											<p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-												25 minutes ago
-											</p>
-										</div>
-									</div>
-								</div>
-								<div className="p-3 border-l-4 border-blue-500 hover:bg-gray-50 dark:hover:bg-neutral-800 cursor-pointer">
-									<div className="flex items-start">
-										<div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-full mr-3">
-											<SettingsIcon size={16} className="text-blue-600 dark:text-blue-400" />
-										</div>
-										<div>
-											<p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-												System backup completed
-											</p>
-											<p className="text-xs text-gray-500 dark:text-gray-400">
-												Daily backup completed successfully
-											</p>
-											<p className="text-xs text-gray-400 dark:text-gray-500 mt-1">1 hour ago</p>
-										</div>
-									</div>
-								</div>
+								) : (
+									notifications.slice(0, 10).map((notif) => {
+										const borderColor =
+											notif.type === "message"
+												? "border-blue-500"
+												: notif.type === "match"
+												? "border-green-500"
+												: notif.type === "claim"
+												? "border-orange-500"
+												: "border-gray-500";
+										const bgColor =
+											notif.type === "message"
+												? "bg-blue-100 dark:bg-blue-900/30"
+												: notif.type === "match"
+												? "bg-green-100 dark:bg-green-900/30"
+												: notif.type === "claim"
+												? "bg-orange-100 dark:bg-orange-900/30"
+												: "bg-gray-100 dark:bg-gray-900/30";
+										const iconColor =
+											notif.type === "message"
+												? "text-blue-600 dark:text-blue-400"
+												: notif.type === "match"
+												? "text-green-600 dark:text-green-400"
+												: notif.type === "claim"
+												? "text-orange-600 dark:text-orange-400"
+												: "text-gray-600 dark:text-gray-400";
+
+										return (
+											<div
+												key={notif.id}
+												className={`p-3 border-l-4 ${borderColor} hover:bg-gray-50 dark:hover:bg-neutral-800 cursor-pointer ${
+													!notif.isRead ? "bg-gray-50 dark:bg-neutral-800/50" : ""
+												}`}
+											>
+												<div className="flex items-start">
+													<div className={`${bgColor} p-2 rounded-full mr-3`}>
+														<BellIcon size={16} className={iconColor} />
+													</div>
+													<div className="flex-1 min-w-0">
+														<p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+															{notif.title}
+														</p>
+														<p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+															{notif.message}
+														</p>
+														<p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+															{notif.time}
+														</p>
+													</div>
+													{!notif.isRead && (
+														<div className="w-2 h-2 bg-blue-500 rounded-full ml-2 mt-1"></div>
+													)}
+												</div>
+											</div>
+										);
+									})
+								)}
 							</div>
-							<div className="p-2 border-t border-gray-200 dark:border-neutral-800 text-center">
-								<button className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium">
-									Mark all as read
-								</button>
-							</div>
+							{notifications.filter((n) => !n.isRead).length > 0 && (
+								<div className="p-2 border-t border-gray-200 dark:border-neutral-800 text-center">
+									<button
+										onClick={onMarkAllRead}
+										className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium"
+									>
+										Mark all as read
+									</button>
+								</div>
+							)}
 						</div>
 					)}
 				</div>
@@ -166,7 +196,10 @@ export default function AdminHeader({ title, onMenuClick }: AdminHeaderProps) {
 						aria-label="User menu"
 					>
 						<div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-medium">
-							AD
+							{adminData
+								? `${adminData.firstname?.[0] || ""}${adminData.lastname?.[0] || ""}`.toUpperCase() ||
+								  "AD"
+								: "AD"}
 						</div>
 					</button>
 
@@ -175,15 +208,24 @@ export default function AdminHeader({ title, onMenuClick }: AdminHeaderProps) {
 							<div className="p-4 border-b border-gray-200 dark:border-neutral-800">
 								<div className="flex items-center space-x-3">
 									<div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-medium">
-										AD
+										{adminData
+											? `${adminData.firstname?.[0] || ""}${
+													adminData.lastname?.[0] || ""
+											  }`.toUpperCase() || "AD"
+											: "AD"}
 									</div>
 									<div>
-										<p className="font-medium text-gray-900 dark:text-gray-100">Admin User</p>
+										<p className="font-medium text-gray-900 dark:text-gray-100">
+											{adminData
+												? `${adminData.firstname || ""} ${adminData.lastname || ""}`.trim() ||
+												  "Admin User"
+												: "Admin User"}
+										</p>
 										<p className="text-xs text-gray-500 dark:text-gray-400">
-											admin@gordoncollege.edu.ph
+											{adminData?.email || "admin@.edu.ph"}
 										</p>
 										<span className="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.5 rounded-full mt-1 inline-block">
-											Super Admin
+											{adminData?.role === "admin" ? "Administrator" : "Super Admin"}
 										</span>
 									</div>
 								</div>
