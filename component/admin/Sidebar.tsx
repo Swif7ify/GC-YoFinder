@@ -1,5 +1,6 @@
+"use client";
+
 import React, { useState } from "react";
-import Link from "next/link";
 import {
 	BarChartIcon,
 	UsersIcon,
@@ -16,76 +17,105 @@ import {
 	ArchiveIcon,
 	ChevronRightIcon,
 	LogOutIcon,
+	WrenchIcon,
 } from "lucide-react";
+
 interface AdminSidebarProps {
 	isOpen: boolean;
+	activeTab: string;
+	onTabClick: (tab: string) => void;
+	onLogout: () => void;
 }
-export default function AdminSidebar({ isOpen }: AdminSidebarProps) {
+
+export default function AdminSidebar({ isOpen, activeTab, onTabClick, onLogout }: AdminSidebarProps) {
 	const [itemManagementOpen, setItemManagementOpen] = useState(true);
-	const isActive = (path: string) => {
-		return location.pathname === path;
-	};
-	const isItemManagementActive = () => {
-		return location.pathname.includes("/admin/item-management");
-	};
+
+	const isActive = (tab: string) => activeTab === tab;
+	const isItemManagementActive = () => activeTab.startsWith("item-");
+
 	if (!isOpen) return null;
+
 	return (
-		<aside className="w-64 h-full bg-white border-r border-gray-200 fixed overflow-y-auto">
+		<aside className="w-64 h-full bg-white dark:bg-neutral-900 border-r border-gray-200 dark:border-neutral-800 fixed overflow-y-auto z-10">
 			<div className="py-4">
+				{/* Pending Approvals Card */}
 				<div className="px-4 mb-6">
-					<div className="px-2 py-3 bg-gradient-to-r from-red-50 to-orange-50 rounded-lg border border-red-100">
+					<div className="px-3 py-3 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
 						<div className="flex items-center justify-between">
 							<div>
-								<p className="text-xs font-medium text-gray-500">Pending Approvals</p>
-								<p className="text-xl font-bold text-red-600">15</p>
+								<p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+									Pending Approvals
+								</p>
+								<p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">15</p>
 							</div>
-							<Link
-								href="/admin/item-management/pending-approvals"
-								className="p-1 bg-white rounded-full border border-red-200 hover:bg-red-50"
+							<button
+								onClick={() => onTabClick("item-pending")}
+								className="p-1 bg-white dark:bg-neutral-800 rounded-full border border-emerald-200 dark:border-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
 							>
-								<ChevronRightIcon size={14} className="text-red-500" />
-							</Link>
+								<ChevronRightIcon size={14} className="text-emerald-500 dark:text-emerald-400" />
+							</button>
 						</div>
 					</div>
 				</div>
-				<div className="space-y-1 px-3">
-					<Link
-						href="/admin/dashboard"
-						className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-							isActive("/admin/dashboard") ? "bg-red-50 text-red-700" : "text-gray-700 hover:bg-gray-100"
+
+				{/* Navigation */}
+				<nav className="space-y-1 px-3">
+					<button
+						onClick={() => onTabClick("dashboard")}
+						className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+							isActive("dashboard")
+								? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+								: "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800"
 						}`}
 					>
 						<BarChartIcon
 							size={18}
-							className={`mr-3 ${isActive("/admin/dashboard") ? "text-red-500" : "text-gray-500"}`}
+							className={`mr-3 ${
+								isActive("dashboard")
+									? "text-emerald-500 dark:text-emerald-400"
+									: "text-gray-500 dark:text-gray-400"
+							}`}
 						/>
 						Dashboard
-					</Link>
-					<Link
-						href="/admin/user-management"
-						className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-							isActive("/admin/user-management")
-								? "bg-red-50 text-red-700"
-								: "text-gray-700 hover:bg-gray-100"
+					</button>
+
+					<button
+						onClick={() => onTabClick("users")}
+						className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+							isActive("users")
+								? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+								: "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800"
 						}`}
 					>
 						<UsersIcon
 							size={18}
-							className={`mr-3 ${isActive("/admin/user-management") ? "text-red-500" : "text-gray-500"}`}
+							className={`mr-3 ${
+								isActive("users")
+									? "text-emerald-500 dark:text-emerald-400"
+									: "text-gray-500 dark:text-gray-400"
+							}`}
 						/>
 						User Management
-					</Link>
+					</button>
+
+					{/* Item Management Dropdown */}
 					<div>
 						<button
 							onClick={() => setItemManagementOpen(!itemManagementOpen)}
-							className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md ${
-								isItemManagementActive() ? "bg-red-50 text-red-700" : "text-gray-700 hover:bg-gray-100"
+							className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+								isItemManagementActive()
+									? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+									: "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800"
 							}`}
 						>
 							<div className="flex items-center">
 								<ClipboardListIcon
 									size={18}
-									className={`mr-3 ${isItemManagementActive() ? "text-red-500" : "text-gray-500"}`}
+									className={`mr-3 ${
+										isItemManagementActive()
+											? "text-emerald-500 dark:text-emerald-400"
+											: "text-gray-500 dark:text-gray-400"
+									}`}
 								/>
 								Item Management
 							</div>
@@ -94,186 +124,220 @@ export default function AdminSidebar({ isOpen }: AdminSidebarProps) {
 								className={`transform transition-transform ${itemManagementOpen ? "rotate-90" : ""}`}
 							/>
 						</button>
+
 						{itemManagementOpen && (
 							<div className="pl-10 space-y-1 mt-1">
-								<Link
-									href="/admin/item-management/pending-approvals"
-									className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-										isActive("/admin/item-management/pending-approvals")
-											? "bg-red-50 text-red-700"
-											: "text-gray-600 hover:bg-gray-100"
+								<button
+									onClick={() => onTabClick("item-pending")}
+									className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+										isActive("item-pending")
+											? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+											: "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800"
 									}`}
 								>
-									<CheckCircleIcon size={16} className="mr-2 text-gray-400" />
+									<CheckCircleIcon size={16} className="mr-2 text-gray-400 dark:text-gray-500" />
 									Pending Approvals
-								</Link>
-								<Link
-									href="/admin/item-management/active-listings"
-									className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-										isActive("/admin/item-management/active-listings")
-											? "bg-red-50 text-red-700"
-											: "text-gray-600 hover:bg-gray-100"
+								</button>
+								<button
+									onClick={() => onTabClick("item-active")}
+									className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+										isActive("item-active")
+											? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+											: "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800"
 									}`}
 								>
-									<ListIcon size={16} className="mr-2 text-gray-400" />
+									<ListIcon size={16} className="mr-2 text-gray-400 dark:text-gray-500" />
 									Active Listings
-								</Link>
-								<Link
-									href="/admin/item-management/claimed-items"
-									className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-										isActive("/admin/item-management/claimed-items")
-											? "bg-red-50 text-red-700"
-											: "text-gray-600 hover:bg-gray-100"
+								</button>
+								<button
+									onClick={() => onTabClick("item-claimed")}
+									className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+										isActive("item-claimed")
+											? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+											: "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800"
 									}`}
 								>
-									<CheckCircleIcon size={16} className="mr-2 text-gray-400" />
+									<CheckCircleIcon size={16} className="mr-2 text-gray-400 dark:text-gray-500" />
 									Claimed Items
-								</Link>
-								<Link
-									href="/admin/item-management/archived-items"
-									className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-										isActive("/admin/item-management/archived-items")
-											? "bg-red-50 text-red-700"
-											: "text-gray-600 hover:bg-gray-100"
+								</button>
+								<button
+									onClick={() => onTabClick("item-archived")}
+									className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+										isActive("item-archived")
+											? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+											: "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800"
 									}`}
 								>
-									<ArchiveIcon size={16} className="mr-2 text-gray-400" />
+									<ArchiveIcon size={16} className="mr-2 text-gray-400 dark:text-gray-500" />
 									Archived Items
-								</Link>
+								</button>
 							</div>
 						)}
 					</div>
-					<Link
-						href="/admin/reports-analytics"
-						className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-							isActive("/admin/reports-analytics")
-								? "bg-red-50 text-red-700"
-								: "text-gray-700 hover:bg-gray-100"
+
+					<button
+						onClick={() => onTabClick("reports")}
+						className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+							isActive("reports")
+								? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+								: "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800"
 						}`}
 					>
 						<LineChartIcon
 							size={18}
 							className={`mr-3 ${
-								isActive("/admin/reports-analytics") ? "text-red-500" : "text-gray-500"
+								isActive("reports")
+									? "text-emerald-500 dark:text-emerald-400"
+									: "text-gray-500 dark:text-gray-400"
 							}`}
 						/>
 						Reports & Analytics
-					</Link>
-					<Link
-						href="/admin/activity-logs"
-						className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-							isActive("/admin/activity-logs")
-								? "bg-red-50 text-red-700"
-								: "text-gray-700 hover:bg-gray-100"
+					</button>
+
+					<button
+						onClick={() => onTabClick("activity")}
+						className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+							isActive("activity")
+								? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+								: "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800"
 						}`}
 					>
 						<ClockIcon
 							size={18}
-							className={`mr-3 ${isActive("/admin/activity-logs") ? "text-red-500" : "text-gray-500"}`}
+							className={`mr-3 ${
+								isActive("activity")
+									? "text-emerald-500 dark:text-emerald-400"
+									: "text-gray-500 dark:text-gray-400"
+							}`}
 						/>
 						Activity Logs
-					</Link>
-					<Link
-						href="/admin/system-settings"
-						className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-							isActive("/admin/system-settings")
-								? "bg-red-50 text-red-700"
-								: "text-gray-700 hover:bg-gray-100"
+					</button>
+
+					<button
+						onClick={() => onTabClick("settings")}
+						className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+							isActive("settings")
+								? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+								: "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800"
 						}`}
 					>
 						<SettingsIcon
 							size={18}
-							className={`mr-3 ${isActive("/admin/system-settings") ? "text-red-500" : "text-gray-500"}`}
+							className={`mr-3 ${
+								isActive("settings")
+									? "text-emerald-500 dark:text-emerald-400"
+									: "text-gray-500 dark:text-gray-400"
+							}`}
 						/>
 						System Settings
-					</Link>
-					<Link
-						href="/admin/location-management"
-						className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-							isActive("/admin/location-management")
-								? "bg-red-50 text-red-700"
-								: "text-gray-700 hover:bg-gray-100"
+					</button>
+
+					<button
+						onClick={() => onTabClick("locations")}
+						className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+							isActive("locations")
+								? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+								: "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800"
 						}`}
 					>
 						<BuildingIcon
 							size={18}
 							className={`mr-3 ${
-								isActive("/admin/location-management") ? "text-red-500" : "text-gray-500"
+								isActive("locations")
+									? "text-emerald-500 dark:text-emerald-400"
+									: "text-gray-500 dark:text-gray-400"
 							}`}
 						/>
 						Location Management
-					</Link>
-					<Link
-						href="/admin/communication-center"
-						className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-							isActive("/admin/communication-center")
-								? "bg-red-50 text-red-700"
-								: "text-gray-700 hover:bg-gray-100"
+					</button>
+
+					<button
+						onClick={() => onTabClick("messages")}
+						className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+							isActive("messages")
+								? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+								: "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800"
 						}`}
 					>
 						<MessageCircleIcon
 							size={18}
 							className={`mr-3 ${
-								isActive("/admin/communication-center") ? "text-red-500" : "text-gray-500"
+								isActive("messages")
+									? "text-emerald-500 dark:text-emerald-400"
+									: "text-gray-500 dark:text-gray-400"
 							}`}
 						/>
 						Communication Center
-					</Link>
-					<Link
-						href="/admin/security-permissions"
-						className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-							isActive("/admin/security-permissions")
-								? "bg-red-50 text-red-700"
-								: "text-gray-700 hover:bg-gray-100"
+					</button>
+
+					<button
+						onClick={() => onTabClick("security")}
+						className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+							isActive("security")
+								? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+								: "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800"
 						}`}
 					>
 						<LockIcon
 							size={18}
 							className={`mr-3 ${
-								isActive("/admin/security-permissions") ? "text-red-500" : "text-gray-500"
+								isActive("security")
+									? "text-emerald-500 dark:text-emerald-400"
+									: "text-gray-500 dark:text-gray-400"
 							}`}
 						/>
 						Security & Permissions
-					</Link>
-					<Link
-						href="/admin/data-export"
-						className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-							isActive("/admin/data-export")
-								? "bg-red-50 text-red-700"
-								: "text-gray-700 hover:bg-gray-100"
+					</button>
+
+					<button
+						onClick={() => onTabClick("export")}
+						className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+							isActive("export")
+								? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+								: "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800"
 						}`}
 					>
 						<UploadIcon
 							size={18}
-							className={`mr-3 ${isActive("/admin/data-export") ? "text-red-500" : "text-gray-500"}`}
+							className={`mr-3 ${
+								isActive("export")
+									? "text-emerald-500 dark:text-emerald-400"
+									: "text-gray-500 dark:text-gray-400"
+							}`}
 						/>
 						Data Export
-					</Link>
-					<Link
-						href="/admin/system-maintenance"
-						className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-							isActive("/admin/system-maintenance")
-								? "bg-red-50 text-red-700"
-								: "text-gray-700 hover:bg-gray-100"
+					</button>
+
+					<button
+						onClick={() => onTabClick("maintenance")}
+						className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+							isActive("maintenance")
+								? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+								: "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800"
 						}`}
 					>
-						<div
+						<WrenchIcon
+							size={18}
 							className={`mr-3 ${
-								isActive("/admin/system-maintenance") ? "text-red-500" : "text-gray-500"
+								isActive("maintenance")
+									? "text-emerald-500 dark:text-emerald-400"
+									: "text-gray-500 dark:text-gray-400"
 							}`}
 						/>
 						System Maintenance
-					</Link>
-				</div>
+					</button>
+				</nav>
 			</div>
-			<div className="absolute bottom-0 w-full border-t border-gray-200 p-4">
-				<Link
-					href="/admin/signin"
-					className="flex items-center px-3 py-2 text-sm font-medium rounded-md text-red-600 hover:bg-red-50"
+
+			{/* Sign Out */}
+			<div className="absolute bottom-0 w-full border-t border-gray-200 dark:border-neutral-800 p-4 bg-white dark:bg-neutral-900">
+				<button
+					onClick={onLogout}
+					className="w-full flex items-center px-3 py-2 text-sm font-medium rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
 				>
-					<LogOutIcon size={18} className="mr-3 text-red-500" />
+					<LogOutIcon size={18} className="mr-3 text-red-500 dark:text-red-400" />
 					Sign Out
-				</Link>
+				</button>
 			</div>
 		</aside>
 	);

@@ -1,10 +1,6 @@
 import UserSchema from "@/server/models/UserSchema";
 import ItemsSchema from "@/server/models/ItemsSchema";
-import {
-	responsePayload,
-	serverResponseError,
-	userNotFoundError,
-} from "@/server/utils/responsePayload";
+import { responsePayload, serverResponseError, userNotFoundError } from "@/server/utils/responsePayload";
 import { ValidateStringField } from "@/server/utils/DataValitdation";
 import mongoose from "mongoose";
 import { connectToDatabase } from "@/server/lib/mongodb";
@@ -17,41 +13,21 @@ class DashboardHandlers {
 			const isValidUserID = await ValidateStringField(userID);
 			if (!isValidUserID) return userNotFoundError();
 
-			const userData = await UserSchema.findById(userID).select(
-				"-__v -password"
-			);
+			const userData = await UserSchema.findById(userID).select("-__v -password");
 			if (!userData) return userNotFoundError();
 
-			return responsePayload(
-				userData,
-				"success",
-				"User data retrieved successfully",
-				200
-			);
+			return responsePayload(userData, "success", "User data retrieved successfully", 200);
 		} catch (error) {
 			return serverResponseError();
 		}
 	}
 
-	static async updateUserDataByID(
-		userID: string,
-		updateData: { username?: string; phone?: string }
-	) {
+	static async updateUserDataByID(userID: string, updateData: { username?: string; phone?: string }) {
 		await connectToDatabase();
 		const session = await mongoose.startSession();
 		try {
-			const validateFields = ValidateStringField(
-				userID,
-				updateData.username,
-				updateData.phone
-			);
-			if (!validateFields)
-				return responsePayload(
-					null,
-					"error",
-					"Invalid input data",
-					400
-				);
+			const validateFields = ValidateStringField(userID, updateData.username, updateData.phone);
+			if (!validateFields) return responsePayload(null, "error", "Invalid input data", 400);
 
 			session.startTransaction();
 			const userData = await UserSchema.findByIdAndUpdate(
@@ -71,12 +47,7 @@ class DashboardHandlers {
 			}
 
 			await session.commitTransaction();
-			return responsePayload(
-				null,
-				"success",
-				"User data updated successfully",
-				200
-			);
+			return responsePayload(null, "success", "User data updated successfully", 200);
 		} catch (error) {
 			return serverResponseError();
 		} finally {
@@ -89,23 +60,15 @@ class DashboardHandlers {
 		const session = await mongoose.startSession();
 		try {
 			const isValidUserID = await ValidateStringField(userID);
-			if (!isValidUserID)
-				return responsePayload(null, "error", "Invalid user ID", 400);
+			if (!isValidUserID) return responsePayload(null, "error", "Invalid user ID", 400);
 
 			if (!image.photo) {
-				return responsePayload(
-					null,
-					"error",
-					"Invalid image file",
-					400
-				);
+				return responsePayload(null, "error", "Invalid image file", 400);
 			}
 
 			const uploadedPublicIds: string[] = [];
 
-			const username = await UserSchema.findById(userID).select(
-				"username"
-			);
+			const username = await UserSchema.findById(userID).select("username");
 			if (!username) return userNotFoundError();
 			const usernameStr = String(username.username || userID);
 			const sanitize = (s: string) =>
@@ -115,10 +78,7 @@ class DashboardHandlers {
 					.slice(0, 50);
 			const imageBase = `${sanitize(usernameStr)}_profile_photo`;
 
-			const imageResult = await uploadFiles(
-				image.photo as File,
-				imageBase
-			);
+			const imageResult = await uploadFiles(image.photo as File, imageBase);
 
 			uploadedPublicIds.push(imageResult.public_id);
 
@@ -130,9 +90,7 @@ class DashboardHandlers {
 				size: typeof res.bytes === "number" ? res.bytes : res.size || 0,
 				width: res.width || 0,
 				height: res.height || 0,
-				uploaded_at: res.created_at
-					? new Date(res.created_at)
-					: new Date(),
+				uploaded_at: res.created_at ? new Date(res.created_at) : new Date(),
 				version: res.version,
 				signature: res.signature,
 				etag: res.etag,
@@ -160,12 +118,7 @@ class DashboardHandlers {
 			}
 
 			await session.commitTransaction();
-			return responsePayload(
-				null,
-				"success",
-				"User photo updated successfully",
-				200
-			);
+			return responsePayload(null, "success", "User photo updated successfully", 200);
 		} catch (error) {
 			return serverResponseError();
 		} finally {
@@ -188,8 +141,7 @@ class DashboardHandlers {
 		await connectToDatabase();
 		try {
 			const validateUserID = ValidateStringField(userID);
-			if (!validateUserID)
-				return responsePayload(null, "error", "Invalid user ID", 400);
+			if (!validateUserID) return responsePayload(null, "error", "Invalid user ID", 400);
 
 			const user = await UserSchema.findById(userID);
 			if (!user) return userNotFoundError();
@@ -198,23 +150,23 @@ class DashboardHandlers {
 			limit = Math.max(1, Math.min(100, Number(limit) || 10));
 
 			// Build query based on filters
-			const query: any = {};
+			// By default, only show active items (approved by admin)
+			const query: any = { status: "active" };
 
 			if (filters?.searchQuery) {
 				const searchRegex = new RegExp(filters.searchQuery, "i");
-				query.$or = [
-					{ name: searchRegex },
-					{ description: searchRegex },
-					{ location: searchRegex },
-				];
+				query.$or = [{ name: searchRegex }, { description: searchRegex }, { location: searchRegex }];
 			}
 
 			if (filters?.type && filters.type !== "all") {
 				query.type = filters.type;
 			}
 
+			// Allow filtering by status only for active and claimed (not pending/rejected)
 			if (filters?.status && filters.status !== "all") {
-				query.status = filters.status;
+				if (filters.status === "active" || filters.status === "claimed") {
+					query.status = filters.status;
+				}
 			}
 
 			if (filters?.category && filters.category !== "all") {
@@ -243,9 +195,7 @@ class DashboardHandlers {
 				let userPhoto = null;
 				if (item.user_id && item.user_id.photo) {
 					userPhoto =
-						typeof item.user_id.photo === "string"
-							? item.user_id.photo
-							: item.user_id.photo.url || null;
+						typeof item.user_id.photo === "string" ? item.user_id.photo : item.user_id.photo.url || null;
 				}
 
 				let itemPhotos = [];
@@ -283,12 +233,7 @@ class DashboardHandlers {
 				},
 			};
 
-			return responsePayload(
-				payload,
-				"success",
-				"Items fetched successfully",
-				200
-			);
+			return responsePayload(payload, "success", "Items fetched successfully", 200);
 		} catch (error) {
 			console.error("Error fetching all items:", error);
 			return serverResponseError();
@@ -296,9 +241,4 @@ class DashboardHandlers {
 	}
 }
 
-export const {
-	getUserDataByID,
-	updateUserDataByID,
-	updateUserPhotoByID,
-	getAllItems,
-} = DashboardHandlers;
+export const { getUserDataByID, updateUserDataByID, updateUserPhotoByID, getAllItems } = DashboardHandlers;
