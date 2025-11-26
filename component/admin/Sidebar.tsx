@@ -252,44 +252,6 @@ export default function AdminSidebar({ isOpen, activeTab, onTabClick, onLogout }
 					</button>
 
 					<button
-						onClick={() => onTabClick("messages")}
-						className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-							isActive("messages")
-								? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
-								: "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800"
-						}`}
-					>
-						<MessageCircleIcon
-							size={18}
-							className={`mr-3 ${
-								isActive("messages")
-									? "text-emerald-500 dark:text-emerald-400"
-									: "text-gray-500 dark:text-gray-400"
-							}`}
-						/>
-						Communication Center
-					</button>
-
-					<button
-						onClick={() => onTabClick("security")}
-						className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-							isActive("security")
-								? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
-								: "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800"
-						}`}
-					>
-						<LockIcon
-							size={18}
-							className={`mr-3 ${
-								isActive("security")
-									? "text-emerald-500 dark:text-emerald-400"
-									: "text-gray-500 dark:text-gray-400"
-							}`}
-						/>
-						Security & Permissions
-					</button>
-
-					<button
 						onClick={() => onTabClick("export")}
 						className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
 							isActive("export")
@@ -306,25 +268,6 @@ export default function AdminSidebar({ isOpen, activeTab, onTabClick, onLogout }
 							}`}
 						/>
 						Data Export
-					</button>
-
-					<button
-						onClick={() => onTabClick("maintenance")}
-						className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-							isActive("maintenance")
-								? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
-								: "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800"
-						}`}
-					>
-						<WrenchIcon
-							size={18}
-							className={`mr-3 ${
-								isActive("maintenance")
-									? "text-emerald-500 dark:text-emerald-400"
-									: "text-gray-500 dark:text-gray-400"
-							}`}
-						/>
-						System Maintenance
 					</button>
 				</nav>
 			</div>
