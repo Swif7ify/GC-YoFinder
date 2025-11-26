@@ -22,7 +22,7 @@ export interface IItems extends Document {
 	description: string;
 	category: ItemCategory; // Electronics, Personal Items, etc.
 	type: "lost" | "found"; // Whether this is a lost or found item
-	status: "active" | "claimed" | "removed"; // Item status
+	status: "pending" | "active" | "claimed" | "rejected" | "removed"; // Item status
 	location: string;
 	date_lost_or_found: Date; // When the item was lost or found
 	matched: number;
@@ -56,8 +56,8 @@ const ItemsSchema = new Schema<IItems>({
 	status: {
 		type: String,
 		required: true,
-		enum: ["active", "claimed", "removed"],
-		default: "active",
+		enum: ["pending", "active", "claimed", "rejected", "removed"],
+		default: "pending",
 	},
 	location: { type: String, required: true, trim: true },
 	date_lost_or_found: { type: Date, required: true },
@@ -81,10 +81,7 @@ const ItemsSchema = new Schema<IItems>({
 			},
 		],
 		default: [],
-		validate: [
-			(val: any[]) => val.length <= 5,
-			"Cannot upload more than 5 photos",
-		],
+		validate: [(val: any[]) => val.length <= 5, "Cannot upload more than 5 photos"],
 	},
 	user_id: {
 		type: mongoose.Schema.Types.ObjectId,
@@ -115,5 +112,4 @@ ItemsSchema.index({ status: 1, date_lost_or_found: -1 });
 
 ItemsSchema.index({ name: "text", description: "text", location: "text" });
 
-export default mongoose.models.Items ||
-	mongoose.model<IItems>("Items", ItemsSchema);
+export default mongoose.models.Items || mongoose.model<IItems>("Items", ItemsSchema);

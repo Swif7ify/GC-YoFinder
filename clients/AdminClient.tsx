@@ -1,8 +1,14 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import Dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
+import { useConfirm } from "@/ui/ConfirmProvider";
+import { api, apiCached, invalidateCache } from "@/lib/api.config";
+import { toastError } from "@/utils/toast";
+import { UserData } from "@/types/types";
+import { useSearchParams } from "next/navigation";
 
 const Header = Dynamic(() => import("@/component/admin/Header").then((mod) => mod.default), { ssr: false });
 const Sidebar = Dynamic(() => import("@/component/admin/Sidebar").then((mod) => mod.default), { ssr: false });
@@ -63,13 +69,45 @@ const TAB_MAP: Record<string, string> = {
 	messages: "Communication Center",
 	security: "Security & Permissions",
 	export: "Data Export",
-	maintenance: "System Maintenance",
 };
 
 export default function AdminClient() {
+	const router = useRouter();
+	const confirm = useConfirm();
+	const searchParams = useSearchParams();
 	const [sidebarOpen, setSidebarOpen] = useState(true);
-	const [activeTab, setActiveTab] = useState("dashboard");
+	const initialTab = searchParams.get("tab") || "dashboard";
+	const [activeTab, setActiveTab] = useState(initialTab);
 	const mainRef = useRef<HTMLElement | null>(null);
+
+	// Admin data state
+	const [adminData, setAdminData] = useState<UserData | null>(null);
+	const [loading, setLoading] = useState(true);
+
+	// Notifications state
+	const [notifications, setNotifications] = useState<
+		{
+			id: string;
+			title: string;
+			message: string;
+			time: string;
+			isRead: boolean;
+			type: string;
+			conversationId?: string;
+		}[]
+	>([]);
+
+	// Dashboard stats state
+	const [dashboardStats, setDashboardStats] = useState<any>(null);
+
+	// Items state
+	const [pendingItems, setPendingItems] = useState<any[]>([]);
+	const [activeItems, setActiveItems] = useState<any[]>([]);
+	const [claimedItems, setClaimedItems] = useState<any[]>([]);
+
+	// Users state
+	const [users, setUsers] = useState<any[]>([]);
+	const [usersPagination, setUsersPagination] = useState<any>(null);
 
 	const handleMenuClick = () => {
 		setSidebarOpen(!sidebarOpen);
@@ -77,22 +115,206 @@ export default function AdminClient() {
 
 	const handleTabClick = (tab: string) => {
 		setActiveTab(tab);
+		router.push(`/dashboard-admin?tab=${tab}`, { scroll: false });
 	};
 
-	const handleLogout = () => {
-		// TODO: Implement logout
-		console.log("Logout clicked");
+	useEffect(() => {
+		setActiveTab(initialTab);
+	}, [initialTab]);
+
+	const handleLogout = async () => {
+		const ok = await confirm({
+			title: "Confirm Logout",
+			description: "Are you sure you want to log out?",
+			variant: "danger",
+			cancelText: "Cancel",
+			confirmText: "Logout",
+		});
+
+		if (!ok) return;
+		try {
+			const response = await api("/api/logout", {
+				method: "POST",
+			});
+
+			if (response.ok) {
+				router.replace("/login");
+			}
+		} catch (error) {
+			console.log(error);
+		}
 	};
 
+	// Fetch admin user data
+	const fetchAdminData = async (useCache = true) => {
+		try {
+			const response = await apiCached(
+				"/api/admin/user",
+				{
+					method: "GET",
+				},
+				useCache
+			);
+
+			if (response.status !== 200) {
+				toastError("Server Error", "Unable to fetch admin data.");
+				return;
+			}
+
+			const data = await response.json();
+			setAdminData(data.data);
+		} catch (error) {
+			console.error("Error fetching admin data:", error);
+			toastError("Error", "Failed to fetch admin data.");
+		}
+	};
+
+	// Fetch notifications
+	const fetchNotifications = async (useCache = true) => {
+		try {
+			const response = await apiCached(
+				"/api/notifications",
+				{
+					method: "GET",
+				},
+				useCache
+			);
+
+			if (response.status !== 200) {
+				console.error("Unable to fetch notifications");
+				return;
+			}
+
+			const data = await response.json();
+			setNotifications(data.notifications || []);
+		} catch (error) {
+			console.error("Error fetching notifications:", error);
+		}
+	};
+
+	// Mark all notifications as read
+	const markAllNotificationsAsRead = async () => {
+		try {
+			invalidateCache(/\/api\/notifications/);
+
+			const response = await api("/api/notifications", {
+				method: "PUT",
+			});
+
+			if (response.status === 200) {
+				// Update local state
+				setNotifications((prev) => prev.map((notif) => ({ ...notif, isRead: true })));
+			}
+		} catch (error) {
+			console.error("Error marking notifications as read:", error);
+		}
+	};
+
+	// Fetch dashboard stats
+	const fetchDashboardStats = async (useCache = true) => {
+		try {
+			const response = await apiCached("/api/admin/dashboard/stats", { method: "GET" }, useCache);
+
+			if (response.status !== 200) {
+				console.error("Unable to fetch dashboard stats");
+				return;
+			}
+
+			const data = await response.json();
+			setDashboardStats(data.data);
+		} catch (error) {
+			console.error("Error fetching dashboard stats:", error);
+		}
+	};
+
+	// Fetch items by status
+	const fetchItems = async (status: string, useCache = true) => {
+		try {
+			const response = await apiCached(`/api/admin/items?status=${status}&limit=50`, { method: "GET" }, useCache);
+
+			if (response.status !== 200) {
+				console.error(`Unable to fetch ${status} items`);
+				return;
+			}
+
+			const data = await response.json();
+
+			if (status === "pending") setPendingItems(data.items || []);
+			else if (status === "active") setActiveItems(data.items || []);
+			else if (status === "claimed") setClaimedItems(data.items || []);
+		} catch (error) {
+			console.error(`Error fetching ${status} items:`, error);
+		}
+	};
+
+	// Fetch users
+	const fetchUsers = async (page = 1, search?: string, useCache = true) => {
+		try {
+			let url = `/api/admin/users?page=${page}&limit=20`;
+			if (search) url += `&search=${encodeURIComponent(search)}`;
+
+			const response = await apiCached(url, { method: "GET" }, useCache);
+
+			if (response.status !== 200) {
+				console.error("Unable to fetch users");
+				return;
+			}
+
+			const data = await response.json();
+			setUsers(data.users || []);
+			setUsersPagination(data.pagination || null);
+		} catch (error) {
+			console.error("Error fetching users:", error);
+		}
+	};
+
+	// Update item status (approve/reject)
+	const updateItemStatus = async (itemId: string, status: "active" | "rejected") => {
+		try {
+			invalidateCache(/\/api\/admin/);
+
+			const response = await api(`/api/admin/items/${itemId}/status`, {
+				method: "PUT",
+				body: JSON.stringify({ status }),
+			});
+
+			if (response.status === 200) {
+				// Refresh data
+				await Promise.all([
+					fetchDashboardStats(false),
+					fetchItems("pending", false),
+					fetchItems("active", false),
+				]);
+				return true;
+			}
+			return false;
+		} catch (error) {
+			console.error("Error updating item status:", error);
+			return false;
+		}
+	};
 	const componentMap: Record<string, React.ReactNode> = {
-		dashboard: <DashboardPage />,
-		users: <UsersPage />,
-		"item-pending": <ItemPendingPage />,
-		"item-active": <ItemActivePage />,
-		"item-claimed": <ItemClaimedPage />,
+		dashboard: <DashboardPage stats={dashboardStats} onRefresh={() => fetchDashboardStats(false)} />,
+		users: (
+			<UsersPage
+				users={users}
+				pagination={usersPagination}
+				onSearch={fetchUsers}
+				onRefresh={() => fetchUsers(1, undefined, false)}
+			/>
+		),
+		"item-pending": (
+			<ItemPendingPage
+				items={pendingItems}
+				onUpdateStatus={updateItemStatus}
+				onRefresh={() => fetchItems("pending", false)}
+			/>
+		),
+		"item-active": <ItemActivePage items={activeItems} onRefresh={() => fetchItems("active", false)} />,
+		"item-claimed": <ItemClaimedPage items={claimedItems} onRefresh={() => fetchItems("claimed", false)} />,
 		"item-archived": <ItemArchivedPage />,
-		reports: <ReportsPage />,
-		activity: <ActivityPage />,
+		reports: <ReportsPage stats={dashboardStats} />,
+		activity: <ActivityPage stats={dashboardStats} />,
 		settings: <SettingsPage />,
 		locations: <LocationsPage />,
 		messages: <MessagesPage />,
@@ -102,6 +324,27 @@ export default function AdminClient() {
 	};
 
 	const ActiveComponent = componentMap[activeTab];
+
+	// Initialize data on component mount
+	useEffect(() => {
+		const initializeData = async () => {
+			setLoading(true);
+			try {
+				await Promise.all([
+					fetchAdminData(),
+					fetchNotifications(),
+					fetchDashboardStats(),
+					fetchItems("pending"),
+					fetchItems("active"),
+					fetchItems("claimed"),
+					fetchUsers(),
+				]);
+			} finally {
+				setLoading(false);
+			}
+		};
+		initializeData();
+	}, []);
 
 	return (
 		<div className="h-screen overflow-hidden bg-gray-50 dark:bg-black">
@@ -121,7 +364,12 @@ export default function AdminClient() {
 				<div
 					className={`flex-1 flex flex-col min-w-0 ${sidebarOpen ? "ml-64" : ""} transition-all duration-300`}
 				>
-					<Header title={TAB_MAP[activeTab] ?? "Dashboard"} onMenuClick={handleMenuClick} />
+					<Header
+						onMenuClick={handleMenuClick}
+						adminData={adminData}
+						notifications={notifications}
+						onMarkAllRead={markAllNotificationsAsRead}
+					/>
 
 					<main
 						id="main-content"
@@ -131,14 +379,20 @@ export default function AdminClient() {
 						aria-label={`${TAB_MAP[activeTab] ?? "Dashboard"} content`}
 						className="overflow-auto p-6 w-full flex-1"
 					>
-						<motion.div
-							key={activeTab}
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.3 }}
-						>
-							{ActiveComponent || "Component not found."}
-						</motion.div>
+						{loading ? (
+							<div className="flex items-center justify-center h-64">
+								<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 dark:border-emerald-400"></div>
+							</div>
+						) : (
+							<motion.div
+								key={activeTab}
+								initial={{ opacity: 0, y: 20 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ duration: 0.3 }}
+							>
+								{ActiveComponent || "Component not found."}
+							</motion.div>
+						)}
 					</main>
 				</div>
 			</div>
