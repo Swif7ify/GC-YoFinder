@@ -23,11 +23,11 @@ import { AllItem } from "@/types/types";
 import Pusher from "pusher-js";
 
 const Sidebar = Dynamic(
-	() => import("@/component/dashboard/Sidebar").then((mod) => mod.default),
+	() => import("@/components/organisms/Sidebar").then((mod) => mod.default),
 	{ ssr: false }
 );
 const Header = Dynamic(
-	() => import("@/component/dashboard/Header").then((mod) => mod.default),
+	() => import("@/components/organisms/Header").then((mod) => mod.default),
 	{ ssr: false }
 );
 
@@ -438,30 +438,36 @@ export default function DashboardPage() {
 			});
 
 			// Listen for new notifications
-			userChannel.bind("new-notification", (data: { notification: any }) => {
-				const newNotification = {
-					id: data.notification.id,
-					title: data.notification.title,
-					message: data.notification.message,
-					time: data.notification.time || new Date().toLocaleTimeString("en-US", {
-						hour: "2-digit",
-						minute: "2-digit",
-						hour12: false,
-					}),
-					isRead: data.notification.isRead || false,
-					conversationId: data.notification.conversationId || null,
-				};
-				setNotifications((prev) => {
-					// Check if notification already exists
-					if (prev.some((n) => n.id === newNotification.id)) {
-						return prev;
-					}
-					// Add new notification at the beginning
-					return [newNotification, ...prev];
-				});
-				// Also update unread count
-				fetchUnreadCount();
-			});
+			userChannel.bind(
+				"new-notification",
+				(data: { notification: any }) => {
+					const newNotification = {
+						id: data.notification.id,
+						title: data.notification.title,
+						message: data.notification.message,
+						time:
+							data.notification.time ||
+							new Date().toLocaleTimeString("en-US", {
+								hour: "2-digit",
+								minute: "2-digit",
+								hour12: false,
+							}),
+						isRead: data.notification.isRead || false,
+						conversationId:
+							data.notification.conversationId || null,
+					};
+					setNotifications((prev) => {
+						// Check if notification already exists
+						if (prev.some((n) => n.id === newNotification.id)) {
+							return prev;
+						}
+						// Add new notification at the beginning
+						return [newNotification, ...prev];
+					});
+					// Also update unread count
+					fetchUnreadCount();
+				}
+			);
 
 			// Listen for conversation updates (which may affect unread count)
 			userChannel.bind("conversation-updated", () => {
@@ -483,11 +489,13 @@ export default function DashboardPage() {
 						id: event.detail.id,
 						title: event.detail.title,
 						message: event.detail.message,
-						time: event.detail.time || new Date().toLocaleTimeString("en-US", {
-							hour: "2-digit",
-							minute: "2-digit",
-							hour12: false,
-						}),
+						time:
+							event.detail.time ||
+							new Date().toLocaleTimeString("en-US", {
+								hour: "2-digit",
+								minute: "2-digit",
+								hour12: false,
+							}),
 						isRead: event.detail.isRead || false,
 						conversationId: event.detail.conversationId || null,
 					};
@@ -504,16 +512,28 @@ export default function DashboardPage() {
 				fetchNotifications();
 			};
 
-			window.addEventListener("unreadCountUpdate", handleUnreadCountUpdate);
-			window.addEventListener("notificationUpdate", handleNotificationUpdate);
+			window.addEventListener(
+				"unreadCountUpdate",
+				handleUnreadCountUpdate
+			);
+			window.addEventListener(
+				"notificationUpdate",
+				handleNotificationUpdate
+			);
 
 			// Cleanup
 			return () => {
 				userChannel.unbind("unread-count-updated");
 				userChannel.unbind("new-notification");
 				userChannel.unbind("conversation-updated");
-				window.removeEventListener("unreadCountUpdate", handleUnreadCountUpdate);
-				window.removeEventListener("notificationUpdate", handleNotificationUpdate);
+				window.removeEventListener(
+					"unreadCountUpdate",
+					handleUnreadCountUpdate
+				);
+				window.removeEventListener(
+					"notificationUpdate",
+					handleNotificationUpdate
+				);
 				pusher.disconnect();
 			};
 		} else {
@@ -529,11 +549,13 @@ export default function DashboardPage() {
 						id: event.detail.id,
 						title: event.detail.title,
 						message: event.detail.message,
-						time: event.detail.time || new Date().toLocaleTimeString("en-US", {
-							hour: "2-digit",
-							minute: "2-digit",
-							hour12: false,
-						}),
+						time:
+							event.detail.time ||
+							new Date().toLocaleTimeString("en-US", {
+								hour: "2-digit",
+								minute: "2-digit",
+								hour12: false,
+							}),
 						isRead: event.detail.isRead || false,
 						conversationId: event.detail.conversationId || null,
 					};
@@ -547,12 +569,24 @@ export default function DashboardPage() {
 				fetchNotifications();
 			};
 
-			window.addEventListener("unreadCountUpdate", handleUnreadCountUpdate);
-			window.addEventListener("notificationUpdate", handleNotificationUpdate);
+			window.addEventListener(
+				"unreadCountUpdate",
+				handleUnreadCountUpdate
+			);
+			window.addEventListener(
+				"notificationUpdate",
+				handleNotificationUpdate
+			);
 
 			return () => {
-				window.removeEventListener("unreadCountUpdate", handleUnreadCountUpdate);
-				window.removeEventListener("notificationUpdate", handleNotificationUpdate);
+				window.removeEventListener(
+					"unreadCountUpdate",
+					handleUnreadCountUpdate
+				);
+				window.removeEventListener(
+					"notificationUpdate",
+					handleNotificationUpdate
+				);
 			};
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
