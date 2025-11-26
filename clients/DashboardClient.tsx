@@ -13,7 +13,7 @@ import {
 
 import { RecentItems, UserData } from "@/types/types";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api } from "@/lib/api.config";
+import { api, apiCached, invalidateCache } from "@/lib/api.config";
 import Dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { toastError } from "@/utils/toast";
@@ -22,68 +22,40 @@ import { useConfirm } from "@/ui/ConfirmProvider";
 import { AllItem } from "@/types/types";
 import Pusher from "pusher-js";
 
-const Sidebar = Dynamic(
-	() => import("@/component/dashboard/Sidebar").then((mod) => mod.default),
-	{ ssr: false }
-);
-const Header = Dynamic(
-	() => import("@/component/dashboard/Header").then((mod) => mod.default),
-	{ ssr: false }
-);
+const Sidebar = Dynamic(() => import("@/component/dashboard/Sidebar").then((mod) => mod.default), { ssr: false });
+const Header = Dynamic(() => import("@/component/dashboard/Header").then((mod) => mod.default), { ssr: false });
 
-const HomeComponent = Dynamic(
-	() =>
-		import("@/component/dashboard/items/HomeComponent").then(
-			(mod) => mod.default
-		),
-	{ ssr: false }
-);
+const HomeComponent = Dynamic(() => import("@/component/dashboard/items/HomeComponent").then((mod) => mod.default), {
+	ssr: false,
+});
 
 const NewItemComponent = Dynamic(
-	() =>
-		import("@/component/dashboard/items/NewItemComponent").then(
-			(mod) => mod.default
-		),
+	() => import("@/component/dashboard/items/NewItemComponent").then((mod) => mod.default),
 	{ ssr: false }
 );
 
 const SearchItemsComponent = Dynamic(
-	() =>
-		import("@/component/dashboard/items/SearchItemsComponent").then(
-			(mod) => mod.default
-		),
+	() => import("@/component/dashboard/items/SearchItemsComponent").then((mod) => mod.default),
 	{ ssr: false }
 );
 
 const MyItemsComponent = Dynamic(
-	() =>
-		import("@/component/dashboard/items/MyItemsComponent").then(
-			(mod) => mod.default
-		),
+	() => import("@/component/dashboard/items/MyItemsComponent").then((mod) => mod.default),
 	{ ssr: false }
 );
 
 const LocationsComponent = Dynamic(
-	() =>
-		import("@/component/dashboard/items/LocationsComponent").then(
-			(mod) => mod.default
-		),
+	() => import("@/component/dashboard/items/LocationsComponent").then((mod) => mod.default),
 	{ ssr: false }
 );
 
 const MessagesComponent = Dynamic(
-	() =>
-		import("@/component/dashboard/items/MessagesComponent").then(
-			(mod) => mod.default
-		),
+	() => import("@/component/dashboard/items/MessagesComponent").then((mod) => mod.default),
 	{ ssr: false }
 );
 
 const SettingsComponent = Dynamic(
-	() =>
-		import("@/component/dashboard/items/SettingsComponent").then(
-			(mod) => mod.default
-		),
+	() => import("@/component/dashboard/items/SettingsComponent").then((mod) => mod.default),
 	{ ssr: false }
 );
 
@@ -121,9 +93,7 @@ export default function DashboardPage() {
 	const mainRef = useRef<HTMLElement | null>(null);
 
 	// userData
-	const [userData, setUserData] = useState<UserData>(
-		[] as unknown as UserData
-	);
+	const [userData, setUserData] = useState<UserData>([] as unknown as UserData);
 
 	useEffect(() => {
 		const tab = (searchParams?.get("tab") ?? "dashboard").toLowerCase();
@@ -167,11 +137,15 @@ export default function DashboardPage() {
 		},
 	];
 
-	const fetchUserData = async () => {
+	const fetchUserData = async (useCache = true) => {
 		try {
-			const response = await api("/api/dashboard/user", {
-				method: "GET",
-			});
+			const response = await apiCached(
+				"/api/dashboard/user",
+				{
+					method: "GET",
+				},
+				useCache
+			);
 
 			if (response.status !== 200) {
 				toastError("Server Error", "Unable to fetch user data.");
@@ -188,6 +162,9 @@ export default function DashboardPage() {
 
 	const fetchUserItems = async () => {
 		try {
+			// Invalidate dashboard items cache when user items change
+			invalidateCache(/\/api\/dashboard\/items/);
+
 			const response = await api("/api/items");
 			if (response.status !== 200) {
 				toastError("Server Error", "Unable to fetch user items.");
@@ -217,11 +194,9 @@ export default function DashboardPage() {
 		}
 	};
 
-	const fetchRecentItems = async (page = 1, limit = 4) => {
+	const fetchRecentItems = async (page = 1, limit = 4, useCache = true) => {
 		try {
-			const response = await api(
-				`/api/dashboard/items?page=${page}&limit=${limit}`
-			);
+			const response = await apiCached(`/api/dashboard/items?page=${page}&limit=${limit}`, {}, useCache);
 			if (response.status !== 200) {
 				toastError("Server Error", "Unable to fetch recent items.");
 				return;
@@ -261,20 +236,13 @@ export default function DashboardPage() {
 				limit: String(limit),
 			});
 
-			if (filters?.searchQuery)
-				params.set("searchQuery", filters.searchQuery);
-			if (filters?.type && filters.type !== "all")
-				params.set("type", filters.type);
-			if (filters?.status && filters.status !== "all")
-				params.set("status", filters.status);
-			if (filters?.category && filters.category !== "all")
-				params.set("category", filters.category);
-			if (filters?.location && filters.location !== "all")
-				params.set("location", filters.location);
+			if (filters?.searchQuery) params.set("searchQuery", filters.searchQuery);
+			if (filters?.type && filters.type !== "all") params.set("type", filters.type);
+			if (filters?.status && filters.status !== "all") params.set("status", filters.status);
+			if (filters?.category && filters.category !== "all") params.set("category", filters.category);
+			if (filters?.location && filters.location !== "all") params.set("location", filters.location);
 
-			const response = await withLoading(() =>
-				api(`/api/dashboard/items?${params.toString()}`)
-			);
+			const response = await withLoading(() => api(`/api/dashboard/items?${params.toString()}`));
 			if (response.status !== 200) {
 				toastError("Server Error", "Unable to fetch items.");
 				return;
@@ -307,9 +275,7 @@ export default function DashboardPage() {
 				views: item.views,
 			}));
 
-			setAllItems((prev) =>
-				append ? [...prev, ...mappedItems] : mappedItems
-			);
+			setAllItems((prev) => (append ? [...prev, ...mappedItems] : mappedItems));
 
 			if (data.meta) {
 				setPaginationMeta(data.meta);
@@ -323,10 +289,7 @@ export default function DashboardPage() {
 
 	const componentMap: Record<string, React.ReactNode> = {
 		dashboard: (
-			<HomeComponent
-				userFullName={userData.firstname + " " + userData.lastname}
-				recentItems={recentItems}
-			/>
+			<HomeComponent userFullName={userData.firstname + " " + userData.lastname} recentItems={recentItems} />
 		),
 		"new-item": <NewItemComponent onUpdate={fetchUserItems} />,
 		"search-items": (
@@ -337,18 +300,13 @@ export default function DashboardPage() {
 				onPageChange={fetchPaginatedItems}
 			/>
 		),
-		"my-items": (
-			<MyItemsComponent userItems={userItems} onUpdate={fetchUserItems} />
-		),
+		"my-items": <MyItemsComponent userItems={userItems} onUpdate={fetchUserItems} />,
 		messages: <MessagesComponent userID={userID} />,
 		locations: <LocationsComponent />,
-		settings: (
-			<SettingsComponent userData={userData} onChange={fetchUserData} />
-		),
+		settings: <SettingsComponent userData={userData} onChange={fetchUserData} />,
 	};
 
-	const ActiveComponent =
-		componentMap[activeTab as keyof typeof componentMap];
+	const ActiveComponent = componentMap[activeTab as keyof typeof componentMap];
 
 	const handleTabClick = (tab: string) => {
 		setActiveTab(tab);
@@ -374,9 +332,7 @@ export default function DashboardPage() {
 
 	// Notification bell should only show unread notifications, not unread messages
 	// Unread messages are shown separately in the sidebar badge
-	const unreadCount = notifications.filter(
-		(notification) => !notification.isRead
-	).length;
+	const unreadCount = notifications.filter((notification) => !notification.isRead).length;
 
 	// Fetch unread message count
 	const fetchUnreadCount = async () => {
@@ -443,11 +399,13 @@ export default function DashboardPage() {
 					id: data.notification.id,
 					title: data.notification.title,
 					message: data.notification.message,
-					time: data.notification.time || new Date().toLocaleTimeString("en-US", {
-						hour: "2-digit",
-						minute: "2-digit",
-						hour12: false,
-					}),
+					time:
+						data.notification.time ||
+						new Date().toLocaleTimeString("en-US", {
+							hour: "2-digit",
+							minute: "2-digit",
+							hour12: false,
+						}),
 					isRead: data.notification.isRead || false,
 					conversationId: data.notification.conversationId || null,
 				};
@@ -483,11 +441,13 @@ export default function DashboardPage() {
 						id: event.detail.id,
 						title: event.detail.title,
 						message: event.detail.message,
-						time: event.detail.time || new Date().toLocaleTimeString("en-US", {
-							hour: "2-digit",
-							minute: "2-digit",
-							hour12: false,
-						}),
+						time:
+							event.detail.time ||
+							new Date().toLocaleTimeString("en-US", {
+								hour: "2-digit",
+								minute: "2-digit",
+								hour12: false,
+							}),
 						isRead: event.detail.isRead || false,
 						conversationId: event.detail.conversationId || null,
 					};
@@ -529,11 +489,13 @@ export default function DashboardPage() {
 						id: event.detail.id,
 						title: event.detail.title,
 						message: event.detail.message,
-						time: event.detail.time || new Date().toLocaleTimeString("en-US", {
-							hour: "2-digit",
-							minute: "2-digit",
-							hour12: false,
-						}),
+						time:
+							event.detail.time ||
+							new Date().toLocaleTimeString("en-US", {
+								hour: "2-digit",
+								minute: "2-digit",
+								hour12: false,
+							}),
 						isRead: event.detail.isRead || false,
 						conversationId: event.detail.conversationId || null,
 					};
@@ -638,9 +600,7 @@ export default function DashboardPage() {
 						ref={mainRef}
 						tabIndex={-1}
 						aria-live="polite"
-						aria-label={`${
-							TAB_MAP[activeTab] ?? "Dashboard"
-						} content`}
+						aria-label={`${TAB_MAP[activeTab] ?? "Dashboard"} content`}
 						className="overflow-auto p-6 w-full"
 					>
 						<motion.div
