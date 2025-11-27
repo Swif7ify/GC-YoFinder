@@ -625,7 +625,7 @@ export default function DashboardPage() {
 						tabIndex={-1}
 						aria-live="polite"
 						aria-label={`${TAB_MAP[activeTab] ?? "Dashboard"} content`}
-						className="overflow-auto p-6 w-full"
+						className="flex-1 min-h-0 overflow-auto p-6 w-full"
 					>
 						<motion.div
 							initial={{ opacity: 0, y: 20 }}

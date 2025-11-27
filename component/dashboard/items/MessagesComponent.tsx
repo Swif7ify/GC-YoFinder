@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { MessageSquare, Send, Search } from "lucide-react";
+import { MessageSquare, Send, Search, MoreVertical, Eye } from "lucide-react";
 import { Conversation, Message } from "@/types/types";
 import { api } from "@/lib/api.config";
 import { useApiLoading } from "@/hooks/useApiLoading";
@@ -26,6 +26,8 @@ export default function MessagesComponent({
 	const [searchQuery, setSearchQuery] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
 	const [isSending, setIsSending] = useState(false);
+	const [showHeaderMenu, setShowHeaderMenu] = useState(false);
+	const [showProfileModal, setShowProfileModal] = useState(false);
 	const { withLoading } = useApiLoading();
 	const pusherRef = useRef<Pusher | null>(null);
 	const channelRef = useRef<any>(null);
@@ -359,7 +361,7 @@ export default function MessagesComponent({
 	);
 
 	return (
-		<div className="h-[calc(100vh-8rem)] flex flex-col">
+		<div className="h-full flex flex-col">
 			{/* Header */}
 			<section aria-labelledby="messages-heading" className="mb-4">
 				<h1
@@ -513,44 +515,82 @@ export default function MessagesComponent({
 						<>
 							{/* Conversation Header */}
 							<header className="p-4 border-b border-gray-200 dark:border-neutral-800">
-								<div className="flex items-center gap-3">
-									<div
-										className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-medium overflow-hidden"
-										aria-hidden="true"
-									>
-										{(() => {
-											const photo = (selectedConversation as any).otherParticipant?.photo;
-											const photoUrl = typeof photo === "string" 
-												? photo 
-												: photo?.url;
-											
-											if (photoUrl && photoUrl.trim() !== "") {
-												return (
-													<Image
-														src={photoUrl}
-														alt={selectedConversation.name}
-														width={40}
-														height={40}
-														className="w-full h-full object-cover"
-													/>
-												);
-											}
-											
-											return selectedConversation.name
-												.split(" ")
-												.map((n) => n[0])
-												.slice(0, 2)
-												.join("")
-												.toUpperCase();
-										})()}
+								<div className="flex items-center justify-between">
+									<div className="flex items-center gap-3">
+										<div
+											className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-medium overflow-hidden"
+											aria-hidden="true"
+										>
+											{(() => {
+												const photo = (selectedConversation as any).otherParticipant?.photo;
+												const photoUrl = typeof photo === "string" 
+													? photo 
+													: photo?.url;
+												
+												if (photoUrl && photoUrl.trim() !== "") {
+													return (
+														<Image
+															src={photoUrl}
+															alt={selectedConversation.name}
+															width={40}
+															height={40}
+															className="w-full h-full object-cover"
+														/>
+													);
+												}
+												
+												return selectedConversation.name
+													.split(" ")
+													.map((n) => n[0])
+													.slice(0, 2)
+													.join("")
+													.toUpperCase();
+											})()}
+										</div>
+										<div>
+											<h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+												{selectedConversation.name}
+											</h2>
+											<p className="text-xs text-emerald-600 dark:text-emerald-400">
+												{selectedConversation.subject}
+											</p>
+										</div>
 									</div>
-									<div>
-										<h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-											{selectedConversation.name}
-										</h2>
-										<p className="text-xs text-emerald-600 dark:text-emerald-400">
-											{selectedConversation.subject}
-										</p>
+
+									{/* Three-dot Menu */}
+									<div className="relative">
+										<button
+											type="button"
+											onClick={() => setShowHeaderMenu(!showHeaderMenu)}
+											className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
+											aria-label="More options"
+										>
+											<MoreVertical size={20} className="text-gray-600 dark:text-gray-200" />
+										</button>
+
+										{showHeaderMenu && (
+											<>
+												{/* Backdrop to close menu */}
+												<div 
+													className="fixed inset-0 z-10" 
+													onClick={() => setShowHeaderMenu(false)}
+												/>
+												{/* Dropdown Menu */}
+												<div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-neutral-800 rounded-lg shadow-lg border border-gray-200 dark:border-neutral-700 z-20 py-1">
+													<button
+														type="button"
+														onClick={() => {
+															setShowProfileModal(true);
+															setShowHeaderMenu(false);
+														}}
+														className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
+													>
+														<Eye size={16} />
+														View Profile
+													</button>
+												</div>
+											</>
+										)}
 									</div>
 								</div>
 							</header>
@@ -652,11 +692,118 @@ export default function MessagesComponent({
 							</h3>
 							<p className="text-sm text-gray-600 dark:text-gray-400">
 								Choose a conversation from the list to start
-								messaging
-							</p>
+							messaging
+						</p>
+					</div>
+				)}
+
+				{/* Profile View Modal */}
+				{showProfileModal && selectedConversation && (
+					<div 
+						className="fixed inset-0 z-50 flex items-center justify-center"
+						onClick={() => setShowProfileModal(false)}
+					>
+						{/* Backdrop */}
+						<div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+						
+						{/* Modal */}
+						<div 
+							className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-neutral-700 w-full max-w-sm mx-4 overflow-hidden"
+							onClick={(e) => e.stopPropagation()}
+						>
+							{/* Header Banner */}
+							<div className="h-24 bg-gradient-to-r from-emerald-500 to-emerald-600" />
+							
+							{/* Profile Content */}
+							<div className="px-6 pb-6">
+								{/* Avatar */}
+								<div className="-mt-12 mb-4 flex justify-center">
+									<div className="w-24 h-24 rounded-full bg-emerald-100 dark:bg-emerald-900/40 border-4 border-white dark:border-neutral-900 flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-bold text-2xl overflow-hidden shadow-lg">
+										{(() => {
+											const photo = (selectedConversation as any).otherParticipant?.photo;
+											const photoUrl = typeof photo === "string" ? photo : photo?.url;
+											
+											if (photoUrl && photoUrl.trim() !== "") {
+												return (
+													<Image
+														src={photoUrl}
+														alt={selectedConversation.name}
+														width={96}
+														height={96}
+														className="w-full h-full object-cover"
+													/>
+												);
+											}
+											
+											return selectedConversation.name
+												.split(" ")
+												.map((n) => n[0])
+												.slice(0, 2)
+												.join("")
+												.toUpperCase();
+										})()}
+									</div>
+								</div>
+								
+								{/* User Info */}
+								<div className="text-center">
+									<h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+										{selectedConversation.name}
+									</h3>
+									<p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+										@{(selectedConversation as any).otherParticipant?.username || "user"}
+									</p>
+									<p className="text-sm text-emerald-600 dark:text-emerald-400 mt-1">
+										{selectedConversation.subject}
+									</p>
+								</div>
+								
+								{/* Divider */}
+								<div className="my-4 border-t border-gray-200 dark:border-neutral-700" />
+								
+								{/* Contact Details */}
+								<div className="space-y-3">
+									{(selectedConversation as any).otherParticipant?.email && (
+										<div className="flex items-center gap-3 text-sm">
+											<svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+											</svg>
+											<span className="text-gray-600 dark:text-gray-300 truncate">
+												{(selectedConversation as any).otherParticipant.email}
+											</span>
+										</div>
+									)}
+									{(selectedConversation as any).otherParticipant?.phone && (
+										<div className="flex items-center gap-3 text-sm">
+											<svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+											</svg>
+											<span className="text-gray-600 dark:text-gray-300">
+												{(selectedConversation as any).otherParticipant.phone}
+											</span>
+										</div>
+									)}
+									<div className="flex items-center gap-3 text-sm">
+										<MessageSquare size={16} className="text-gray-400 shrink-0" />
+										<span className="text-gray-600 dark:text-gray-400">
+											Conversation started
+										</span>
+									</div>
+								</div>
+								
+								{/* Close Button */}
+								<button
+									type="button"
+									onClick={() => setShowProfileModal(false)}
+									className="mt-6 w-full py-2.5 px-4 bg-gray-100 dark:bg-neutral-800 hover:bg-gray-200 dark:hover:bg-neutral-700 text-gray-700 dark:text-gray-200 rounded-lg font-medium transition-colors"
+								>
+									Close
+								</button>
+							</div>
 						</div>
-					)}
-				</main>
+					</div>
+				)}
+			</main>
 			</div>
 		</div>
 	);

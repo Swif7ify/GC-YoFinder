@@ -29,7 +29,7 @@ class MessageHandlers {
 
 			if (existingConversation) {
 				const populated = await ConversationSchema.findById(existingConversation._id)
-					.populate("participants", "firstname lastname username photo")
+					.populate("participants", "firstname lastname username photo email phone")
 					.populate("item_id", "name photos")
 					.lean();
 
@@ -49,7 +49,7 @@ class MessageHandlers {
 			await newConversation.save();
 
 			const populated = await ConversationSchema.findById(newConversation._id)
-				.populate("participants", "firstname lastname username photo")
+				.populate("participants", "firstname lastname username photo email phone")
 				.populate("item_id", "name photos")
 				.lean();
 
@@ -90,7 +90,7 @@ class MessageHandlers {
 			const conversations = await ConversationSchema.find({
 				participants: userID,
 			})
-				.populate("participants", "firstname lastname username photo")
+				.populate("participants", "firstname lastname username photo email phone")
 				.populate("item_id", "name photos")
 				.populate("last_message")
 				.sort({ last_message_at: -1, updated_at: -1 })
