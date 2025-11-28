@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
 	SearchIcon,
 	RefreshCwIcon,
@@ -10,6 +10,9 @@ import {
 	CalendarIcon,
 	ChevronLeftIcon,
 	ChevronRightIcon,
+	MoreVerticalIcon,
+	EyeIcon,
+	XIcon,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -43,6 +46,20 @@ interface UsersPageProps {
 
 export default function UsersPage({ users = [], pagination, onSearch, onRefresh }: UsersPageProps) {
 	const [searchQuery, setSearchQuery] = useState("");
+	const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+	const [selectedUser, setSelectedUser] = useState<User | null>(null);
+	const menuRef = useRef<HTMLDivElement>(null);
+
+	// Close menu when clicking outside
+	useEffect(() => {
+		function handleClickOutside(event: MouseEvent) {
+			if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+				setOpenMenuId(null);
+			}
+		}
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => document.removeEventListener("mousedown", handleClickOutside);
+	}, []);
 
 	const handleSearch = () => {
 		if (onSearch) {
@@ -62,6 +79,10 @@ export default function UsersPage({ users = [], pagination, onSearch, onRefresh 
 			month: "short",
 			day: "numeric",
 		});
+	};
+
+	const toggleMenu = (userId: string) => {
+		setOpenMenuId(openMenuId === userId ? null : userId);
 	};
 
 	return (
@@ -125,12 +146,15 @@ export default function UsersPage({ users = [], pagination, onSearch, onRefresh 
 								<th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
 									Joined
 								</th>
+								<th className="text-center py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
+									Actions
+								</th>
 							</tr>
 						</thead>
 						<tbody>
 							{users.length === 0 ? (
 								<tr>
-									<td colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400">
+									<td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">
 										<UserIcon size={48} className="mx-auto mb-4 opacity-50" />
 										<p>No users found</p>
 									</td>
@@ -203,6 +227,33 @@ export default function UsersPage({ users = [], pagination, onSearch, onRefresh 
 												<span className="text-sm">{formatDate(user.created_at)}</span>
 											</div>
 										</td>
+										<td className="py-3 px-4">
+											<div
+												className="relative flex justify-center"
+												ref={openMenuId === user._id ? menuRef : null}
+											>
+												<button
+													onClick={() => toggleMenu(user._id)}
+													className="p-2 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+												>
+													<MoreVerticalIcon size={16} className="text-gray-500" />
+												</button>
+												{openMenuId === user._id && (
+													<div className="absolute right-0 top-10 w-40 bg-white dark:bg-neutral-900 rounded-lg shadow-lg border border-gray-200 dark:border-neutral-700 z-50">
+														<button
+															onClick={() => {
+																setSelectedUser(user);
+																setOpenMenuId(null);
+															}}
+															className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800"
+														>
+															<EyeIcon size={14} />
+															View Details
+														</button>
+													</div>
+												)}
+											</div>
+										</td>
 									</tr>
 								))
 							)}
@@ -211,23 +262,82 @@ export default function UsersPage({ users = [], pagination, onSearch, onRefresh 
 				</div>
 
 				{/* Pagination */}
-				{pagination && pagination.totalPages > 1 && (
+				{pagination && pagination.totalPages > 0 && (
 					<div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-neutral-700">
 						<p className="text-sm text-gray-600 dark:text-gray-400">
-							Page {pagination.currentPage} of {pagination.totalPages} ({pagination.totalItems} users)
+							Showing {(pagination.currentPage - 1) * 10 + 1} to{" "}
+							{Math.min(pagination.currentPage * 10, pagination.totalItems)} of {pagination.totalItems}{" "}
+							users
 						</p>
-						<div className="flex gap-2">
+						<div className="flex items-center gap-1">
+							{/* Previous Button */}
 							<button
 								onClick={() => handlePageChange(pagination.currentPage - 1)}
 								disabled={!pagination.hasPrev}
-								className="p-2 rounded-lg border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
+								className="p-2 rounded-lg border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed dark:text-white"
 							>
 								<ChevronLeftIcon size={16} />
 							</button>
+
+							{/* Page Numbers */}
+							{(() => {
+								const pages = [];
+								const current = pagination.currentPage;
+								const total = pagination.totalPages;
+
+								// Always show first page
+								if (total > 0) {
+									pages.push(1);
+								}
+
+								// Show ellipsis if needed
+								if (current > 3) {
+									pages.push("...");
+								}
+
+								// Show pages around current
+								for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
+									if (!pages.includes(i)) {
+										pages.push(i);
+									}
+								}
+
+								// Show ellipsis if needed
+								if (current < total - 2) {
+									pages.push("...");
+								}
+
+								// Always show last page
+								if (total > 1 && !pages.includes(total)) {
+									pages.push(total);
+								}
+
+								return pages.map((page, idx) =>
+									typeof page === "number" ? (
+										<button
+											key={idx}
+											onClick={() => handlePageChange(page)}
+											className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
+												page === current
+													? "bg-emerald-600 text-white"
+													: "border border-gray-200 dark:border-neutral-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800"
+											}`}
+										>
+											{page}
+										</button>
+									) : (
+										<span key={idx} className="px-1 text-gray-400">
+											...
+										</span>
+									)
+								);
+							})()}
+
+							{/* Next Button */}
 							<button
 								onClick={() => handlePageChange(pagination.currentPage + 1)}
 								disabled={!pagination.hasNext}
-								className="p-2 rounded-lg border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
+								className="p-2 rounded-lg border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed dark:text-white"
 							>
 								<ChevronRightIcon size={16} />
 							</button>
@@ -235,6 +345,96 @@ export default function UsersPage({ users = [], pagination, onSearch, onRefresh 
 					</div>
 				)}
 			</div>
+
+			{/* User Details Modal */}
+			{selectedUser && (
+				<div
+					className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+					onClick={() => setSelectedUser(null)}
+				>
+					<div
+						className="bg-white dark:bg-neutral-900 rounded-xl shadow-xl max-w-md w-full mx-4"
+						onClick={(e) => e.stopPropagation()}
+					>
+						<div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-neutral-800">
+							<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">User Details</h3>
+							<button
+								onClick={() => setSelectedUser(null)}
+								className="p-1 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded"
+							>
+								<XIcon size={20} className="text-gray-500" />
+							</button>
+						</div>
+						<div className="p-6">
+							<div className="flex items-center gap-4 mb-6">
+								<div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/40 overflow-hidden flex items-center justify-center">
+									{selectedUser.photo?.url ? (
+										<Image
+											src={selectedUser.photo.url}
+											alt={selectedUser.username}
+											width={64}
+											height={64}
+											className="w-full h-full object-cover"
+										/>
+									) : (
+										<span className="text-2xl text-emerald-700 dark:text-emerald-400 font-medium">
+											{selectedUser.firstname?.[0]}
+											{selectedUser.lastname?.[0]}
+										</span>
+									)}
+								</div>
+								<div>
+									<h4 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+										{selectedUser.firstname} {selectedUser.lastname}
+									</h4>
+									<p className="text-gray-500 dark:text-gray-400">@{selectedUser.username}</p>
+									<span
+										className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${
+											selectedUser.is_online
+												? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+												: "bg-gray-100 text-gray-800 dark:bg-neutral-800 dark:text-gray-300"
+										}`}
+									>
+										<span
+											className={`w-2 h-2 rounded-full ${
+												selectedUser.is_online ? "bg-green-500" : "bg-gray-400"
+											}`}
+										></span>
+										{selectedUser.is_online ? "Online" : "Offline"}
+									</span>
+								</div>
+							</div>
+							<div className="space-y-4">
+								<div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-neutral-800 rounded-lg">
+									<MailIcon size={18} className="text-gray-500" />
+									<div>
+										<p className="text-xs text-gray-500 dark:text-gray-400">Email</p>
+										<p className="text-gray-900 dark:text-gray-100">{selectedUser.email}</p>
+									</div>
+								</div>
+								<div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-neutral-800 rounded-lg">
+									<PhoneIcon size={18} className="text-gray-500" />
+									<div>
+										<p className="text-xs text-gray-500 dark:text-gray-400">Phone</p>
+										<p className="text-gray-900 dark:text-gray-100">
+											{selectedUser.phone || "Not provided"}
+										</p>
+									</div>
+								</div>
+								<div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-neutral-800 rounded-lg">
+									<CalendarIcon size={18} className="text-gray-500" />
+									<div>
+										<p className="text-xs text-gray-500 dark:text-gray-400">Joined</p>
+										<p className="text-gray-900 dark:text-gray-100">
+											{formatDate(selectedUser.created_at)}
+										</p>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

@@ -250,7 +250,7 @@ export default function AdminClient() {
 	// Fetch users
 	const fetchUsers = async (page = 1, search?: string, useCache = true) => {
 		try {
-			let url = `/api/admin/users?page=${page}&limit=20`;
+			let url = `/api/admin/users?page=${page}&limit=10`;
 			if (search) url += `&search=${encodeURIComponent(search)}`;
 
 			const response = await apiCached(url, { method: "GET" }, useCache);
@@ -358,6 +358,7 @@ export default function AdminClient() {
 				<Sidebar
 					isOpen={sidebarOpen}
 					activeTab={activeTab}
+					pendingCount={pendingItems.length}
 					onTabClick={handleTabClick}
 					onLogout={handleLogout}
 				/>
