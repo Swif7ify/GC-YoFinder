@@ -228,10 +228,10 @@ export default function DashboardPage({ stats, onRefresh }: DashboardPageProps) 
 										/>
 										<Tooltip
 											contentStyle={{
-												backgroundColor: "#1f2937",
+												backgroundColor: "#ffffff",
 												border: "none",
 												borderRadius: "8px",
-												color: "#fff",
+												color: "#000000",
 											}}
 											cursor={{ fill: "rgba(0,0,0,0.1)" }}
 										/>
@@ -289,10 +289,9 @@ export default function DashboardPage({ stats, onRefresh }: DashboardPageProps) 
 										</Pie>
 										<Tooltip
 											contentStyle={{
-												backgroundColor: "#1f2937",
+												backgroundColor: "#ffffff",
 												border: "none",
 												borderRadius: "8px",
-												color: "#fff",
 											}}
 										/>
 									</PieChart>
