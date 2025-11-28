@@ -6,6 +6,7 @@ import { responsePayload, serverResponseError, userNotFoundError } from "@/serve
 import { ValidateStringField } from "@/server/utils/DataValitdation";
 import mongoose from "mongoose";
 import { connectToDatabase } from "@/server/lib/mongodb";
+import pusher from "@/server/config/pusher.config";
 
 class AdminHandlers {
 	// Get admin user data by ID
@@ -273,7 +274,7 @@ class AdminHandlers {
 	// Update item status (approve/reject/archive)
 	static async updateItemStatus(
 		itemID: string,
-		status: "active" | "rejected" | "pending" | "removed",
+		status: "active" | "rejected" | "pending" | "removed" | "claimed",
 		adminID: string
 	) {
 		await connectToDatabase();
@@ -324,6 +325,31 @@ class AdminHandlers {
 					`Your item "${itemName}" has been archived.`,
 					itemID
 				);
+			}
+
+			// Trigger Pusher events for real-time updates
+			// Notify admin dashboard to refresh
+			await pusher.trigger("admin-updates", "item-status-changed", {
+				itemId: itemID,
+				status,
+				previousStatus: item.status,
+			});
+
+			// Notify the item owner's dashboard to refresh
+			await pusher.trigger(`private-user-${itemOwnerID}`, "item-updated", {
+				itemId: itemID,
+				status,
+			});
+
+			// Notify all users about item status changes (for search items real-time updates)
+			if (status === "active") {
+				await pusher.trigger("global-items", "item-approved", {
+					itemId: itemID,
+				});
+			} else if (status === "claimed") {
+				await pusher.trigger("global-items", "item-claimed", {
+					itemId: itemID,
+				});
 			}
 
 			return responsePayload(item, "success", `Item ${status} successfully`, 200);

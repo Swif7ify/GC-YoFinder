@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import Dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/ui/ConfirmProvider";
 import { api, apiCached, invalidateCache } from "@/lib/api.config";
-import { toastError } from "@/utils/toast";
+import { toastError, toastSuccess } from "@/utils/toast";
 import { UserData } from "@/types/types";
 import { useSearchParams } from "next/navigation";
+import { usePusher } from "@/contexts/PusherProvider";
 
 const Header = Dynamic(() => import("@/component/admin/Header").then((mod) => mod.default), { ssr: false });
 const Sidebar = Dynamic(() => import("@/component/admin/Sidebar").then((mod) => mod.default), { ssr: false });
@@ -390,6 +391,49 @@ export default function AdminClient() {
 		};
 		initializeData();
 	}, []);
+
+	// Use global Pusher context
+	const { subscribe, isConnected } = usePusher();
+
+	// Refresh functions wrapped in useCallback for Pusher events
+	const refreshAllData = useCallback(() => {
+		invalidateCache(/\/api\/admin/);
+		fetchDashboardStats(false);
+		fetchItems("pending", false);
+		fetchItems("rejected", false);
+		fetchItems("active", false);
+		fetchItems("claimed", false);
+		fetchItems("removed", false);
+	}, []);
+
+	// Setup Pusher for real-time updates
+	useEffect(() => {
+		if (!isConnected) return;
+
+		// Subscribe to admin updates channel
+		const adminChannel = subscribe("admin-updates");
+		if (!adminChannel) return;
+
+		// Listen for item status changes
+		const handleItemStatusChanged = () => {
+			refreshAllData();
+		};
+		adminChannel.bind("item-status-changed", handleItemStatusChanged);
+
+		// Listen for new items
+		const handleNewItem = () => {
+			invalidateCache(/\/api\/admin/);
+			fetchDashboardStats(false);
+			fetchItems("pending", false);
+			toastSuccess("New Item", "A new item has been submitted for review");
+		};
+		adminChannel.bind("new-item", handleNewItem);
+
+		return () => {
+			adminChannel.unbind("item-status-changed", handleItemStatusChanged);
+			adminChannel.unbind("new-item", handleNewItem);
+		};
+	}, [isConnected, subscribe, refreshAllData]);
 
 	return (
 		<div className="h-screen overflow-hidden bg-gray-50 dark:bg-black">

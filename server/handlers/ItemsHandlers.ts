@@ -8,6 +8,7 @@ import { ValidateStringField } from "@/server/utils/DataValitdation";
 import mongoose from "mongoose";
 import { connectToDatabase } from "@/server/lib/mongodb";
 import { deleteFiles } from "@/server/config/cloudinary.config";
+import pusher from "@/server/config/pusher.config";
 
 import { handleImagesUpload } from "@/server/utils/MultipleImageHandler";
 
@@ -121,6 +122,20 @@ class ItemsHandlers {
 				return responsePayload(null, "error", "Failed to create new item", 500);
 			}
 			await session.commitTransaction();
+
+			// Trigger Pusher events for real-time updates
+			// Notify admin dashboard about new pending item
+			await pusher.trigger("admin-updates", "new-item", {
+				itemId: newItem[0]._id.toString(),
+				type: itemData.type,
+				status: "pending",
+			});
+
+			// Notify user's dashboard
+			await pusher.trigger(`private-user-${userID}`, "item-created", {
+				itemId: newItem[0]._id.toString(),
+			});
+
 			return responsePayload(null, "success", "Item created successfully", 201);
 		} catch (error) {
 			console.log(error);
@@ -294,6 +309,31 @@ class ItemsHandlers {
 					console.error("Failed to delete old images from Cloudinary:", err)
 				);
 			}
+
+			// Trigger Pusher events for real-time updates
+			const previousStatus = item.status;
+			if (newStatus !== previousStatus) {
+				// Notify admin dashboard about status change
+				await pusher.trigger("admin-updates", "item-status-changed", {
+					itemId: itemID,
+					status: newStatus,
+					previousStatus,
+				});
+
+				// Notify all users about item status changes (for search items real-time updates)
+				if (newStatus === "claimed") {
+					await pusher.trigger("global-items", "item-claimed", {
+						itemId: itemID,
+					});
+				}
+			}
+
+			// Notify user's dashboard
+			await pusher.trigger(`private-user-${userID}`, "item-updated", {
+				itemId: itemID,
+				status: newStatus,
+			});
+
 			return responsePayload(null, "success", "Item updated successfully", 200);
 		} catch (error) {
 			await session.abortTransaction();
