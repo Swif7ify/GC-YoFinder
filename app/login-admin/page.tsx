@@ -28,6 +28,7 @@ const AdminLogin = () => {
 
 			if (response.status !== 200) {
 				toastError("Invalid credentials", "Please Try Again");
+				return;
 			}
 			toastSuccess("Login Successful", "Redirecting to dashboard");
 			router.replace("/dashboard-admin");

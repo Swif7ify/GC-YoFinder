@@ -10,10 +10,9 @@ import {
 	MessageSquareIcon,
 	EyeIcon,
 	SearchIcon,
-	AlertCircleIcon,
-	XCircleIcon,
 	RefreshCwIcon,
 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 interface DashboardStats {
 	totalUsers: number;
@@ -201,87 +200,105 @@ export default function DashboardPage({ stats, onRefresh }: DashboardPageProps) 
 					</div>
 				</div>
 
-				{/* Item Status Breakdown */}
+				{/* Item Status - Bar Chart with Recharts */}
 				<div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-800 p-5">
 					<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Item Status</h3>
-					<div className="space-y-3">
-						<div className="flex items-center justify-between">
-							<div className="flex items-center gap-2">
-								<ClockIcon size={16} className="text-orange-500" />
-								<span className="text-gray-700 dark:text-gray-300">Pending</span>
+					{(() => {
+						const statusData = [
+							{ name: "Pending", value: stats.pendingItems, fill: "#f97316" },
+							{ name: "Active", value: stats.activeItems, fill: "#22c55e" },
+							{ name: "Claimed", value: stats.claimedItems, fill: "#3b82f6" },
+							{ name: "Rejected", value: stats.rejectedItems, fill: "#ef4444" },
+						];
+
+						return (
+							<div className="h-48">
+								<ResponsiveContainer width="100%" height="100%">
+									<BarChart data={statusData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+										<XAxis
+											dataKey="name"
+											tick={{ fontSize: 12, fill: "#9ca3af" }}
+											axisLine={false}
+											tickLine={false}
+										/>
+										<YAxis
+											tick={{ fontSize: 12, fill: "#9ca3af" }}
+											axisLine={false}
+											tickLine={false}
+										/>
+										<Tooltip
+											contentStyle={{
+												backgroundColor: "#ffffff",
+												border: "none",
+												borderRadius: "8px",
+												color: "#000000",
+											}}
+											cursor={{ fill: "rgba(0,0,0,0.1)" }}
+										/>
+										<Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={50}>
+											{statusData.map((entry, index) => (
+												<Cell key={`cell-${index}`} fill={entry.fill} />
+											))}
+										</Bar>
+									</BarChart>
+								</ResponsiveContainer>
 							</div>
-							<span className="font-semibold text-gray-900 dark:text-gray-100">{stats.pendingItems}</span>
-						</div>
-						<div className="flex items-center justify-between">
-							<div className="flex items-center gap-2">
-								<CheckCircleIcon size={16} className="text-green-500" />
-								<span className="text-gray-700 dark:text-gray-300">Active</span>
-							</div>
-							<span className="font-semibold text-gray-900 dark:text-gray-100">{stats.activeItems}</span>
-						</div>
-						<div className="flex items-center justify-between">
-							<div className="flex items-center gap-2">
-								<AlertCircleIcon size={16} className="text-blue-500" />
-								<span className="text-gray-700 dark:text-gray-300">Claimed</span>
-							</div>
-							<span className="font-semibold text-gray-900 dark:text-gray-100">{stats.claimedItems}</span>
-						</div>
-						<div className="flex items-center justify-between">
-							<div className="flex items-center gap-2">
-								<XCircleIcon size={16} className="text-red-500" />
-								<span className="text-gray-700 dark:text-gray-300">Rejected</span>
-							</div>
-							<span className="font-semibold text-gray-900 dark:text-gray-100">
-								{stats.rejectedItems}
-							</span>
-						</div>
-					</div>
-					{/* Progress bar */}
-					<div className="mt-4">
-						<div className="h-2 bg-gray-200 dark:bg-neutral-700 rounded-full overflow-hidden flex">
-							<div
-								className="bg-orange-500 h-full"
-								style={{ width: `${(stats.pendingItems / stats.totalItems) * 100}%` }}
-							/>
-							<div
-								className="bg-green-500 h-full"
-								style={{ width: `${(stats.activeItems / stats.totalItems) * 100}%` }}
-							/>
-							<div
-								className="bg-blue-500 h-full"
-								style={{ width: `${(stats.claimedItems / stats.totalItems) * 100}%` }}
-							/>
-							<div
-								className="bg-red-500 h-full"
-								style={{ width: `${(stats.rejectedItems / stats.totalItems) * 100}%` }}
-							/>
-						</div>
-					</div>
+						);
+					})()}
 				</div>
 
-				{/* Top Categories */}
+				{/* Top Categories - Pie Chart with Recharts */}
 				<div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-800 p-5">
 					<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Top Categories</h3>
-					<div className="space-y-3">
-						{stats.categoryBreakdown.slice(0, 5).map((cat, index) => (
-							<div key={index} className="flex items-center justify-between">
-								<span className="text-gray-700 dark:text-gray-300 capitalize">
-									{cat._id || "Unknown"}
-								</span>
-								<div className="flex items-center gap-2">
-									<div className="w-24 h-2 bg-gray-200 dark:bg-neutral-700 rounded-full overflow-hidden">
-										<div
-											className="bg-emerald-500 h-full rounded-full"
-											style={{ width: `${(cat.count / stats.totalItems) * 100}%` }}
+					{(() => {
+						const categories = stats.categoryBreakdown.slice(0, 5);
+						const colors = ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ec4899"];
+
+						if (categories.length === 0) {
+							return (
+								<p className="text-gray-500 dark:text-gray-400 text-center py-8">No category data</p>
+							);
+						}
+
+						const pieData = categories.map((cat, idx) => ({
+							name: cat._id || "Unknown",
+							value: cat.count,
+							fill: colors[idx % colors.length],
+						}));
+
+						return (
+							<div className="h-48">
+								<ResponsiveContainer width="100%" height="100%">
+									<PieChart>
+										<Pie
+											data={pieData}
+											cx="50%"
+											cy="50%"
+											innerRadius={40}
+											outerRadius={70}
+											paddingAngle={2}
+											dataKey="value"
+											label={({ name, percent }) =>
+												`${name} ${((percent || 0) * 100).toFixed(0)}%`
+											}
+											labelLine={false}
+										>
+											{pieData.map((entry, index) => (
+												<Cell key={`cell-${index}`} fill={entry.fill} />
+											))}
+										</Pie>
+										<Tooltip
+											contentStyle={{
+												backgroundColor: "#ffffff",
+												border: "none",
+												borderRadius: "8px",
+											}}
 										/>
-									</div>
-									<span className="text-sm font-medium text-gray-900 dark:text-gray-100 w-8 text-right">
-										{cat.count}
-									</span>
-								</div>
+									</PieChart>
+								</ResponsiveContainer>
 							</div>
-						))}
-					</div>
+						);
+					})()}
 				</div>
 			</div>
 

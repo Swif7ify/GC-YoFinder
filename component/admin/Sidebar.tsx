@@ -9,15 +9,12 @@ import {
 	ClockIcon,
 	SettingsIcon,
 	BuildingIcon,
-	MessageCircleIcon,
-	LockIcon,
 	UploadIcon,
 	CheckCircleIcon,
 	ListIcon,
 	ArchiveIcon,
 	ChevronRightIcon,
 	LogOutIcon,
-	WrenchIcon,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -25,9 +22,10 @@ interface AdminSidebarProps {
 	activeTab: string;
 	onTabClick: (tab: string) => void;
 	onLogout: () => void;
+	pendingCount?: number;
 }
 
-export default function AdminSidebar({ isOpen, activeTab, onTabClick, onLogout }: AdminSidebarProps) {
+export default function AdminSidebar({ isOpen, activeTab, onTabClick, onLogout, pendingCount = 0 }: AdminSidebarProps) {
 	const [itemManagementOpen, setItemManagementOpen] = useState(true);
 
 	const isActive = (tab: string) => activeTab === tab;
@@ -40,19 +38,44 @@ export default function AdminSidebar({ isOpen, activeTab, onTabClick, onLogout }
 			<div className="py-4">
 				{/* Pending Approvals Card */}
 				<div className="px-4 mb-6">
-					<div className="px-3 py-3 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+					<div
+						className={`px-3 py-3 rounded-lg border ${
+							pendingCount > 0
+								? "bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-orange-200 dark:border-orange-800"
+								: "bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 border-emerald-200 dark:border-emerald-800"
+						}`}
+					>
 						<div className="flex items-center justify-between">
 							<div>
 								<p className="text-xs font-medium text-gray-500 dark:text-gray-400">
 									Pending Approvals
 								</p>
-								<p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">15</p>
+								<p
+									className={`text-xl font-bold ${
+										pendingCount > 0
+											? "text-orange-600 dark:text-orange-400"
+											: "text-emerald-600 dark:text-emerald-400"
+									}`}
+								>
+									{pendingCount}
+								</p>
 							</div>
 							<button
 								onClick={() => onTabClick("item-pending")}
-								className="p-1 bg-white dark:bg-neutral-800 rounded-full border border-emerald-200 dark:border-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
+								className={`p-1 bg-white dark:bg-neutral-800 rounded-full border ${
+									pendingCount > 0
+										? "border-orange-200 dark:border-orange-700 hover:bg-orange-50 dark:hover:bg-orange-900/30"
+										: "border-emerald-200 dark:border-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
+								}`}
 							>
-								<ChevronRightIcon size={14} className="text-emerald-500 dark:text-emerald-400" />
+								<ChevronRightIcon
+									size={14}
+									className={
+										pendingCount > 0
+											? "text-orange-500 dark:text-orange-400"
+											: "text-emerald-500 dark:text-emerald-400"
+									}
+								/>
 							</button>
 						</div>
 					</div>
