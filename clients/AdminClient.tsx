@@ -55,11 +55,15 @@ const ExportPage = Dynamic(() => import("@/component/admin/pages/ExportPage").th
 const MaintenancePage = Dynamic(() => import("@/component/admin/pages/MaintenancePage").then((mod) => mod.default), {
 	ssr: false,
 });
+const ItemAllPage = Dynamic(() => import("@/component/admin/pages/ItemAllPage").then((mod) => mod.default), {
+	ssr: false,
+});
 
 const TAB_MAP: Record<string, string> = {
 	dashboard: "Dashboard",
 	users: "User Management",
-	"item-pending": "Pending Approvals",
+	"item-all": "All Items",
+	"item-pending": "Pending Review",
 	"item-active": "Active Listings",
 	"item-claimed": "Claimed Items",
 	"item-archived": "Archived Items",
@@ -276,8 +280,8 @@ export default function AdminClient() {
 		}
 	};
 
-	// Update item status (approve/reject/pending)
-	const updateItemStatus = async (itemId: string, status: "active" | "rejected" | "pending") => {
+	// Update item status (approve/reject/pending/removed)
+	const updateItemStatus = async (itemId: string, status: "active" | "rejected" | "pending" | "removed") => {
 		try {
 			invalidateCache(/\/api\/admin/);
 
@@ -287,12 +291,14 @@ export default function AdminClient() {
 			});
 
 			if (response.status === 200) {
-				// Refresh data
+				// Refresh all data
 				await Promise.all([
 					fetchDashboardStats(false),
 					fetchItems("pending", false),
 					fetchItems("rejected", false),
 					fetchItems("active", false),
+					fetchItems("claimed", false),
+					fetchItems("removed", false),
 				]);
 				return true;
 			}
@@ -328,6 +334,9 @@ export default function AdminClient() {
 			return false;
 		}
 	};
+	// Combine all items for the All Items page
+	const allItems = [...pendingItems, ...rejectedItems, ...activeItems, ...claimedItems, ...archivedItems];
+
 	const componentMap: Record<string, React.ReactNode> = {
 		dashboard: <DashboardPage stats={dashboardStats} onRefresh={() => fetchDashboardStats(false)} />,
 		users: (
@@ -336,6 +345,19 @@ export default function AdminClient() {
 				pagination={usersPagination}
 				onSearch={fetchUsers}
 				onRefresh={() => fetchUsers(1, undefined, false)}
+			/>
+		),
+		"item-all": (
+			<ItemAllPage
+				items={allItems}
+				onUpdateStatus={updateItemStatus}
+				onRefresh={() => {
+					fetchItems("pending", false);
+					fetchItems("rejected", false);
+					fetchItems("active", false);
+					fetchItems("claimed", false);
+					fetchItems("removed", false);
+				}}
 			/>
 		),
 		"item-pending": (
