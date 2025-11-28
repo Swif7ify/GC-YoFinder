@@ -40,33 +40,20 @@ export default function Sidebar({
 						</div>
 						<ul className="space-y-1" role="list">
 							{navItems.map((item) => {
-								const isActive =
-									activeTab ===
-									item.name.toLowerCase().replace(/ /g, "-");
+								const isActive = activeTab === item.name.toLowerCase().replace(/ /g, "-");
 								return (
 									<li key={item.name}>
 										<button
 											type="button"
-											onClick={() =>
-												handleTabClick(
-													item.name
-														.toLowerCase()
-														.replace(/ /g, "-")
-												)
-											}
+											onClick={() => handleTabClick(item.name.toLowerCase().replace(/ /g, "-"))}
 											className={`w-full text-left flex items-center px-4 py-3 transition-colors duration-200 ${
 												isActive
 													? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-medium border-l-4 border-emerald-500 dark:border-emerald-400"
 													: "text-gray-700 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
 											} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-emerald-400 focus-visible:ring-inset`}
-											aria-current={
-												isActive ? "page" : undefined
-											}
+											aria-current={isActive ? "page" : undefined}
 										>
-											<span
-												className="mr-3 text-gray-500 dark:text-gray-400"
-												aria-hidden="true"
-											>
+											<span className="mr-3 text-gray-500 dark:text-gray-400" aria-hidden="true">
 												{item.icon}
 											</span>
 											<span className="flex-1">{item.name}</span>
@@ -88,10 +75,7 @@ export default function Sidebar({
 									onClick={handleLogout}
 									className="w-full text-left text-red-700 dark:text-red-400 flex items-center px-4 py-3 transition-colors duration-200 hover:bg-red-50 dark:hover:bg-red-900/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:focus-visible:ring-red-400 focus-visible:ring-inset"
 								>
-									<span
-										className="mr-3 text-red-500 dark:text-red-400"
-										aria-hidden="true"
-									>
+									<span className="mr-3 text-red-500 dark:text-red-400" aria-hidden="true">
 										<LogOut size={18} />
 									</span>
 									<span>Sign Out</span>
@@ -115,11 +99,7 @@ export default function Sidebar({
 						role="button"
 						tabIndex={0}
 						onKeyDown={(e) => {
-							if (
-								e.key === "Escape" ||
-								e.key === "Enter" ||
-								e.key === " "
-							) {
+							if (e.key === "Escape" || e.key === "Enter" || e.key === " ") {
 								setShowMobileMenu(false);
 							}
 						}}
@@ -142,38 +122,21 @@ export default function Sidebar({
 								</div>
 								<ul className="space-y-1" role="list">
 									{navItems.map((item) => {
-										const isActive =
-											activeTab ===
-											item.name
-												.toLowerCase()
-												.replace(/ /g, "-");
+										const isActive = activeTab === item.name.toLowerCase().replace(/ /g, "-");
 										return (
 											<li key={item.name}>
 												<button
 													type="button"
 													onClick={() => {
-														handleTabClick(
-															item.name
-																.toLowerCase()
-																.replace(
-																	/ /g,
-																	"-"
-																)
-														);
-														setShowMobileMenu(
-															false
-														);
+														handleTabClick(item.name.toLowerCase().replace(/ /g, "-"));
+														setShowMobileMenu(false);
 													}}
 													className={`w-full text-left flex items-center px-4 py-3 transition-colors duration-200 ${
 														isActive
 															? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-medium border-l-4 border-emerald-500 dark:border-emerald-400"
 															: "text-gray-700 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
 													} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:focus-visible:ring-emerald-400 focus-visible:ring-inset`}
-													aria-current={
-														isActive
-															? "page"
-															: undefined
-													}
+													aria-current={isActive ? "page" : undefined}
 												>
 													<span
 														className="mr-3 text-gray-500 dark:text-gray-400"
@@ -203,10 +166,7 @@ export default function Sidebar({
 											}}
 											className="w-full text-left text-red-700 dark:text-red-400 flex items-center px-4 py-3 transition-colors duration-200 hover:bg-red-50 dark:hover:bg-red-900/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:focus-visible:ring-red-400 focus-visible:ring-inset"
 										>
-											<span
-												className="mr-3 text-red-500 dark:text-red-400"
-												aria-hidden="true"
-											>
+											<span className="mr-3 text-red-500 dark:text-red-400" aria-hidden="true">
 												<LogOut size={18} />
 											</span>
 											<span>Sign Out</span>

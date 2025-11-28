@@ -1,5 +1,5 @@
-// Templates - Page layouts
-// These are the main page components that compose organisms
+// Templates / Pages - Main page components that compose organisms
+// Located in items/ folder for backward compatibility
 
 export { default as HomeComponent } from "../items/HomeComponent";
 export { default as SearchItemsComponent } from "../items/SearchItemsComponent";

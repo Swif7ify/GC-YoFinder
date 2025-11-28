@@ -1,11 +1,22 @@
 // Admin Component Library - Atomic Design Structure
 // ==================================================
-// organisms/ - Complex sections (Header, Sidebar)
+// atoms/     - Basic building blocks (Badge, StatCard, IconBox)
+// molecules/ - Combinations of atoms (ItemCard, DetailPanel, SearchFilter, etc.)
+// organisms/ - Complex sections (Header, Sidebar, ItemListWithDetail)
 // pages/     - Page components (Dashboard, Users, Items, etc.)
+// templates/ - Page layouts
+
+// Atoms
+export * from "./atoms";
+
+// Molecules
+export * from "./molecules";
 
 // Organisms
-export { default as Header } from "./Header";
-export { default as Sidebar } from "./Sidebar";
+export * from "./organisms";
 
 // Pages
 export * from "./pages";
+
+// Templates
+export * from "./templates";
