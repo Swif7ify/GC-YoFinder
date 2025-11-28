@@ -429,9 +429,16 @@ export default function AdminClient() {
 		};
 		adminChannel.bind("new-item", handleNewItem);
 
+		// Listen for item deletions
+		const handleItemDeleted = () => {
+			refreshAllData();
+		};
+		adminChannel.bind("item-deleted", handleItemDeleted);
+
 		return () => {
 			adminChannel.unbind("item-status-changed", handleItemStatusChanged);
 			adminChannel.unbind("new-item", handleNewItem);
+			adminChannel.unbind("item-deleted", handleItemDeleted);
 		};
 	}, [isConnected, subscribe, refreshAllData]);
 

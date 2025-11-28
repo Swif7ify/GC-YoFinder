@@ -197,6 +197,23 @@ class ItemsHandlers {
 			}
 
 			await session.commitTransaction();
+
+			// Trigger Pusher events for real-time updates
+			// Notify admin dashboard about item deletion
+			await pusher.trigger("admin-updates", "item-deleted", {
+				itemId: itemID,
+			});
+
+			// Notify user's dashboard
+			await pusher.trigger(`private-user-${userID}`, "item-deleted", {
+				itemId: itemID,
+			});
+
+			// Notify all users to refresh search items
+			await pusher.trigger("global-items", "item-deleted", {
+				itemId: itemID,
+			});
+
 			return responsePayload(null, "success", "Item deleted successfully", 200);
 		} catch (error) {
 			await session.abortTransaction();

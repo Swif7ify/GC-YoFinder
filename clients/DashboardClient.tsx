@@ -444,15 +444,25 @@ export default function DashboardPage() {
 		};
 		userChannel.bind("item-created", handleItemCreated);
 
+		// Listen for item deleted confirmation
+		const handleItemDeleted = () => {
+			invalidateCache(/\/api\/items/);
+			invalidateCache(/\/api\/dashboard/);
+			fetchUserItems();
+			refreshAllItems();
+		};
+		userChannel.bind("item-deleted", handleItemDeleted);
+
 		// Subscribe to global items channel for real-time updates from all users
 		const globalChannel = subscribe("global-items");
 		if (globalChannel) {
-			// Listen for any new items being approved (visible to all)
+			// Listen for any item changes (visible to all)
 			const handleGlobalItemUpdate = () => {
 				refreshAllItems();
 			};
 			globalChannel.bind("item-approved", handleGlobalItemUpdate);
 			globalChannel.bind("item-claimed", handleGlobalItemUpdate);
+			globalChannel.bind("item-deleted", handleGlobalItemUpdate);
 		}
 
 		// Also listen for custom events from MessagesComponent (as backup)
@@ -497,6 +507,7 @@ export default function DashboardPage() {
 			userChannel.unbind("conversation-updated", handleConversationUpdated);
 			userChannel.unbind("item-updated", handleItemUpdated);
 			userChannel.unbind("item-created", handleItemCreated);
+			userChannel.unbind("item-deleted", handleItemDeleted);
 			if (globalChannel) {
 				globalChannel.unbind_all();
 			}
