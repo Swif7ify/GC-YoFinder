@@ -9,6 +9,7 @@ import {
 	UserIcon,
 	ImageIcon,
 	CheckCircleIcon,
+	ArchiveIcon,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -32,10 +33,19 @@ interface Item {
 interface ItemClaimedPageProps {
 	items?: Item[];
 	onRefresh?: () => void;
+	onArchive?: (itemId: string) => Promise<boolean>;
 }
 
-export default function ItemClaimedPage({ items = [], onRefresh }: ItemClaimedPageProps) {
+export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: ItemClaimedPageProps) {
 	const [searchQuery, setSearchQuery] = useState("");
+	const [archiving, setArchiving] = useState<string | null>(null);
+
+	const handleArchive = async (itemId: string) => {
+		if (!onArchive) return;
+		setArchiving(itemId);
+		await onArchive(itemId);
+		setArchiving(null);
+	};
 
 	const filteredItems = items.filter(
 		(item) =>
@@ -119,18 +129,30 @@ export default function ItemClaimedPage({ items = [], onRefresh }: ItemClaimedPa
 									)}
 								</div>
 								<div className="flex-1 min-w-0">
-									<h3 className="font-medium text-gray-900 dark:text-gray-100 truncate">
-										{item.name}
-									</h3>
-									<span
-										className={`inline-block px-2 py-0.5 rounded-full text-xs mt-1 ${
-											item.type === "lost"
-												? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-												: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
-										}`}
-									>
-										{item.type.toUpperCase()}
-									</span>
+									<div className="flex items-start justify-between gap-2">
+										<div>
+											<h3 className="font-medium text-gray-900 dark:text-gray-100 truncate">
+												{item.name}
+											</h3>
+											<span
+												className={`inline-block px-2 py-0.5 rounded-full text-xs mt-1 ${
+													item.type === "lost"
+														? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+														: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+												}`}
+											>
+												{item.type.toUpperCase()}
+											</span>
+										</div>
+										<button
+											onClick={() => handleArchive(item._id)}
+											disabled={archiving === item._id}
+											className="p-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-gray-600 dark:text-gray-400 rounded-lg transition-colors disabled:opacity-50"
+											title="Archive item"
+										>
+											<ArchiveIcon size={14} />
+										</button>
+									</div>
 									<div className="flex items-center gap-1 mt-2 text-xs text-gray-500">
 										<MapPinIcon size={12} />
 										{item.location}

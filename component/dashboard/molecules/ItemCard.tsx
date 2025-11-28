@@ -5,12 +5,14 @@ import Image from "next/image";
 import { MapPin, Calendar, Eye, MessageSquare, AlertCircle, CheckCircle2 } from "lucide-react";
 import dayjs from "dayjs";
 
+import { ItemStatus } from "@/types/types";
+
 interface ItemCardProps {
 	id: string;
 	name: string;
 	description: string;
 	type: "lost" | "found";
-	status: "active" | "claimed" | "removed";
+	status: ItemStatus;
 	location: string;
 	date: string;
 	imageUrl?: string | null;

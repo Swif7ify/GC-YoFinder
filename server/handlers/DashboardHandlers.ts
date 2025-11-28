@@ -1,5 +1,7 @@
 import UserSchema from "@/server/models/UserSchema";
 import ItemsSchema from "@/server/models/ItemsSchema";
+import ConversationSchema from "@/server/models/ConversationSchema";
+import MessageSchema from "@/server/models/MessageSchema";
 import { responsePayload, serverResponseError, userNotFoundError } from "@/server/utils/responsePayload";
 import { ValidateStringField } from "@/server/utils/DataValitdation";
 import mongoose from "mongoose";
@@ -239,6 +241,82 @@ class DashboardHandlers {
 			return serverResponseError();
 		}
 	}
+
+	// Get user dashboard stats
+	static async getUserStats(userID: string) {
+		await connectToDatabase();
+		try {
+			const validateUserID = ValidateStringField(userID);
+			if (!validateUserID) return responsePayload(null, "error", "Invalid user ID", 400);
+
+			const user = await UserSchema.findById(userID);
+			if (!user) return userNotFoundError();
+
+			// Get date ranges
+			const now = new Date();
+			const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+			// Get user's item stats
+			const [
+				totalItemsPosted,
+				itemsPostedThisWeek,
+				lostItemsPosted,
+				foundItemsPosted,
+				pendingItems,
+				activeItems,
+				claimedItems,
+				totalConversations,
+				unreadMessages,
+			] = await Promise.all([
+				ItemsSchema.countDocuments({ user_id: userID }),
+				ItemsSchema.countDocuments({ user_id: userID, created_at: { $gte: weekStart } }),
+				ItemsSchema.countDocuments({ user_id: userID, type: "lost" }),
+				ItemsSchema.countDocuments({ user_id: userID, type: "found" }),
+				ItemsSchema.countDocuments({ user_id: userID, status: "pending" }),
+				ItemsSchema.countDocuments({ user_id: userID, status: "active" }),
+				ItemsSchema.countDocuments({ user_id: userID, status: "claimed" }),
+				ConversationSchema.countDocuments({
+					$or: [{ user1_id: userID }, { user2_id: userID }],
+				}),
+				MessageSchema.countDocuments({
+					receiver_id: userID,
+					is_read: false,
+				}),
+			]);
+
+			const stats = {
+				itemsPosted: {
+					total: totalItemsPosted,
+					thisWeek: itemsPostedThisWeek,
+				},
+				itemsFound: {
+					total: foundItemsPosted,
+					thisWeek: 0, // Can be calculated if needed
+				},
+				activeClaims: {
+					total: pendingItems + activeItems,
+					pending: pendingItems,
+				},
+				messages: {
+					total: totalConversations,
+					unread: unreadMessages,
+				},
+				breakdown: {
+					lost: lostItemsPosted,
+					found: foundItemsPosted,
+					pending: pendingItems,
+					active: activeItems,
+					claimed: claimedItems,
+				},
+			};
+
+			return responsePayload(stats, "success", "User stats retrieved successfully", 200);
+		} catch (error) {
+			console.error("Error fetching user stats:", error);
+			return serverResponseError();
+		}
+	}
 }
 
-export const { getUserDataByID, updateUserDataByID, updateUserPhotoByID, getAllItems } = DashboardHandlers;
+export const { getUserDataByID, updateUserDataByID, updateUserPhotoByID, getAllItems, getUserStats } =
+	DashboardHandlers;

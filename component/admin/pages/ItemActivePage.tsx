@@ -1,16 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-	RefreshCwIcon,
-	SearchIcon,
-	MapPinIcon,
-	CalendarIcon,
-	UserIcon,
-	ImageIcon,
-	EyeIcon,
-	PackageIcon,
-} from "lucide-react";
+import { RefreshCwIcon, SearchIcon, MapPinIcon, UserIcon, ImageIcon, EyeIcon, PackageIcon } from "lucide-react";
 import Image from "next/image";
 
 interface Item {

@@ -23,6 +23,9 @@ export interface UserData {
 	updated_at: string;
 }
 
+// Shared status type for all items
+export type ItemStatus = "pending" | "active" | "claimed" | "rejected" | "removed";
+
 export interface RecentItems {
 	id: string;
 	title: string;
@@ -30,7 +33,7 @@ export interface RecentItems {
 	type: "lost" | "found";
 	location: string;
 	date: string;
-	status: "active" | "claimed" | "removed";
+	status: ItemStatus;
 	image_url?: string;
 }
 
@@ -62,6 +65,7 @@ export interface Conversation {
 	time: string;
 	avatar?: string;
 	unreadCount: number;
+	itemStatus?: ItemStatus;
 }
 
 export interface Message {
@@ -92,7 +96,7 @@ export interface MyItem {
 	type: "lost" | "found";
 	location: string;
 	dateReported: string;
-	status: "active" | "claimed" | "removed";
+	status: ItemStatus;
 	views: number;
 	matchCount: number;
 	image_url?: string;
@@ -116,7 +120,7 @@ export interface AllItem {
 	matched: number;
 	name: string;
 	photos: any[];
-	status: "active" | "claimed" | "removed";
+	status: ItemStatus;
 	type: "lost" | "found";
 	updated_at: string;
 	user_id: {

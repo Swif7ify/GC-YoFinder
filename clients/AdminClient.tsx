@@ -102,8 +102,13 @@ export default function AdminClient() {
 
 	// Items state
 	const [pendingItems, setPendingItems] = useState<any[]>([]);
+	const [rejectedItems, setRejectedItems] = useState<any[]>([]);
 	const [activeItems, setActiveItems] = useState<any[]>([]);
 	const [claimedItems, setClaimedItems] = useState<any[]>([]);
+	const [archivedItems, setArchivedItems] = useState<any[]>([]);
+
+	// Combined items for review page (pending + rejected)
+	const reviewItems = [...pendingItems, ...rejectedItems];
 
 	// Users state
 	const [users, setUsers] = useState<any[]>([]);
@@ -240,8 +245,10 @@ export default function AdminClient() {
 			const data = await response.json();
 
 			if (status === "pending") setPendingItems(data.items || []);
+			else if (status === "rejected") setRejectedItems(data.items || []);
 			else if (status === "active") setActiveItems(data.items || []);
 			else if (status === "claimed") setClaimedItems(data.items || []);
+			else if (status === "removed") setArchivedItems(data.items || []);
 		} catch (error) {
 			console.error(`Error fetching ${status} items:`, error);
 		}
@@ -268,8 +275,8 @@ export default function AdminClient() {
 		}
 	};
 
-	// Update item status (approve/reject)
-	const updateItemStatus = async (itemId: string, status: "active" | "rejected") => {
+	// Update item status (approve/reject/pending)
+	const updateItemStatus = async (itemId: string, status: "active" | "rejected" | "pending") => {
 		try {
 			invalidateCache(/\/api\/admin/);
 
@@ -283,6 +290,7 @@ export default function AdminClient() {
 				await Promise.all([
 					fetchDashboardStats(false),
 					fetchItems("pending", false),
+					fetchItems("rejected", false),
 					fetchItems("active", false),
 				]);
 				return true;
@@ -290,6 +298,32 @@ export default function AdminClient() {
 			return false;
 		} catch (error) {
 			console.error("Error updating item status:", error);
+			return false;
+		}
+	};
+
+	// Archive item (set status to removed)
+	const archiveItem = async (itemId: string) => {
+		try {
+			invalidateCache(/\/api\/admin/);
+
+			const response = await api(`/api/admin/items/${itemId}/status`, {
+				method: "PUT",
+				body: JSON.stringify({ status: "removed" }),
+			});
+
+			if (response.status === 200) {
+				// Refresh data
+				await Promise.all([
+					fetchDashboardStats(false),
+					fetchItems("claimed", false),
+					fetchItems("removed", false),
+				]);
+				return true;
+			}
+			return false;
+		} catch (error) {
+			console.error("Error archiving item:", error);
 			return false;
 		}
 	};
@@ -305,14 +339,23 @@ export default function AdminClient() {
 		),
 		"item-pending": (
 			<ItemPendingPage
-				items={pendingItems}
+				items={reviewItems}
 				onUpdateStatus={updateItemStatus}
-				onRefresh={() => fetchItems("pending", false)}
+				onRefresh={() => {
+					fetchItems("pending", false);
+					fetchItems("rejected", false);
+				}}
 			/>
 		),
 		"item-active": <ItemActivePage items={activeItems} onRefresh={() => fetchItems("active", false)} />,
-		"item-claimed": <ItemClaimedPage items={claimedItems} onRefresh={() => fetchItems("claimed", false)} />,
-		"item-archived": <ItemArchivedPage />,
+		"item-claimed": (
+			<ItemClaimedPage
+				items={claimedItems}
+				onRefresh={() => fetchItems("claimed", false)}
+				onArchive={archiveItem}
+			/>
+		),
+		"item-archived": <ItemArchivedPage items={archivedItems} onRefresh={() => fetchItems("removed", false)} />,
 		reports: <ReportsPage stats={dashboardStats} />,
 		activity: <ActivityPage stats={dashboardStats} />,
 		settings: <SettingsPage />,
@@ -335,8 +378,10 @@ export default function AdminClient() {
 					fetchNotifications(),
 					fetchDashboardStats(),
 					fetchItems("pending"),
+					fetchItems("rejected"),
 					fetchItems("active"),
 					fetchItems("claimed"),
+					fetchItems("removed"),
 					fetchUsers(),
 				]);
 			} finally {

@@ -203,14 +203,31 @@ class ItemsHandlers {
 				itemData.title,
 				itemData.description,
 				itemData.category,
-				itemData.location,
-				itemData.status
+				itemData.location
 			);
 			if (!validateFields) return responsePayload(null, "error", "Invalid item data", 400);
 			const user = await UserSchema.findById(userID);
 			if (!user) return userNotFoundError();
 			const item = await ItemsSchema.findById(itemID);
 			if (!item) return responsePayload(null, "error", "Item not found", 404);
+
+			// Verify user owns this item
+			if (item.user_id.toString() !== userID) {
+				return responsePayload(null, "error", "You can only edit your own items", 403);
+			}
+
+			// Determine new status based on current status and user request
+			let newStatus = item.status;
+
+			if (item.status === "rejected") {
+				// If item was rejected and user is editing, set back to pending for re-approval
+				newStatus = "pending";
+			} else if (item.status === "active" && itemData.status === "claimed") {
+				// Users can only mark active items as claimed
+				newStatus = "claimed";
+			}
+			// Users cannot set status to "active" - only admin can approve
+			// Pending items stay pending, claimed items stay claimed
 
 			let uploadedPublicIds: string[] = [];
 
@@ -244,16 +261,23 @@ class ItemsHandlers {
 				finalPhotos.push(...uploadResult.imageMetadata);
 			}
 
-			const doc = {
+			const doc: any = {
 				type: itemData.type,
 				name: itemData.title,
 				description: itemData.description,
 				category: itemData.category,
 				location: itemData.location,
-				status: itemData.status,
+				status: newStatus,
 				date_lost_or_found: itemData.date_lost_or_found ? new Date(itemData.date_lost_or_found) : new Date(),
 				photos: finalPhotos,
+				updated_at: new Date(),
 			};
+
+			// Set claimed_by and claimed_at when marking as claimed
+			if (newStatus === "claimed" && item.status !== "claimed") {
+				doc.claimed_by = userID;
+				doc.claimed_at = new Date();
+			}
 
 			const updatedItem = await ItemsSchema.findByIdAndUpdate(itemID, doc, { new: true, session });
 			if (!updatedItem) {

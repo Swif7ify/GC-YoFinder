@@ -270,8 +270,12 @@ class AdminHandlers {
 		}
 	}
 
-	// Update item status (approve/reject)
-	static async updateItemStatus(itemID: string, status: "active" | "rejected", adminID: string) {
+	// Update item status (approve/reject/archive)
+	static async updateItemStatus(
+		itemID: string,
+		status: "active" | "rejected" | "pending" | "removed",
+		adminID: string
+	) {
 		await connectToDatabase();
 		try {
 			const item = await ItemsSchema.findById(itemID).populate("user_id", "firstname lastname");
@@ -302,6 +306,22 @@ class AdminHandlers {
 					"item_update",
 					"Item Rejected",
 					`Your item "${itemName}" has been rejected. Please review and resubmit.`,
+					itemID
+				);
+			} else if (status === "pending") {
+				await createNotification(
+					itemOwnerID,
+					"item_update",
+					"Item Under Review",
+					`Your item "${itemName}" has been restored to pending review.`,
+					itemID
+				);
+			} else if (status === "removed") {
+				await createNotification(
+					itemOwnerID,
+					"item_update",
+					"Item Archived",
+					`Your item "${itemName}" has been archived.`,
 					itemID
 				);
 			}

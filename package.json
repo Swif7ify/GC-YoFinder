@@ -7,7 +7,8 @@
 		"build": "next build",
 		"start": "next start",
 		"lint": "next lint",
-		"create-student": "node scripts/create-student.js"
+		"create-student": "node scripts/create-student.js",
+		"check": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@emotion/react": "^11.14.0",

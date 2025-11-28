@@ -91,7 +91,7 @@ class MessageHandlers {
 				participants: userID,
 			})
 				.populate("participants", "firstname lastname username photo email phone")
-				.populate("item_id", "name photos")
+				.populate("item_id", "name photos status")
 				.populate("last_message")
 				.sort({ last_message_at: -1, updated_at: -1 })
 				.lean();
@@ -119,6 +119,7 @@ class MessageHandlers {
 					unreadCount: unreadData?.count || 0,
 					otherParticipant: otherParticipant,
 					item: conv.item_id,
+					itemStatus: conv.item_id?.status || "active",
 				};
 			});
 

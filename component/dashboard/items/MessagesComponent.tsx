@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { MessageSquare, Send, Search, MoreVertical, Eye } from "lucide-react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { MessageSquare, Send, Search, MoreVertical, Eye, Lock } from "lucide-react";
 import { Conversation, Message } from "@/types/types";
 import { api } from "@/lib/api.config";
 import { useApiLoading } from "@/hooks/useApiLoading";
@@ -10,20 +10,20 @@ import Pusher from "pusher-js";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 
+type ConversationFilter = "all" | "active" | "claimed";
+
 interface MessagesComponentProps {
 	userID: string | null;
 }
 
-export default function MessagesComponent({
-	userID,
-}: MessagesComponentProps) {
+export default function MessagesComponent({ userID }: MessagesComponentProps) {
 	const searchParams = useSearchParams();
 	const [conversations, setConversations] = useState<Conversation[]>([]);
-	const [selectedConversation, setSelectedConversation] =
-		useState<Conversation | null>(null);
+	const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
 	const [messages, setMessages] = useState<Message[]>([]);
 	const [newMessage, setNewMessage] = useState("");
 	const [searchQuery, setSearchQuery] = useState("");
+	const [filterTab, setFilterTab] = useState<ConversationFilter>("all");
 	const [isLoading, setIsLoading] = useState(false);
 	const [isSending, setIsSending] = useState(false);
 	const [showHeaderMenu, setShowHeaderMenu] = useState(false);
@@ -32,6 +32,19 @@ export default function MessagesComponent({
 	const pusherRef = useRef<Pusher | null>(null);
 	const channelRef = useRef<any>(null);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
+
+	// Count conversations by status
+	const counts = useMemo(
+		() => ({
+			all: conversations.length,
+			active: conversations.filter((c) => c.itemStatus !== "claimed").length,
+			claimed: conversations.filter((c) => c.itemStatus === "claimed").length,
+		}),
+		[conversations]
+	);
+
+	// Check if selected conversation is for a claimed item
+	const isConversationClaimed = selectedConversation?.itemStatus === "claimed";
 
 	// Initialize Pusher
 	useEffect(() => {
@@ -55,7 +68,7 @@ export default function MessagesComponent({
 
 		// Subscribe to user-specific channel for conversation updates
 		const userChannel = pusher.subscribe(`private-user-${userID}`);
-		
+
 		const handleConversationUpdate = () => {
 			// Refresh conversations when updated
 			if (userID) {
@@ -70,7 +83,8 @@ export default function MessagesComponent({
 							// Ensure unreadCount is a number
 							const formattedConversations = data.conversations.map((conv: any) => ({
 								...conv,
-								unreadCount: typeof conv.unreadCount === 'number' ? conv.unreadCount : (conv.unreadCount || 0),
+								unreadCount:
+									typeof conv.unreadCount === "number" ? conv.unreadCount : conv.unreadCount || 0,
 							}));
 							setConversations(formattedConversations);
 							// Trigger custom event to update unread count in parent
@@ -85,14 +99,14 @@ export default function MessagesComponent({
 
 		userChannel.bind("conversation-updated", handleConversationUpdate);
 		userChannel.bind("new-message", handleConversationUpdate);
-		
+
 		// Listen for unread count updates
 		const handleUnreadCountUpdate = () => {
 			// Trigger custom event to update unread count in parent
 			window.dispatchEvent(new CustomEvent("unreadCountUpdate"));
 		};
 		userChannel.bind("unread-count-updated", handleUnreadCountUpdate);
-		
+
 		// Listen for new notifications
 		const handleNewNotification = (data: { notification: any }) => {
 			// Trigger custom event to update notifications in parent with the notification data
@@ -117,9 +131,7 @@ export default function MessagesComponent({
 
 		try {
 			setIsLoading(true);
-			const response = await withLoading(() =>
-				api("/api/messages/conversations")
-			);
+			const response = await withLoading(() => api("/api/messages/conversations"));
 
 			if (response.status !== 200) {
 				toastError("Error", "Failed to load conversations");
@@ -131,7 +143,7 @@ export default function MessagesComponent({
 			// Ensure unreadCount is a number
 			const formattedConversations = conversationsData.map((conv: any) => ({
 				...conv,
-				unreadCount: typeof conv.unreadCount === 'number' ? conv.unreadCount : (conv.unreadCount || 0),
+				unreadCount: typeof conv.unreadCount === "number" ? conv.unreadCount : conv.unreadCount || 0,
 			}));
 			setConversations(formattedConversations);
 		} catch (error) {
@@ -170,9 +182,7 @@ export default function MessagesComponent({
 		if (!userID) return;
 
 		try {
-			const response = await api(
-				`/api/messages/conversations/${conversationID}`
-			);
+			const response = await api(`/api/messages/conversations/${conversationID}`);
 
 			if (response.status !== 200) {
 				toastError("Error", "Failed to load messages");
@@ -189,11 +199,7 @@ export default function MessagesComponent({
 
 			// Update unread count in conversations list
 			setConversations((prev) =>
-				prev.map((conv) =>
-					conv.id === conversationID
-						? { ...conv, unreadCount: 0 }
-						: conv
-				)
+				prev.map((conv) => (conv.id === conversationID ? { ...conv, unreadCount: 0 } : conv))
 			);
 
 			// Trigger custom event to update unread count in parent
@@ -217,9 +223,7 @@ export default function MessagesComponent({
 
 		// Subscribe to conversation channel for real-time messages
 		if (pusherRef.current) {
-			const channel = pusherRef.current.subscribe(
-				`conversation-${conversation.id}`
-			);
+			const channel = pusherRef.current.subscribe(`conversation-${conversation.id}`);
 
 			channel.bind("new-message", (data: { message: Message }) => {
 				// Check if this message is from the current user
@@ -251,9 +255,7 @@ export default function MessagesComponent({
 								lastMessage: messageToAdd.content,
 								time: messageToAdd.timestamp,
 								unreadCount:
-									selectedConversation?.id === conversation.id
-										? 0
-										: (conv.unreadCount || 0) + 1,
+									selectedConversation?.id === conversation.id ? 0 : (conv.unreadCount || 0) + 1,
 							};
 						}
 						return conv;
@@ -354,39 +356,82 @@ export default function MessagesComponent({
 		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
 	}, [messages]);
 
-	const filteredConversations = conversations.filter(
-		(conv) =>
-			conv.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-			conv.subject.toLowerCase().includes(searchQuery.toLowerCase())
-	);
+	const filteredConversations = useMemo(() => {
+		return conversations
+			.filter((conv) => {
+				// Filter by tab
+				if (filterTab === "active") return conv.itemStatus !== "claimed";
+				if (filterTab === "claimed") return conv.itemStatus === "claimed";
+				return true; // "all"
+			})
+			.filter(
+				(conv) =>
+					conv.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+					conv.subject.toLowerCase().includes(searchQuery.toLowerCase())
+			);
+	}, [conversations, filterTab, searchQuery]);
 
 	return (
-		<div className="h-full flex flex-col">
+		<div className="h-[calc(100vh-180px)] flex flex-col overflow-hidden">
 			{/* Header */}
-			<section aria-labelledby="messages-heading" className="mb-4">
+			<section aria-labelledby="messages-heading" className="mb-4 flex-shrink-0">
 				<h1
 					id="messages-heading"
 					className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-gray-100 mb-1"
 				>
 					Messages
 				</h1>
-				<p className="text-gray-600 dark:text-gray-400">
-					Communicate about lost and found items
-				</p>
+				<p className="text-gray-600 dark:text-gray-400">Communicate about lost and found items</p>
 			</section>
 
 			{/* Messages Container */}
-			<div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
+			<div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0 overflow-hidden">
 				{/* Conversations List */}
 				<aside
-					className="lg:col-span-1 bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 flex flex-col"
+					className="lg:col-span-1 bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 flex flex-col overflow-hidden"
 					aria-label="Conversations list"
 				>
+					{/* Filter Tabs */}
+					<div className="p-3 border-b border-gray-200 dark:border-neutral-800 flex-shrink-0">
+						<div className="flex gap-1 bg-gray-100 dark:bg-neutral-800 rounded-lg p-1">
+							<button
+								type="button"
+								onClick={() => setFilterTab("all")}
+								className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+									filterTab === "all"
+										? "bg-white dark:bg-neutral-700 text-gray-900 dark:text-gray-100 shadow-sm"
+										: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+								}`}
+							>
+								All ({counts.all})
+							</button>
+							<button
+								type="button"
+								onClick={() => setFilterTab("active")}
+								className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+									filterTab === "active"
+										? "bg-white dark:bg-neutral-700 text-emerald-600 dark:text-emerald-400 shadow-sm"
+										: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+								}`}
+							>
+								Active ({counts.active})
+							</button>
+							<button
+								type="button"
+								onClick={() => setFilterTab("claimed")}
+								className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+									filterTab === "claimed"
+										? "bg-white dark:bg-neutral-700 text-blue-600 dark:text-blue-400 shadow-sm"
+										: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+								}`}
+							>
+								Claimed ({counts.claimed})
+							</button>
+						</div>
+					</div>
+
 					{/* Search */}
-					<div className="p-4 border-b border-gray-200 dark:border-neutral-800">
-						<h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">
-							Conversations
-						</h2>
+					<div className="p-3 border-b border-gray-200 dark:border-neutral-800 flex-shrink-0">
 						<div className="relative">
 							<Search
 								size={18}
@@ -398,7 +443,7 @@ export default function MessagesComponent({
 								placeholder="Search conversations..."
 								value={searchQuery}
 								onChange={(e) => setSearchQuery(e.target.value)}
-								className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-neutral-700  rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-neutral-800/50 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-sm"
+								className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-neutral-800/50 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-sm"
 								aria-label="Search conversations"
 							/>
 						</div>
@@ -421,23 +466,13 @@ export default function MessagesComponent({
 								<li key={conversation.id}>
 									<button
 										type="button"
-										onClick={() =>
-											handleConversationClick(
-												conversation
-											)
-										}
+										onClick={() => handleConversationClick(conversation)}
 										className={`w-full text-left px-4 py-3 border-b border-gray-100 dark:border-neutral-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500 ${
-											selectedConversation?.id ===
-											conversation.id
+											selectedConversation?.id === conversation.id
 												? "bg-emerald-50 dark:bg-emerald-900/20"
 												: ""
 										}`}
-										aria-current={
-											selectedConversation?.id ===
-											conversation.id
-												? "true"
-												: undefined
-										}
+										aria-current={selectedConversation?.id === conversation.id ? "true" : undefined}
 									>
 										<div className="flex items-start gap-3">
 											{/* Avatar */}
@@ -447,10 +482,8 @@ export default function MessagesComponent({
 											>
 												{(() => {
 													const photo = (conversation as any).otherParticipant?.photo;
-													const photoUrl = typeof photo === "string" 
-														? photo 
-														: photo?.url;
-													
+													const photoUrl = typeof photo === "string" ? photo : photo?.url;
+
 													if (photoUrl && photoUrl.trim() !== "") {
 														return (
 															<Image
@@ -462,7 +495,7 @@ export default function MessagesComponent({
 															/>
 														);
 													}
-													
+
 													return conversation.name
 														.split(" ")
 														.map((n) => n[0])
@@ -483,7 +516,9 @@ export default function MessagesComponent({
 																className="bg-red-500 text-white text-xs font-medium px-2 py-0.5 rounded-full min-w-[20px] text-center"
 																aria-label={`${conversation.unreadCount} new messages`}
 															>
-																{conversation.unreadCount > 99 ? "99+" : conversation.unreadCount}
+																{conversation.unreadCount > 99
+																	? "99+"
+																	: conversation.unreadCount}
 															</span>
 														)}
 														<span className="text-xs text-gray-500 dark:text-gray-400">
@@ -491,9 +526,16 @@ export default function MessagesComponent({
 														</span>
 													</div>
 												</div>
-												<p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mb-1 truncate">
-													{conversation.subject}
-												</p>
+												<div className="flex items-center gap-2 mb-1">
+													<p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium truncate">
+														{conversation.subject}
+													</p>
+													{conversation.itemStatus === "claimed" && (
+														<span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+															Claimed
+														</span>
+													)}
+												</div>
 												<p className="text-xs text-gray-600 dark:text-gray-400 truncate">
 													{conversation.lastMessage}
 												</p>
@@ -508,7 +550,7 @@ export default function MessagesComponent({
 
 				{/* Messages Panel */}
 				<main
-					className="lg:col-span-2 bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 flex flex-col"
+					className="lg:col-span-2 bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 flex flex-col overflow-hidden"
 					aria-label="Message thread"
 				>
 					{selectedConversation ? (
@@ -523,10 +565,8 @@ export default function MessagesComponent({
 										>
 											{(() => {
 												const photo = (selectedConversation as any).otherParticipant?.photo;
-												const photoUrl = typeof photo === "string" 
-													? photo 
-													: photo?.url;
-												
+												const photoUrl = typeof photo === "string" ? photo : photo?.url;
+
 												if (photoUrl && photoUrl.trim() !== "") {
 													return (
 														<Image
@@ -538,7 +578,7 @@ export default function MessagesComponent({
 														/>
 													);
 												}
-												
+
 												return selectedConversation.name
 													.split(" ")
 													.map((n) => n[0])
@@ -551,9 +591,16 @@ export default function MessagesComponent({
 											<h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
 												{selectedConversation.name}
 											</h2>
-											<p className="text-xs text-emerald-600 dark:text-emerald-400">
-												{selectedConversation.subject}
-											</p>
+											<div className="flex items-center gap-2">
+												<p className="text-xs text-emerald-600 dark:text-emerald-400">
+													{selectedConversation.subject}
+												</p>
+												{isConversationClaimed && (
+													<span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+														Claimed
+													</span>
+												)}
+											</div>
 										</div>
 									</div>
 
@@ -571,8 +618,8 @@ export default function MessagesComponent({
 										{showHeaderMenu && (
 											<>
 												{/* Backdrop to close menu */}
-												<div 
-													className="fixed inset-0 z-10" 
+												<div
+													className="fixed inset-0 z-10"
 													onClick={() => setShowHeaderMenu(false)}
 												/>
 												{/* Dropdown Menu */}
@@ -610,19 +657,9 @@ export default function MessagesComponent({
 								{messages.map((message) => (
 									<div
 										key={message.id}
-										className={`flex ${
-											message.isOwn
-												? "justify-end"
-												: "justify-start"
-										}`}
+										className={`flex ${message.isOwn ? "justify-end" : "justify-start"}`}
 									>
-										<div
-											className={`max-w-[70%] ${
-												message.isOwn
-													? "order-2"
-													: "order-1"
-											}`}
-										>
+										<div className={`max-w-[70%] ${message.isOwn ? "order-2" : "order-1"}`}>
 											<div
 												className={`rounded-lg px-4 py-2 ${
 													message.isOwn
@@ -630,15 +667,11 @@ export default function MessagesComponent({
 														: "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
 												}`}
 											>
-												<p className="text-sm">
-													{message.content}
-												</p>
+												<p className="text-sm">{message.content}</p>
 											</div>
 											<p
 												className={`text-xs text-gray-500 dark:text-gray-400 mt-1 ${
-													message.isOwn
-														? "text-right"
-														: "text-left"
+													message.isOwn ? "text-right" : "text-left"
 												}`}
 											>
 												{message.timestamp}
@@ -650,31 +683,40 @@ export default function MessagesComponent({
 							</div>
 
 							{/* Message Input */}
-							<form
-								onSubmit={handleSendMessage}
-								className="p-4 border-t border-gray-200 dark:border-neutral-800"
-							>
-								<div className="flex gap-2">
-									<input
-										type="text"
-										value={newMessage}
-										onChange={(e) =>
-											setNewMessage(e.target.value)
-										}
-										placeholder="Type your message..."
-										className="flex-1 px-4 py-2 border border-gray-300 dark:border-neutral-700  rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-neutral-800/50 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-										aria-label="Message input"
-									/>
-									<button
-										type="submit"
-										disabled={!newMessage.trim() || isSending}
-										className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-colors"
-										aria-label="Send message"
-									>
-										<Send size={20} aria-hidden="true" />
-									</button>
+							{isConversationClaimed ? (
+								<div className="p-4 border-t border-gray-200 dark:border-neutral-800 bg-gray-50 dark:bg-neutral-800/50">
+									<div className="flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400">
+										<Lock size={16} />
+										<span className="text-sm">
+											This item has been claimed. Messaging is disabled.
+										</span>
+									</div>
 								</div>
-							</form>
+							) : (
+								<form
+									onSubmit={handleSendMessage}
+									className="p-4 border-t border-gray-200 dark:border-neutral-800 flex-shrink-0"
+								>
+									<div className="flex gap-2">
+										<input
+											type="text"
+											value={newMessage}
+											onChange={(e) => setNewMessage(e.target.value)}
+											placeholder="Type your message..."
+											className="flex-1 px-4 py-2 border border-gray-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-neutral-800/50 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+											aria-label="Message input"
+										/>
+										<button
+											type="submit"
+											disabled={!newMessage.trim() || isSending}
+											className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-colors"
+											aria-label="Send message"
+										>
+											<Send size={20} aria-hidden="true" />
+										</button>
+									</div>
+								</form>
+							)}
 						</>
 					) : (
 						<div className="flex-1 flex flex-col items-center justify-center text-center p-8">
@@ -682,128 +724,144 @@ export default function MessagesComponent({
 								className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-4"
 								aria-hidden="true"
 							>
-								<MessageSquare
-									size={32}
-									className="text-gray-400 dark:text-gray-500"
-								/>
+								<MessageSquare size={32} className="text-gray-400 dark:text-gray-500" />
 							</div>
 							<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
 								Select a Conversation
 							</h3>
 							<p className="text-sm text-gray-600 dark:text-gray-400">
-								Choose a conversation from the list to start
-							messaging
-						</p>
-					</div>
-				)}
+								Choose a conversation from the list to start messaging
+							</p>
+						</div>
+					)}
 
-				{/* Profile View Modal */}
-				{showProfileModal && selectedConversation && (
-					<div 
-						className="fixed inset-0 z-50 flex items-center justify-center"
-						onClick={() => setShowProfileModal(false)}
-					>
-						{/* Backdrop */}
-						<div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-						
-						{/* Modal */}
-						<div 
-							className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-neutral-700 w-full max-w-sm mx-4 overflow-hidden"
-							onClick={(e) => e.stopPropagation()}
+					{/* Profile View Modal */}
+					{showProfileModal && selectedConversation && (
+						<div
+							className="fixed inset-0 z-50 flex items-center justify-center"
+							onClick={() => setShowProfileModal(false)}
 						>
-							{/* Header Banner */}
-							<div className="h-24 bg-gradient-to-r from-emerald-500 to-emerald-600" />
-							
-							{/* Profile Content */}
-							<div className="px-6 pb-6">
-								{/* Avatar */}
-								<div className="-mt-12 mb-4 flex justify-center">
-									<div className="w-24 h-24 rounded-full bg-emerald-100 dark:bg-emerald-900/40 border-4 border-white dark:border-neutral-900 flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-bold text-2xl overflow-hidden shadow-lg">
-										{(() => {
-											const photo = (selectedConversation as any).otherParticipant?.photo;
-											const photoUrl = typeof photo === "string" ? photo : photo?.url;
-											
-											if (photoUrl && photoUrl.trim() !== "") {
-												return (
-													<Image
-														src={photoUrl}
-														alt={selectedConversation.name}
-														width={96}
-														height={96}
-														className="w-full h-full object-cover"
+							{/* Backdrop */}
+							<div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+
+							{/* Modal */}
+							<div
+								className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-neutral-700 w-full max-w-sm mx-4 overflow-hidden"
+								onClick={(e) => e.stopPropagation()}
+							>
+								{/* Header Banner */}
+								<div className="h-24 bg-gradient-to-r from-emerald-500 to-emerald-600" />
+
+								{/* Profile Content */}
+								<div className="px-6 pb-6">
+									{/* Avatar */}
+									<div className="-mt-12 mb-4 flex justify-center">
+										<div className="w-24 h-24 rounded-full bg-emerald-100 dark:bg-emerald-900/40 border-4 border-white dark:border-neutral-900 flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-bold text-2xl overflow-hidden shadow-lg">
+											{(() => {
+												const photo = (selectedConversation as any).otherParticipant?.photo;
+												const photoUrl = typeof photo === "string" ? photo : photo?.url;
+
+												if (photoUrl && photoUrl.trim() !== "") {
+													return (
+														<Image
+															src={photoUrl}
+															alt={selectedConversation.name}
+															width={96}
+															height={96}
+															className="w-full h-full object-cover"
+														/>
+													);
+												}
+
+												return selectedConversation.name
+													.split(" ")
+													.map((n) => n[0])
+													.slice(0, 2)
+													.join("")
+													.toUpperCase();
+											})()}
+										</div>
+									</div>
+
+									{/* User Info */}
+									<div className="text-center">
+										<h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+											{selectedConversation.name}
+										</h3>
+										<p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+											@{(selectedConversation as any).otherParticipant?.username || "user"}
+										</p>
+										<p className="text-sm text-emerald-600 dark:text-emerald-400 mt-1">
+											{selectedConversation.subject}
+										</p>
+									</div>
+
+									{/* Divider */}
+									<div className="my-4 border-t border-gray-200 dark:border-neutral-700" />
+
+									{/* Contact Details */}
+									<div className="space-y-3">
+										{(selectedConversation as any).otherParticipant?.email && (
+											<div className="flex items-center gap-3 text-sm">
+												<svg
+													className="w-4 h-4 text-gray-400 shrink-0"
+													fill="none"
+													stroke="currentColor"
+													viewBox="0 0 24 24"
+												>
+													<path
+														strokeLinecap="round"
+														strokeLinejoin="round"
+														strokeWidth={2}
+														d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
 													/>
-												);
-											}
-											
-											return selectedConversation.name
-												.split(" ")
-												.map((n) => n[0])
-												.slice(0, 2)
-												.join("")
-												.toUpperCase();
-										})()}
-									</div>
-								</div>
-								
-								{/* User Info */}
-								<div className="text-center">
-									<h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-										{selectedConversation.name}
-									</h3>
-									<p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-										@{(selectedConversation as any).otherParticipant?.username || "user"}
-									</p>
-									<p className="text-sm text-emerald-600 dark:text-emerald-400 mt-1">
-										{selectedConversation.subject}
-									</p>
-								</div>
-								
-								{/* Divider */}
-								<div className="my-4 border-t border-gray-200 dark:border-neutral-700" />
-								
-								{/* Contact Details */}
-								<div className="space-y-3">
-									{(selectedConversation as any).otherParticipant?.email && (
+												</svg>
+												<span className="text-gray-600 dark:text-gray-300 truncate">
+													{(selectedConversation as any).otherParticipant.email}
+												</span>
+											</div>
+										)}
+										{(selectedConversation as any).otherParticipant?.phone && (
+											<div className="flex items-center gap-3 text-sm">
+												<svg
+													className="w-4 h-4 text-gray-400 shrink-0"
+													fill="none"
+													stroke="currentColor"
+													viewBox="0 0 24 24"
+												>
+													<path
+														strokeLinecap="round"
+														strokeLinejoin="round"
+														strokeWidth={2}
+														d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+													/>
+												</svg>
+												<span className="text-gray-600 dark:text-gray-300">
+													{(selectedConversation as any).otherParticipant.phone}
+												</span>
+											</div>
+										)}
 										<div className="flex items-center gap-3 text-sm">
-											<svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-											</svg>
-											<span className="text-gray-600 dark:text-gray-300 truncate">
-												{(selectedConversation as any).otherParticipant.email}
+											<MessageSquare size={16} className="text-gray-400 shrink-0" />
+											<span className="text-gray-600 dark:text-gray-400">
+												Conversation started
 											</span>
 										</div>
-									)}
-									{(selectedConversation as any).otherParticipant?.phone && (
-										<div className="flex items-center gap-3 text-sm">
-											<svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-											</svg>
-											<span className="text-gray-600 dark:text-gray-300">
-												{(selectedConversation as any).otherParticipant.phone}
-											</span>
-										</div>
-									)}
-									<div className="flex items-center gap-3 text-sm">
-										<MessageSquare size={16} className="text-gray-400 shrink-0" />
-										<span className="text-gray-600 dark:text-gray-400">
-											Conversation started
-										</span>
 									</div>
+
+									{/* Close Button */}
+									<button
+										type="button"
+										onClick={() => setShowProfileModal(false)}
+										className="mt-6 w-full py-2.5 px-4 bg-gray-100 dark:bg-neutral-800 hover:bg-gray-200 dark:hover:bg-neutral-700 text-gray-700 dark:text-gray-200 rounded-lg font-medium transition-colors"
+									>
+										Close
+									</button>
 								</div>
-								
-								{/* Close Button */}
-								<button
-									type="button"
-									onClick={() => setShowProfileModal(false)}
-									className="mt-6 w-full py-2.5 px-4 bg-gray-100 dark:bg-neutral-800 hover:bg-gray-200 dark:hover:bg-neutral-700 text-gray-700 dark:text-gray-200 rounded-lg font-medium transition-colors"
-								>
-									Close
-								</button>
 							</div>
 						</div>
-					</div>
-				)}
-			</main>
+					)}
+				</main>
 			</div>
 		</div>
 	);
