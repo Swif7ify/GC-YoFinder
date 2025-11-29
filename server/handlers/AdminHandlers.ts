@@ -257,6 +257,13 @@ class AdminHandlers {
 				ItemsSchema.countDocuments(query),
 			]);
 
+			// Ensure views and matched fields have default values
+			const itemsWithDefaults = items.map((item: any) => ({
+				...item,
+				views: item.views ?? 0,
+				matched: item.matched ?? 0,
+			}));
+
 			const pagination = {
 				currentPage: page,
 				totalPages: Math.ceil(total / limit),
@@ -265,7 +272,12 @@ class AdminHandlers {
 				hasPrev: page > 1,
 			};
 
-			return responsePayload({ items, pagination }, "success", "Items retrieved successfully", 200);
+			return responsePayload(
+				{ items: itemsWithDefaults, pagination },
+				"success",
+				"Items retrieved successfully",
+				200
+			);
 		} catch (error) {
 			return serverResponseError();
 		}

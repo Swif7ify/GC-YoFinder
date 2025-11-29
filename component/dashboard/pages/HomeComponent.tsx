@@ -60,18 +60,18 @@ interface HomeComponentProps {
 	userFullName: string;
 	recentItems: RecentItems[];
 }
-import Stats from "@/component/dashboard/items/Home/Stats";
+import Stats from "@/component/dashboard/pages/Home/Stats";
 
 import { StatsCard } from "@/types/types";
-const QuickActions = Dynamic(() => import("@/component/dashboard/items/Home/QuickActions").then((mod) => mod.default), {
+const QuickActions = Dynamic(() => import("@/component/dashboard/pages/Home/QuickActions").then((mod) => mod.default), {
 	ssr: false,
 });
 const RecentItemsComponent = Dynamic(
-	() => import("@/component/dashboard/items/Home/RecentItems").then((mod) => mod.default),
+	() => import("@/component/dashboard/pages/Home/RecentItems").then((mod) => mod.default),
 	{ ssr: false }
 );
 const RecentActivityComponent = Dynamic(
-	() => import("@/component/dashboard/items/Home/RecentActivity").then((mod) => mod.default),
+	() => import("@/component/dashboard/pages/Home/RecentActivity").then((mod) => mod.default),
 
 	{ ssr: false }
 );

@@ -29,37 +29,37 @@ const Header = Dynamic(() => import("@/component/dashboard/organisms/Header").th
 	ssr: false,
 });
 
-const HomeComponent = Dynamic(() => import("@/component/dashboard/items/HomeComponent").then((mod) => mod.default), {
+const HomeComponent = Dynamic(() => import("@/component/dashboard/pages/HomeComponent").then((mod) => mod.default), {
 	ssr: false,
 });
 
 const NewItemComponent = Dynamic(
-	() => import("@/component/dashboard/items/NewItemComponent").then((mod) => mod.default),
+	() => import("@/component/dashboard/pages/NewItemComponent").then((mod) => mod.default),
 	{ ssr: false }
 );
 
 const SearchItemsComponent = Dynamic(
-	() => import("@/component/dashboard/items/SearchItemsComponent").then((mod) => mod.default),
+	() => import("@/component/dashboard/pages/SearchItemsComponent").then((mod) => mod.default),
 	{ ssr: false }
 );
 
 const MyItemsComponent = Dynamic(
-	() => import("@/component/dashboard/items/MyItemsComponent").then((mod) => mod.default),
+	() => import("@/component/dashboard/pages/MyItemsComponent").then((mod) => mod.default),
 	{ ssr: false }
 );
 
 const LocationsComponent = Dynamic(
-	() => import("@/component/dashboard/items/LocationsComponent").then((mod) => mod.default),
+	() => import("@/component/dashboard/pages/LocationsComponent").then((mod) => mod.default),
 	{ ssr: false }
 );
 
 const MessagesComponent = Dynamic(
-	() => import("@/component/dashboard/items/MessagesComponent").then((mod) => mod.default),
+	() => import("@/component/dashboard/pages/MessagesComponent").then((mod) => mod.default),
 	{ ssr: false }
 );
 
 const SettingsComponent = Dynamic(
-	() => import("@/component/dashboard/items/SettingsComponent").then((mod) => mod.default),
+	() => import("@/component/dashboard/pages/SettingsComponent").then((mod) => mod.default),
 	{ ssr: false }
 );
 
@@ -175,21 +175,29 @@ export default function DashboardPage() {
 				return;
 			}
 			const data = await response.json();
-			const mappedItems = data.items.map((item: any) => ({
-				...item,
-				id: item._id,
-				title: item.name,
-				description: item.description,
-				type: item.type,
-				location: item.location,
-				dateReported: item.date_lost_or_found,
-				status: item.status,
-				views: item.views,
-				matchCount: item.matched,
-				image_url: item.photos.length > 0 ? item.photos[0].url : null,
-				images: item.photos.map((photo: any) => photo.url),
-				category: item.category,
-			}));
+			const mappedItems = data.items.map((item: any) => {
+				// Handle photos - could be array of objects with url or array of strings
+				const photos = item.photos || [];
+				const photoUrls = photos
+					.map((photo: any) => (typeof photo === "string" ? photo : photo?.url))
+					.filter(Boolean);
+
+				return {
+					...item,
+					id: item._id || item.id,
+					title: item.name,
+					description: item.description,
+					type: item.type,
+					location: item.location,
+					dateReported: item.date_lost_or_found,
+					status: item.status,
+					views: item.views || 0,
+					matchCount: item.matched || 0,
+					image_url: photoUrls.length > 0 ? photoUrls[0] : null,
+					images: photoUrls,
+					category: item.category,
+				};
+			});
 
 			setUserItems(mappedItems);
 			fetchPaginatedItems(1, 10);
@@ -232,7 +240,8 @@ export default function DashboardPage() {
 			status?: "all" | "active" | "claimed";
 			category?: string;
 			location?: string;
-		}
+		},
+		showLoader = true
 	) => {
 		try {
 			const params = new URLSearchParams({
@@ -246,9 +255,12 @@ export default function DashboardPage() {
 			if (filters?.category && filters.category !== "all") params.set("category", filters.category);
 			if (filters?.location && filters.location !== "all") params.set("location", filters.location);
 
-			const response = await withLoading(() => api(`/api/dashboard/items?${params.toString()}`));
+			// Only use withLoading for initial load, not for Pusher-triggered refreshes
+			const response = showLoader
+				? await withLoading(() => api(`/api/dashboard/items?${params.toString()}`))
+				: await api(`/api/dashboard/items?${params.toString()}`);
 			if (response.status !== 200) {
-				toastError("Server Error", "Unable to fetch items.");
+				if (showLoader) toastError("Server Error", "Unable to fetch items.");
 				return;
 			}
 			const data = await response.json();
@@ -370,9 +382,10 @@ export default function DashboardPage() {
 	}, [userID]);
 
 	// Refresh all items (for real-time updates from other users)
+	// Don't use withLoading for Pusher-triggered refreshes to avoid blocking UI
 	const refreshAllItems = useCallback(() => {
 		invalidateCache(/\/api\/dashboard\/items/);
-		fetchPaginatedItems(1, 10);
+		fetchPaginatedItems(1, 10, false, undefined, false); // showLoader = false
 		fetchRecentItems(1, 4, false);
 	}, []);
 

@@ -8,6 +8,7 @@
 		"start": "next start",
 		"lint": "next lint",
 		"create-student": "node scripts/create-student.js",
+		"create-admin": "node scripts/create-admin.js",
 		"check": "tsc --noEmit"
 	},
 	"dependencies": {

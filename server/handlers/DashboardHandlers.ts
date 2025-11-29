@@ -221,6 +221,8 @@ class DashboardHandlers {
 						  }
 						: null,
 					photos: itemPhotos,
+					views: item.views ?? 0,
+					matched: item.matched ?? 0,
 				};
 			});
 
