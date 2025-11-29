@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
 	LayoutDashboardIcon,
 	SearchIcon,
@@ -16,11 +16,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { api, apiCached, invalidateCache } from "@/lib/api.config";
 import Dynamic from "next/dynamic";
 import { motion } from "framer-motion";
-import { toastError } from "@/utils/toast";
+import { toastError, toastSuccess } from "@/utils/toast";
 import { useApiLoading } from "@/hooks/useApiLoading";
 import { useConfirm } from "@/ui/ConfirmProvider";
 import { AllItem } from "@/types/types";
-import Pusher from "pusher-js";
+import { usePusher } from "@/contexts/PusherProvider";
 
 const Sidebar = Dynamic(() => import("@/component/dashboard/Sidebar").then((mod) => mod.default), { ssr: false });
 const Header = Dynamic(() => import("@/component/dashboard/Header").then((mod) => mod.default), { ssr: false });
@@ -328,14 +328,16 @@ export default function DashboardPage() {
 			conversationId?: string;
 		}[]
 	>([]);
-	const pusherRef = useRef<Pusher | null>(null);
+
+	// Use global Pusher context
+	const { subscribe, isConnected } = usePusher();
 
 	// Notification bell should only show unread notifications, not unread messages
 	// Unread messages are shown separately in the sidebar badge
 	const unreadCount = notifications.filter((notification) => !notification.isRead).length;
 
 	// Fetch unread message count
-	const fetchUnreadCount = async () => {
+	const fetchUnreadCount = useCallback(async () => {
 		if (!userID) return;
 		try {
 			const response = await api("/api/messages/unread-count");
@@ -343,15 +345,14 @@ export default function DashboardPage() {
 				const data = await response.json();
 				const count = data.unreadCount || 0;
 				setUnreadMessageCount(count);
-				console.log("Unread message count updated:", count);
 			}
 		} catch (error) {
 			console.error("Error fetching unread count:", error);
 		}
-	};
+	}, [userID]);
 
 	// Fetch notifications
-	const fetchNotifications = async () => {
+	const fetchNotifications = useCallback(async () => {
 		if (!userID) return;
 		try {
 			const response = await api("/api/notifications");
@@ -362,187 +363,202 @@ export default function DashboardPage() {
 		} catch (error) {
 			console.error("Error fetching notifications:", error);
 		}
-	};
+	}, [userID]);
+
+	// Refresh all items (for real-time updates from other users)
+	const refreshAllItems = useCallback(() => {
+		invalidateCache(/\/api\/dashboard\/items/);
+		fetchPaginatedItems(1, 10);
+		fetchRecentItems(1, 4, false);
+	}, []);
 
 	// Initialize Pusher and listen for real-time updates
 	useEffect(() => {
-		if (!userID) return;
+		if (!userID || !isConnected) return;
 
 		// Initial fetch
 		fetchUnreadCount();
 		fetchNotifications();
 
-		// Initialize Pusher for real-time updates
-		const pusherKey = process.env.NEXT_PUBLIC_PUSHER_KEY;
-		const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER || "us2";
+		// Subscribe to user-specific channel
+		const userChannel = subscribe(`private-user-${userID}`);
+		if (!userChannel) return;
 
-		if (pusherKey) {
-			const pusher = new Pusher(pusherKey, {
-				cluster: pusherCluster,
-				authEndpoint: "/api/pusher/auth",
+		// Listen for unread count updates
+		const handleUnreadCountUpdated = () => {
+			fetchUnreadCount();
+		};
+		userChannel.bind("unread-count-updated", handleUnreadCountUpdated);
+
+		// Listen for new notifications
+		const handleNewNotification = (data: { notification: any }) => {
+			const newNotification = {
+				id: data.notification.id,
+				title: data.notification.title,
+				message: data.notification.message,
+				time:
+					data.notification.time ||
+					new Date().toLocaleTimeString("en-US", {
+						hour: "2-digit",
+						minute: "2-digit",
+						hour12: false,
+					}),
+				isRead: data.notification.isRead || false,
+				conversationId: data.notification.conversationId || null,
+			};
+			setNotifications((prev) => {
+				if (prev.some((n) => n.id === newNotification.id)) {
+					return prev;
+				}
+				return [newNotification, ...prev];
 			});
+			fetchUnreadCount();
+		};
+		userChannel.bind("new-notification", handleNewNotification);
 
-			pusherRef.current = pusher;
+		// Listen for conversation updates
+		const handleConversationUpdated = () => {
+			fetchUnreadCount();
+			fetchNotifications();
+		};
+		userChannel.bind("conversation-updated", handleConversationUpdated);
 
-			// Subscribe to user-specific channel
-			const userChannel = pusher.subscribe(`private-user-${userID}`);
+		// Listen for item updates (status changes from admin)
+		const handleItemUpdated = (data: any) => {
+			invalidateCache(/\/api\/items/);
+			invalidateCache(/\/api\/dashboard/);
+			fetchUserItems();
+			refreshAllItems();
+			if (data?.status === "active") {
+				toastSuccess("Item Approved", "Your item has been approved and is now visible to others.");
+			} else if (data?.status === "rejected") {
+				toastError("Item Rejected", "Your item has been rejected. Please review and resubmit.");
+			}
+		};
+		userChannel.bind("item-updated", handleItemUpdated);
 
-			// Listen for unread count updates
-			userChannel.bind("unread-count-updated", () => {
-				console.log("Pusher: unread-count-updated event received");
-				fetchUnreadCount();
-			});
+		// Listen for item created confirmation
+		const handleItemCreated = () => {
+			invalidateCache(/\/api\/items/);
+			fetchUserItems();
+		};
+		userChannel.bind("item-created", handleItemCreated);
 
-			// Listen for new notifications
-			userChannel.bind("new-notification", (data: { notification: any }) => {
+		// Listen for item deleted confirmation
+		const handleItemDeleted = () => {
+			invalidateCache(/\/api\/items/);
+			invalidateCache(/\/api\/dashboard/);
+			fetchUserItems();
+			refreshAllItems();
+		};
+		userChannel.bind("item-deleted", handleItemDeleted);
+
+		// Subscribe to global items channel for real-time updates from all users
+		const globalChannel = subscribe("global-items");
+		if (globalChannel) {
+			// Listen for any item changes (visible to all)
+			const handleGlobalItemUpdate = () => {
+				refreshAllItems();
+			};
+			globalChannel.bind("item-approved", handleGlobalItemUpdate);
+			globalChannel.bind("item-claimed", handleGlobalItemUpdate);
+			globalChannel.bind("item-deleted", handleGlobalItemUpdate);
+		}
+
+		// Also listen for custom events from MessagesComponent (as backup)
+		const handleWindowUnreadCountUpdate = () => {
+			fetchUnreadCount();
+			fetchNotifications();
+		};
+
+		const handleWindowNotificationUpdate = (event: any) => {
+			if (event.detail) {
 				const newNotification = {
-					id: data.notification.id,
-					title: data.notification.title,
-					message: data.notification.message,
+					id: event.detail.id,
+					title: event.detail.title,
+					message: event.detail.message,
 					time:
-						data.notification.time ||
+						event.detail.time ||
 						new Date().toLocaleTimeString("en-US", {
 							hour: "2-digit",
 							minute: "2-digit",
 							hour12: false,
 						}),
-					isRead: data.notification.isRead || false,
-					conversationId: data.notification.conversationId || null,
+					isRead: event.detail.isRead || false,
+					conversationId: event.detail.conversationId || null,
 				};
 				setNotifications((prev) => {
-					// Check if notification already exists
 					if (prev.some((n) => n.id === newNotification.id)) {
 						return prev;
 					}
-					// Add new notification at the beginning
 					return [newNotification, ...prev];
 				});
-				// Also update unread count
-				fetchUnreadCount();
-			});
+			}
+			fetchNotifications();
+		};
 
-			// Listen for conversation updates (which may affect unread count)
-			userChannel.bind("conversation-updated", () => {
-				console.log("Pusher: conversation-updated event received");
-				fetchUnreadCount();
-				fetchNotifications();
-			});
+		window.addEventListener("unreadCountUpdate", handleWindowUnreadCountUpdate);
+		window.addEventListener("notificationUpdate", handleWindowNotificationUpdate);
 
-			// Also listen for custom events from MessagesComponent (as backup)
-			const handleUnreadCountUpdate = () => {
-				fetchUnreadCount();
-				fetchNotifications();
-			};
+		// Cleanup
+		return () => {
+			userChannel.unbind("unread-count-updated", handleUnreadCountUpdated);
+			userChannel.unbind("new-notification", handleNewNotification);
+			userChannel.unbind("conversation-updated", handleConversationUpdated);
+			userChannel.unbind("item-updated", handleItemUpdated);
+			userChannel.unbind("item-created", handleItemCreated);
+			userChannel.unbind("item-deleted", handleItemDeleted);
+			if (globalChannel) {
+				globalChannel.unbind_all();
+			}
+			window.removeEventListener("unreadCountUpdate", handleWindowUnreadCountUpdate);
+			window.removeEventListener("notificationUpdate", handleWindowNotificationUpdate);
+		};
+	}, [userID, isConnected, subscribe, fetchUnreadCount, fetchNotifications, refreshAllItems]);
 
-			const handleNotificationUpdate = (event: any) => {
-				// If we have notification data from Pusher, add it immediately
-				if (event.detail) {
-					const newNotification = {
-						id: event.detail.id,
-						title: event.detail.title,
-						message: event.detail.message,
-						time:
-							event.detail.time ||
-							new Date().toLocaleTimeString("en-US", {
-								hour: "2-digit",
-								minute: "2-digit",
-								hour12: false,
-							}),
-						isRead: event.detail.isRead || false,
-						conversationId: event.detail.conversationId || null,
-					};
-					setNotifications((prev) => {
-						// Check if notification already exists
-						if (prev.some((n) => n.id === newNotification.id)) {
-							return prev;
-						}
-						// Add new notification at the beginning
-						return [newNotification, ...prev];
-					});
-				}
-				// Also fetch from server to ensure we have the latest
-				fetchNotifications();
-			};
+	// Fallback: Listen for custom events even without Pusher
+	useEffect(() => {
+		if (isConnected) return; // Skip if Pusher is connected
 
-			window.addEventListener(
-				"unreadCountUpdate",
-				handleUnreadCountUpdate
-			);
-			window.addEventListener(
-				"notificationUpdate",
-				handleNotificationUpdate
-			);
+		const handleUnreadCountUpdate = () => {
+			fetchUnreadCount();
+			fetchNotifications();
+		};
 
-			// Cleanup
-			return () => {
-				userChannel.unbind("unread-count-updated");
-				userChannel.unbind("new-notification");
-				userChannel.unbind("conversation-updated");
-				window.removeEventListener(
-					"unreadCountUpdate",
-					handleUnreadCountUpdate
-				);
-				window.removeEventListener(
-					"notificationUpdate",
-					handleNotificationUpdate
-				);
-				pusher.disconnect();
-			};
-		} else {
-			// If Pusher is not available, still listen for custom events
-			const handleUnreadCountUpdate = () => {
-				fetchUnreadCount();
-				fetchNotifications();
-			};
+		const handleNotificationUpdate = (event: any) => {
+			if (event.detail) {
+				const newNotification = {
+					id: event.detail.id,
+					title: event.detail.title,
+					message: event.detail.message,
+					time:
+						event.detail.time ||
+						new Date().toLocaleTimeString("en-US", {
+							hour: "2-digit",
+							minute: "2-digit",
+							hour12: false,
+						}),
+					isRead: event.detail.isRead || false,
+					conversationId: event.detail.conversationId || null,
+				};
+				setNotifications((prev) => {
+					if (prev.some((n) => n.id === newNotification.id)) {
+						return prev;
+					}
+					return [newNotification, ...prev];
+				});
+			}
+			fetchNotifications();
+		};
 
-			const handleNotificationUpdate = (event: any) => {
-				if (event.detail) {
-					const newNotification = {
-						id: event.detail.id,
-						title: event.detail.title,
-						message: event.detail.message,
-						time:
-							event.detail.time ||
-							new Date().toLocaleTimeString("en-US", {
-								hour: "2-digit",
-								minute: "2-digit",
-								hour12: false,
-							}),
-						isRead: event.detail.isRead || false,
-						conversationId: event.detail.conversationId || null,
-					};
-					setNotifications((prev) => {
-						if (prev.some((n) => n.id === newNotification.id)) {
-							return prev;
-						}
-						return [newNotification, ...prev];
-					});
-				}
-				fetchNotifications();
-			};
+		window.addEventListener("unreadCountUpdate", handleUnreadCountUpdate);
+		window.addEventListener("notificationUpdate", handleNotificationUpdate);
 
-			window.addEventListener(
-				"unreadCountUpdate",
-				handleUnreadCountUpdate
-			);
-			window.addEventListener(
-				"notificationUpdate",
-				handleNotificationUpdate
-			);
-
-			return () => {
-				window.removeEventListener(
-					"unreadCountUpdate",
-					handleUnreadCountUpdate
-				);
-				window.removeEventListener(
-					"notificationUpdate",
-					handleNotificationUpdate
-				);
-			};
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [userID]);
+		return () => {
+			window.removeEventListener("unreadCountUpdate", handleUnreadCountUpdate);
+			window.removeEventListener("notificationUpdate", handleNotificationUpdate);
+		};
+	}, [isConnected, fetchUnreadCount, fetchNotifications]);
 
 	const handleLogout = async () => {
 		const ok = await confirm({

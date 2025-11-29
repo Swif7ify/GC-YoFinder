@@ -8,6 +8,7 @@ import { ValidateStringField } from "@/server/utils/DataValitdation";
 import mongoose from "mongoose";
 import { connectToDatabase } from "@/server/lib/mongodb";
 import { deleteFiles } from "@/server/config/cloudinary.config";
+import pusher from "@/server/config/pusher.config";
 
 import { handleImagesUpload } from "@/server/utils/MultipleImageHandler";
 
@@ -121,6 +122,20 @@ class ItemsHandlers {
 				return responsePayload(null, "error", "Failed to create new item", 500);
 			}
 			await session.commitTransaction();
+
+			// Trigger Pusher events for real-time updates
+			// Notify admin dashboard about new pending item
+			await pusher.trigger("admin-updates", "new-item", {
+				itemId: newItem[0]._id.toString(),
+				type: itemData.type,
+				status: "pending",
+			});
+
+			// Notify user's dashboard
+			await pusher.trigger(`private-user-${userID}`, "item-created", {
+				itemId: newItem[0]._id.toString(),
+			});
+
 			return responsePayload(null, "success", "Item created successfully", 201);
 		} catch (error) {
 			console.log(error);
@@ -182,6 +197,23 @@ class ItemsHandlers {
 			}
 
 			await session.commitTransaction();
+
+			// Trigger Pusher events for real-time updates
+			// Notify admin dashboard about item deletion
+			await pusher.trigger("admin-updates", "item-deleted", {
+				itemId: itemID,
+			});
+
+			// Notify user's dashboard
+			await pusher.trigger(`private-user-${userID}`, "item-deleted", {
+				itemId: itemID,
+			});
+
+			// Notify all users to refresh search items
+			await pusher.trigger("global-items", "item-deleted", {
+				itemId: itemID,
+			});
+
 			return responsePayload(null, "success", "Item deleted successfully", 200);
 		} catch (error) {
 			await session.abortTransaction();
@@ -203,14 +235,31 @@ class ItemsHandlers {
 				itemData.title,
 				itemData.description,
 				itemData.category,
-				itemData.location,
-				itemData.status
+				itemData.location
 			);
 			if (!validateFields) return responsePayload(null, "error", "Invalid item data", 400);
 			const user = await UserSchema.findById(userID);
 			if (!user) return userNotFoundError();
 			const item = await ItemsSchema.findById(itemID);
 			if (!item) return responsePayload(null, "error", "Item not found", 404);
+
+			// Verify user owns this item
+			if (item.user_id.toString() !== userID) {
+				return responsePayload(null, "error", "You can only edit your own items", 403);
+			}
+
+			// Determine new status based on current status and user request
+			let newStatus = item.status;
+
+			if (item.status === "rejected") {
+				// If item was rejected and user is editing, set back to pending for re-approval
+				newStatus = "pending";
+			} else if (item.status === "active" && itemData.status === "claimed") {
+				// Users can only mark active items as claimed
+				newStatus = "claimed";
+			}
+			// Users cannot set status to "active" - only admin can approve
+			// Pending items stay pending, claimed items stay claimed
 
 			let uploadedPublicIds: string[] = [];
 
@@ -244,16 +293,23 @@ class ItemsHandlers {
 				finalPhotos.push(...uploadResult.imageMetadata);
 			}
 
-			const doc = {
+			const doc: any = {
 				type: itemData.type,
 				name: itemData.title,
 				description: itemData.description,
 				category: itemData.category,
 				location: itemData.location,
-				status: itemData.status,
+				status: newStatus,
 				date_lost_or_found: itemData.date_lost_or_found ? new Date(itemData.date_lost_or_found) : new Date(),
 				photos: finalPhotos,
+				updated_at: new Date(),
 			};
+
+			// Set claimed_by and claimed_at when marking as claimed
+			if (newStatus === "claimed" && item.status !== "claimed") {
+				doc.claimed_by = userID;
+				doc.claimed_at = new Date();
+			}
 
 			const updatedItem = await ItemsSchema.findByIdAndUpdate(itemID, doc, { new: true, session });
 			if (!updatedItem) {
@@ -270,6 +326,31 @@ class ItemsHandlers {
 					console.error("Failed to delete old images from Cloudinary:", err)
 				);
 			}
+
+			// Trigger Pusher events for real-time updates
+			const previousStatus = item.status;
+			if (newStatus !== previousStatus) {
+				// Notify admin dashboard about status change
+				await pusher.trigger("admin-updates", "item-status-changed", {
+					itemId: itemID,
+					status: newStatus,
+					previousStatus,
+				});
+
+				// Notify all users about item status changes (for search items real-time updates)
+				if (newStatus === "claimed") {
+					await pusher.trigger("global-items", "item-claimed", {
+						itemId: itemID,
+					});
+				}
+			}
+
+			// Notify user's dashboard
+			await pusher.trigger(`private-user-${userID}`, "item-updated", {
+				itemId: itemID,
+				status: newStatus,
+			});
+
 			return responsePayload(null, "success", "Item updated successfully", 200);
 		} catch (error) {
 			await session.abortTransaction();

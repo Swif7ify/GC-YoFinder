@@ -8,10 +8,12 @@ import {
 	CalendarIcon,
 	UserIcon,
 	ImageIcon,
-	CheckCircleIcon,
-	ArchiveIcon,
 	EyeIcon,
+	PackageIcon,
+	CheckIcon,
 	XIcon,
+	RotateCcwIcon,
+	ArchiveIcon,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -20,42 +22,72 @@ interface Item {
 	name: string;
 	description: string;
 	type: "lost" | "found";
-	status: string;
+	status: "pending" | "active" | "rejected" | "claimed" | "removed";
 	category: string;
 	location: string;
+	date_lost_or_found: string;
 	views?: number;
+	matched?: number;
 	photos: { url: string }[];
 	user_id: {
+		_id: string;
 		firstname: string;
 		lastname: string;
-		email?: string;
+		email: string;
+		username: string;
 	} | null;
-	claimed_at?: string;
 	created_at: string;
-	date_lost_or_found?: string;
+	updated_at?: string;
 }
 
-interface ItemClaimedPageProps {
+type StatusFilter = "all" | "pending" | "active" | "rejected" | "claimed" | "removed";
+
+const getStatusColors = (status: Item["status"]) => {
+	const colors = {
+		pending: { bg: "bg-yellow-100 dark:bg-yellow-900/30", text: "text-yellow-800 dark:text-yellow-300" },
+		active: { bg: "bg-green-100 dark:bg-green-900/30", text: "text-green-800 dark:text-green-300" },
+		rejected: { bg: "bg-red-100 dark:bg-red-900/30", text: "text-red-800 dark:text-red-300" },
+		claimed: { bg: "bg-blue-100 dark:bg-blue-900/30", text: "text-blue-800 dark:text-blue-300" },
+		removed: { bg: "bg-gray-100 dark:bg-gray-700", text: "text-gray-800 dark:text-gray-300" },
+	};
+	return colors[status] || colors.pending;
+};
+
+const StatusBadge = ({ status }: { status: Item["status"] }) => {
+	const colors = getStatusColors(status);
+	return (
+		<span
+			className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${colors.bg} ${colors.text}`}
+		>
+			{status.charAt(0).toUpperCase() + status.slice(1)}
+		</span>
+	);
+};
+
+interface ItemAllPageProps {
 	items?: Item[];
+	onUpdateStatus?: (itemId: string, status: "active" | "rejected" | "pending" | "removed") => Promise<boolean>;
 	onRefresh?: () => void;
-	onArchive?: (itemId: string) => Promise<boolean>;
 }
 
-export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: ItemClaimedPageProps) {
+export default function ItemAllPage({ items = [], onUpdateStatus, onRefresh }: ItemAllPageProps) {
 	const [searchQuery, setSearchQuery] = useState("");
+	const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 	const [typeFilter, setTypeFilter] = useState<"all" | "lost" | "found">("all");
 	const [selectedItem, setSelectedItem] = useState<Item | null>(null);
-	const [archiving, setArchiving] = useState<string | null>(null);
+	const [processing, setProcessing] = useState<string | null>(null);
 
-	const handleArchive = async (itemId: string) => {
-		if (!onArchive) return;
-		setArchiving(itemId);
-		const success = await onArchive(itemId);
-		setArchiving(null);
-		if (success && selectedItem?._id === itemId) {
-			setSelectedItem(null);
-		}
-	};
+	const counts = useMemo(
+		() => ({
+			all: items.length,
+			pending: items.filter((i) => i.status === "pending").length,
+			active: items.filter((i) => i.status === "active").length,
+			rejected: items.filter((i) => i.status === "rejected").length,
+			claimed: items.filter((i) => i.status === "claimed").length,
+			removed: items.filter((i) => i.status === "removed").length,
+		}),
+		[items]
+	);
 
 	const filteredItems = useMemo(() => {
 		return items.filter((item) => {
@@ -63,10 +95,43 @@ export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: It
 				item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
 				item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
 				item.location.toLowerCase().includes(searchQuery.toLowerCase());
+			const matchesStatus = statusFilter === "all" || item.status === statusFilter;
 			const matchesType = typeFilter === "all" || item.type === typeFilter;
-			return matchesSearch && matchesType;
+			return matchesSearch && matchesStatus && matchesType;
 		});
-	}, [items, searchQuery, typeFilter]);
+	}, [items, searchQuery, statusFilter, typeFilter]);
+
+	const handleApprove = async (itemId: string) => {
+		if (!onUpdateStatus) return;
+		setProcessing(itemId);
+		const success = await onUpdateStatus(itemId, "active");
+		setProcessing(null);
+		if (success && selectedItem?._id === itemId) setSelectedItem(null);
+	};
+
+	const handleReject = async (itemId: string) => {
+		if (!onUpdateStatus) return;
+		setProcessing(itemId);
+		const success = await onUpdateStatus(itemId, "rejected");
+		setProcessing(null);
+		if (success && selectedItem?._id === itemId) setSelectedItem(null);
+	};
+
+	const handleRestoreToPending = async (itemId: string) => {
+		if (!onUpdateStatus) return;
+		setProcessing(itemId);
+		const success = await onUpdateStatus(itemId, "pending");
+		setProcessing(null);
+		if (success && selectedItem?._id === itemId) setSelectedItem(null);
+	};
+
+	const handleArchive = async (itemId: string) => {
+		if (!onUpdateStatus) return;
+		setProcessing(itemId);
+		const success = await onUpdateStatus(itemId, "removed");
+		setProcessing(null);
+		if (success && selectedItem?._id === itemId) setSelectedItem(null);
+	};
 
 	const formatDate = (dateString: string) => {
 		return new Date(dateString).toLocaleDateString("en-US", {
@@ -76,15 +141,89 @@ export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: It
 		});
 	};
 
+	const renderActions = (item: Item) => {
+		const isProcessing = processing === item._id;
+		switch (item.status) {
+			case "pending":
+				return (
+					<div className="flex flex-col gap-2">
+						<button
+							onClick={(e) => {
+								e.stopPropagation();
+								handleApprove(item._id);
+							}}
+							disabled={isProcessing}
+							className="p-2 bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400 rounded-lg transition-colors disabled:opacity-50"
+							title="Approve"
+						>
+							<CheckIcon size={16} />
+						</button>
+						<button
+							onClick={(e) => {
+								e.stopPropagation();
+								handleReject(item._id);
+							}}
+							disabled={isProcessing}
+							className="p-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400 rounded-lg transition-colors disabled:opacity-50"
+							title="Reject"
+						>
+							<XIcon size={16} />
+						</button>
+					</div>
+				);
+			case "rejected":
+				return (
+					<div className="flex flex-col gap-2">
+						<button
+							onClick={(e) => {
+								e.stopPropagation();
+								handleApprove(item._id);
+							}}
+							disabled={isProcessing}
+							className="p-2 bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400 rounded-lg transition-colors disabled:opacity-50"
+							title="Approve"
+						>
+							<CheckIcon size={16} />
+						</button>
+						<button
+							onClick={(e) => {
+								e.stopPropagation();
+								handleRestoreToPending(item._id);
+							}}
+							disabled={isProcessing}
+							className="p-2 bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:hover:bg-yellow-900/50 text-yellow-700 dark:text-yellow-400 rounded-lg transition-colors disabled:opacity-50"
+							title="Restore to Pending"
+						>
+							<RotateCcwIcon size={16} />
+						</button>
+					</div>
+				);
+			case "claimed":
+				return (
+					<button
+						onClick={(e) => {
+							e.stopPropagation();
+							handleArchive(item._id);
+						}}
+						disabled={isProcessing}
+						className="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors disabled:opacity-50"
+						title="Archive"
+					>
+						<ArchiveIcon size={16} />
+					</button>
+				);
+			default:
+				return null;
+		}
+	};
+
 	return (
 		<div className="space-y-6">
 			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Claimed Items</h1>
-					<p className="text-gray-600 dark:text-gray-400 mt-1">
-						Items successfully claimed ({items.length} total)
-					</p>
+					<h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">All Items</h1>
+					<p className="text-gray-600 dark:text-gray-400 mt-1">Manage all items across all statuses</p>
 				</div>
 				<button
 					onClick={onRefresh}
@@ -95,13 +234,44 @@ export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: It
 				</button>
 			</div>
 
-			{/* Filters */}
+			{/* Filter Tabs */}
+			<div className="flex items-center gap-4 flex-wrap">
+				<div className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 p-1 inline-flex flex-wrap">
+					{(["all", "pending", "active", "rejected", "claimed", "removed"] as StatusFilter[]).map(
+						(status) => {
+							const colorMap: Record<StatusFilter, string> = {
+								all: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300",
+								pending: "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300",
+								active: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300",
+								rejected: "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300",
+								claimed: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300",
+								removed: "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300",
+							};
+							return (
+								<button
+									key={status}
+									onClick={() => setStatusFilter(status)}
+									className={`px-4 py-2 rounded-md text-sm font-medium transition-colors capitalize ${
+										statusFilter === status
+											? colorMap[status]
+											: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+									}`}
+								>
+									{status === "removed" ? "Archived" : status} ({counts[status]})
+								</button>
+							);
+						}
+					)}
+				</div>
+			</div>
+
+			{/* Search and Type Filter */}
 			<div className="flex items-center gap-4 flex-wrap">
 				<div className="relative flex-1 min-w-[200px]">
 					<SearchIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
 					<input
 						type="text"
-						placeholder="Search claimed items..."
+						placeholder="Search items..."
 						value={searchQuery}
 						onChange={(e) => setSearchQuery(e.target.value)}
 						className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
@@ -133,9 +303,9 @@ export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: It
 				<div className="lg:col-span-2 space-y-4">
 					{filteredItems.length === 0 ? (
 						<div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 p-8 text-center">
-							<CheckCircleIcon size={48} className="mx-auto text-gray-400 mb-4" />
-							<h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No claimed items</h3>
-							<p className="text-gray-500 dark:text-gray-400 mt-1">Claimed items will appear here</p>
+							<PackageIcon size={48} className="mx-auto text-gray-400 mb-4" />
+							<h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No items found</h3>
+							<p className="text-gray-500 dark:text-gray-400 mt-1">Try adjusting your filters</p>
 						</div>
 					) : (
 						filteredItems.map((item) => (
@@ -180,13 +350,11 @@ export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: It
 													>
 														{item.type.toUpperCase()}
 													</span>
-													<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
-														Claimed
-													</span>
+													<StatusBadge status={item.status} />
 												</div>
 											</div>
 											<span className="text-xs text-gray-500 dark:text-gray-400">
-												{formatDate(item.claimed_at || item.created_at)}
+												{formatDate(item.created_at)}
 											</span>
 										</div>
 										<p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
@@ -203,19 +371,15 @@ export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: It
 													? `${item.user_id.firstname} ${item.user_id.lastname}`
 													: "Unknown"}
 											</span>
+											{item.views !== undefined && (
+												<span className="flex items-center gap-1">
+													<EyeIcon size={12} />
+													{item.views} views
+												</span>
+											)}
 										</div>
 									</div>
-									<button
-										onClick={(e) => {
-											e.stopPropagation();
-											handleArchive(item._id);
-										}}
-										disabled={archiving === item._id}
-										className="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors disabled:opacity-50"
-										title="Archive"
-									>
-										<ArchiveIcon size={16} />
-									</button>
+									{renderActions(item)}
 								</div>
 							</div>
 						))
@@ -235,7 +399,6 @@ export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: It
 									<XIcon size={16} className="text-gray-500" />
 								</button>
 							</div>
-
 							{selectedItem.photos && selectedItem.photos.length > 0 && (
 								<div className="mb-4">
 									<div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-neutral-800">
@@ -267,9 +430,7 @@ export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: It
 									)}
 								</div>
 							)}
-
 							<h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">{selectedItem.name}</h4>
-
 							<div className="flex flex-wrap gap-2 mb-3">
 								<span
 									className={`px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -280,16 +441,12 @@ export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: It
 								>
 									{selectedItem.type.toUpperCase()}
 								</span>
-								<span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-									Claimed
-								</span>
+								<StatusBadge status={selectedItem.status} />
 								<span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-neutral-800 dark:text-gray-300 capitalize">
 									{selectedItem.category}
 								</span>
 							</div>
-
 							<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{selectedItem.description}</p>
-
 							<div className="space-y-2 text-sm">
 								<div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
 									<MapPinIcon size={14} />
@@ -298,7 +455,8 @@ export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: It
 								<div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
 									<CalendarIcon size={14} />
 									<span>
-										Claimed on {formatDate(selectedItem.claimed_at || selectedItem.created_at)}
+										{selectedItem.type === "lost" ? "Lost on" : "Found on"}{" "}
+										{formatDate(selectedItem.date_lost_or_found)}
 									</span>
 								</div>
 								<div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
@@ -314,18 +472,6 @@ export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: It
 										{selectedItem.user_id.email}
 									</div>
 								)}
-							</div>
-
-							{/* Archive Button */}
-							<div className="mt-6">
-								<button
-									onClick={() => handleArchive(selectedItem._id)}
-									disabled={archiving === selectedItem._id}
-									className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors disabled:opacity-50"
-								>
-									<ArchiveIcon size={16} />
-									Archive Item
-								</button>
 							</div>
 						</div>
 					) : (

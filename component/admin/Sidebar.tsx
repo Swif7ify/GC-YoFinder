@@ -151,6 +151,17 @@ export default function AdminSidebar({ isOpen, activeTab, onTabClick, onLogout, 
 						{itemManagementOpen && (
 							<div className="pl-10 space-y-1 mt-1">
 								<button
+									onClick={() => onTabClick("item-all")}
+									className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+										isActive("item-all")
+											? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+											: "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800"
+									}`}
+								>
+									<ListIcon size={16} className="mr-2 text-gray-400 dark:text-gray-500" />
+									All Items
+								</button>
+								<button
 									onClick={() => onTabClick("item-pending")}
 									className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
 										isActive("item-pending")
@@ -159,7 +170,7 @@ export default function AdminSidebar({ isOpen, activeTab, onTabClick, onLogout, 
 									}`}
 								>
 									<CheckCircleIcon size={16} className="mr-2 text-gray-400 dark:text-gray-500" />
-									Pending Approvals
+									Pending Review
 								</button>
 								<button
 									onClick={() => onTabClick("item-active")}
@@ -169,8 +180,8 @@ export default function AdminSidebar({ isOpen, activeTab, onTabClick, onLogout, 
 											: "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800"
 									}`}
 								>
-									<ListIcon size={16} className="mr-2 text-gray-400 dark:text-gray-500" />
-									Active Listings
+									<CheckCircleIcon size={16} className="mr-2 text-gray-400 dark:text-gray-500" />
+									Active
 								</button>
 								<button
 									onClick={() => onTabClick("item-claimed")}
@@ -181,7 +192,7 @@ export default function AdminSidebar({ isOpen, activeTab, onTabClick, onLogout, 
 									}`}
 								>
 									<CheckCircleIcon size={16} className="mr-2 text-gray-400 dark:text-gray-500" />
-									Claimed Items
+									Claimed
 								</button>
 								<button
 									onClick={() => onTabClick("item-archived")}
@@ -192,7 +203,7 @@ export default function AdminSidebar({ isOpen, activeTab, onTabClick, onLogout, 
 									}`}
 								>
 									<ArchiveIcon size={16} className="mr-2 text-gray-400 dark:text-gray-500" />
-									Archived Items
+									Archived
 								</button>
 							</div>
 						)}

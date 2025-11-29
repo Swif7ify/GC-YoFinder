@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import Dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/ui/ConfirmProvider";
 import { api, apiCached, invalidateCache } from "@/lib/api.config";
-import { toastError } from "@/utils/toast";
+import { toastError, toastSuccess } from "@/utils/toast";
 import { UserData } from "@/types/types";
 import { useSearchParams } from "next/navigation";
+import { usePusher } from "@/contexts/PusherProvider";
 
 const Header = Dynamic(() => import("@/component/admin/Header").then((mod) => mod.default), { ssr: false });
 const Sidebar = Dynamic(() => import("@/component/admin/Sidebar").then((mod) => mod.default), { ssr: false });
@@ -54,11 +55,15 @@ const ExportPage = Dynamic(() => import("@/component/admin/pages/ExportPage").th
 const MaintenancePage = Dynamic(() => import("@/component/admin/pages/MaintenancePage").then((mod) => mod.default), {
 	ssr: false,
 });
+const ItemAllPage = Dynamic(() => import("@/component/admin/pages/ItemAllPage").then((mod) => mod.default), {
+	ssr: false,
+});
 
 const TAB_MAP: Record<string, string> = {
 	dashboard: "Dashboard",
 	users: "User Management",
-	"item-pending": "Pending Approvals",
+	"item-all": "All Items",
+	"item-pending": "Pending Review",
 	"item-active": "Active Listings",
 	"item-claimed": "Claimed Items",
 	"item-archived": "Archived Items",
@@ -102,8 +107,13 @@ export default function AdminClient() {
 
 	// Items state
 	const [pendingItems, setPendingItems] = useState<any[]>([]);
+	const [rejectedItems, setRejectedItems] = useState<any[]>([]);
 	const [activeItems, setActiveItems] = useState<any[]>([]);
 	const [claimedItems, setClaimedItems] = useState<any[]>([]);
+	const [archivedItems, setArchivedItems] = useState<any[]>([]);
+
+	// Combined items for review page (pending + rejected)
+	const reviewItems = [...pendingItems, ...rejectedItems];
 
 	// Users state
 	const [users, setUsers] = useState<any[]>([]);
@@ -240,8 +250,10 @@ export default function AdminClient() {
 			const data = await response.json();
 
 			if (status === "pending") setPendingItems(data.items || []);
+			else if (status === "rejected") setRejectedItems(data.items || []);
 			else if (status === "active") setActiveItems(data.items || []);
 			else if (status === "claimed") setClaimedItems(data.items || []);
+			else if (status === "removed") setArchivedItems(data.items || []);
 		} catch (error) {
 			console.error(`Error fetching ${status} items:`, error);
 		}
@@ -268,8 +280,8 @@ export default function AdminClient() {
 		}
 	};
 
-	// Update item status (approve/reject)
-	const updateItemStatus = async (itemId: string, status: "active" | "rejected") => {
+	// Update item status (approve/reject/pending/removed)
+	const updateItemStatus = async (itemId: string, status: "active" | "rejected" | "pending" | "removed") => {
 		try {
 			invalidateCache(/\/api\/admin/);
 
@@ -279,11 +291,14 @@ export default function AdminClient() {
 			});
 
 			if (response.status === 200) {
-				// Refresh data
+				// Refresh all data
 				await Promise.all([
 					fetchDashboardStats(false),
 					fetchItems("pending", false),
+					fetchItems("rejected", false),
 					fetchItems("active", false),
+					fetchItems("claimed", false),
+					fetchItems("removed", false),
 				]);
 				return true;
 			}
@@ -293,6 +308,35 @@ export default function AdminClient() {
 			return false;
 		}
 	};
+
+	// Archive item (set status to removed)
+	const archiveItem = async (itemId: string) => {
+		try {
+			invalidateCache(/\/api\/admin/);
+
+			const response = await api(`/api/admin/items/${itemId}/status`, {
+				method: "PUT",
+				body: JSON.stringify({ status: "removed" }),
+			});
+
+			if (response.status === 200) {
+				// Refresh data
+				await Promise.all([
+					fetchDashboardStats(false),
+					fetchItems("claimed", false),
+					fetchItems("removed", false),
+				]);
+				return true;
+			}
+			return false;
+		} catch (error) {
+			console.error("Error archiving item:", error);
+			return false;
+		}
+	};
+	// Combine all items for the All Items page
+	const allItems = [...pendingItems, ...rejectedItems, ...activeItems, ...claimedItems, ...archivedItems];
+
 	const componentMap: Record<string, React.ReactNode> = {
 		dashboard: <DashboardPage stats={dashboardStats} onRefresh={() => fetchDashboardStats(false)} />,
 		users: (
@@ -303,16 +347,38 @@ export default function AdminClient() {
 				onRefresh={() => fetchUsers(1, undefined, false)}
 			/>
 		),
+		"item-all": (
+			<ItemAllPage
+				items={allItems}
+				onUpdateStatus={updateItemStatus}
+				onRefresh={() => {
+					fetchItems("pending", false);
+					fetchItems("rejected", false);
+					fetchItems("active", false);
+					fetchItems("claimed", false);
+					fetchItems("removed", false);
+				}}
+			/>
+		),
 		"item-pending": (
 			<ItemPendingPage
-				items={pendingItems}
+				items={reviewItems}
 				onUpdateStatus={updateItemStatus}
-				onRefresh={() => fetchItems("pending", false)}
+				onRefresh={() => {
+					fetchItems("pending", false);
+					fetchItems("rejected", false);
+				}}
 			/>
 		),
 		"item-active": <ItemActivePage items={activeItems} onRefresh={() => fetchItems("active", false)} />,
-		"item-claimed": <ItemClaimedPage items={claimedItems} onRefresh={() => fetchItems("claimed", false)} />,
-		"item-archived": <ItemArchivedPage />,
+		"item-claimed": (
+			<ItemClaimedPage
+				items={claimedItems}
+				onRefresh={() => fetchItems("claimed", false)}
+				onArchive={archiveItem}
+			/>
+		),
+		"item-archived": <ItemArchivedPage items={archivedItems} onRefresh={() => fetchItems("removed", false)} />,
 		reports: <ReportsPage stats={dashboardStats} />,
 		activity: <ActivityPage stats={dashboardStats} />,
 		settings: <SettingsPage />,
@@ -335,8 +401,10 @@ export default function AdminClient() {
 					fetchNotifications(),
 					fetchDashboardStats(),
 					fetchItems("pending"),
+					fetchItems("rejected"),
 					fetchItems("active"),
 					fetchItems("claimed"),
+					fetchItems("removed"),
 					fetchUsers(),
 				]);
 			} finally {
@@ -345,6 +413,56 @@ export default function AdminClient() {
 		};
 		initializeData();
 	}, []);
+
+	// Use global Pusher context
+	const { subscribe, isConnected } = usePusher();
+
+	// Refresh functions wrapped in useCallback for Pusher events
+	const refreshAllData = useCallback(() => {
+		invalidateCache(/\/api\/admin/);
+		fetchDashboardStats(false);
+		fetchItems("pending", false);
+		fetchItems("rejected", false);
+		fetchItems("active", false);
+		fetchItems("claimed", false);
+		fetchItems("removed", false);
+	}, []);
+
+	// Setup Pusher for real-time updates
+	useEffect(() => {
+		if (!isConnected) return;
+
+		// Subscribe to admin updates channel
+		const adminChannel = subscribe("admin-updates");
+		if (!adminChannel) return;
+
+		// Listen for item status changes
+		const handleItemStatusChanged = () => {
+			refreshAllData();
+		};
+		adminChannel.bind("item-status-changed", handleItemStatusChanged);
+
+		// Listen for new items
+		const handleNewItem = () => {
+			invalidateCache(/\/api\/admin/);
+			fetchDashboardStats(false);
+			fetchItems("pending", false);
+			toastSuccess("New Item", "A new item has been submitted for review");
+		};
+		adminChannel.bind("new-item", handleNewItem);
+
+		// Listen for item deletions
+		const handleItemDeleted = () => {
+			refreshAllData();
+		};
+		adminChannel.bind("item-deleted", handleItemDeleted);
+
+		return () => {
+			adminChannel.unbind("item-status-changed", handleItemStatusChanged);
+			adminChannel.unbind("new-item", handleNewItem);
+			adminChannel.unbind("item-deleted", handleItemDeleted);
+		};
+	}, [isConnected, subscribe, refreshAllData]);
 
 	return (
 		<div className="h-screen overflow-hidden bg-gray-50 dark:bg-black">

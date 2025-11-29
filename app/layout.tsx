@@ -5,6 +5,7 @@ import ThemeProvider from "@/contexts/ThemeProvider";
 import { LoadingProvider } from "@/contexts/LoadingManager";
 import { GlobalLoading } from "@/component/GlobalLoader";
 import { ConfirmProvider } from "@/ui/ConfirmProvider";
+import { PusherProvider } from "@/contexts/PusherProvider";
 // import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata = {
@@ -37,8 +38,7 @@ export const metadata = {
 		type: "website",
 		url: "https://gc-yofinder.vercel.app",
 		title: "GC Yofinder - Lost and Found System for Gordon College",
-		description:
-			"GC Yofinder is a platform that helps students report and recover lost items on campus.",
+		description: "GC Yofinder is a platform that helps students report and recover lost items on campus.",
 		siteName: "GC Yofinder",
 		images: [
 			{
@@ -56,21 +56,19 @@ export const metadata = {
 	},
 };
 
-export default function RootLayout({
-	children,
-}: {
-	children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
 	return (
 		<html lang="en">
 			<link rel="icon" type="image/x-icon" href="/logo.png" />
 			<body className="bg-slate-50 dark:bg-black">
-				<ConfirmProvider>
-					<LoadingProvider>
-						<ThemeProvider>{children}</ThemeProvider>
-						<GlobalLoading />
-					</LoadingProvider>
-				</ConfirmProvider>
+				<PusherProvider>
+					<ConfirmProvider>
+						<LoadingProvider>
+							<ThemeProvider>{children}</ThemeProvider>
+							<GlobalLoading />
+						</LoadingProvider>
+					</ConfirmProvider>
+				</PusherProvider>
 
 				<ToastContainer
 					position="bottom-right"

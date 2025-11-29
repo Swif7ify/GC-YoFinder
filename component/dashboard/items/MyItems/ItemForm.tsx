@@ -1,17 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import {
-	Upload,
-	MapPin,
-	Calendar,
-	X,
-	Plus,
-	Save,
-	Loader2,
-	CheckCircle2,
-	AlertCircle,
-} from "lucide-react";
+import { Upload, MapPin, Calendar, X, Plus, Save, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { toastError, toastSuccess } from "@/utils/toast";
 import CustomSelect from "@/ui/CustomSelect";
 import dayjs, { Dayjs } from "dayjs";
@@ -28,26 +18,16 @@ interface ItemFormProps {
 	handleUpdate: (formData: FormData) => Promise<void>;
 }
 
-export default function ItemForm({
-	item,
-	onClose,
-	handleUpdate,
-}: ItemFormProps) {
+export default function ItemForm({ item, onClose, handleUpdate }: ItemFormProps) {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [itemType, setItemType] = useState<"lost" | "found">(item.type);
 	const [title, setTitle] = useState(item.title);
 	const [description, setDescription] = useState(item.description);
 	const [location, setLocation] = useState(item.location);
-	const [date, setDate] = useState<Dayjs | null>(
-		item.dateReported ? dayjs(item.dateReported) : dayjs()
-	);
+	const [date, setDate] = useState<Dayjs | null>(item.dateReported ? dayjs(item.dateReported) : dayjs());
 	const [category, setCategory] = useState(item.category);
-	const [status, setStatus] = useState<"active" | "claimed" | "removed">(
-		item.status
-	);
-	const [existingImages, setExistingImages] = useState<string[]>(
-		item.images || []
-	);
+	const [markAsClaimed, setMarkAsClaimed] = useState(false);
+	const [existingImages, setExistingImages] = useState<string[]>(item.images || []);
 	const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
 	const allImages = [...existingImages, ...newImagePreviews];
 
@@ -88,9 +68,7 @@ export default function ItemForm({
 		}
 
 		if (!acceptedFiles.length) {
-			setUploadError(
-				"Files must be PNG or JPEG and must not exceed 5 MB."
-			);
+			setUploadError("Files must be PNG or JPEG and must not exceed 5 MB.");
 			toastError(
 				"Image Upload Failed",
 				"All selected files were invalid. Please upload PNG or JPEG files not exceeding 5 MB."
@@ -115,14 +93,8 @@ export default function ItemForm({
 		Promise.all(readers).then((results) => {
 			const urls = results.filter(Boolean) as string[];
 			if (urls.length) {
-				setNewImagePreviews((prev) =>
-					[...prev, ...urls].slice(0, MAX_IMAGES)
-				);
-				setUploadError(
-					skipped
-						? `${skipped} file(s) skipped: only PNG/JPEG ≤ 5MB allowed`
-						: null
-				);
+				setNewImagePreviews((prev) => [...prev, ...urls].slice(0, MAX_IMAGES));
+				setUploadError(skipped ? `${skipped} file(s) skipped: only PNG/JPEG ≤ 5MB allowed` : null);
 			}
 			if (fileInputRef.current) fileInputRef.current.value = "";
 		});
@@ -135,9 +107,7 @@ export default function ItemForm({
 			setExistingImages((prev) => prev.filter((_, i) => i !== index));
 		} else {
 			const newIndex = index - existingCount;
-			setNewImagePreviews((prev) =>
-				prev.filter((_, i) => i !== newIndex)
-			);
+			setNewImagePreviews((prev) => prev.filter((_, i) => i !== newIndex));
 		}
 	};
 
@@ -147,10 +117,7 @@ export default function ItemForm({
 
 		// Validation
 		if (!title.trim()) {
-			toastError(
-				"Validation Error",
-				"Please enter a title for the item."
-			);
+			toastError("Validation Error", "Please enter a title for the item.");
 			return;
 		}
 		if (!description.trim()) {
@@ -171,15 +138,15 @@ export default function ItemForm({
 
 			const form = new FormData();
 			form.append("type", itemType);
-			form.append("status", status);
+			// Only allow changing to "claimed" if item is active and user checked the box
+			// Otherwise keep the current status
+			const newStatus = item.status === "active" && markAsClaimed ? "claimed" : item.status;
+			form.append("status", newStatus);
 			form.append("title", title.trim());
 			form.append("description", description.trim());
 			form.append("category", category);
 			form.append("location", location.trim());
-			form.append(
-				"date_lost_or_found",
-				date ? date.toISOString() : item.dateReported
-			);
+			form.append("date_lost_or_found", date ? date.toISOString() : item.dateReported);
 
 			existingImages.forEach((url) => {
 				form.append("existing_images", url);
@@ -214,12 +181,8 @@ export default function ItemForm({
 				{/* Header */}
 				<div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-neutral-800">
 					<div>
-						<h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-							Edit Item
-						</h2>
-						<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-							Update the details of your item
-						</p>
+						<h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Edit Item</h2>
+						<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Update the details of your item</p>
 					</div>
 					<button
 						type="button"
@@ -227,18 +190,12 @@ export default function ItemForm({
 						className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
 						aria-label="Close form"
 					>
-						<X
-							size={24}
-							className="text-gray-600 dark:text-gray-400"
-						/>
+						<X size={24} className="text-gray-600 dark:text-gray-400" />
 					</button>
 				</div>
 
 				{/* Form */}
-				<form
-					onSubmit={handleSubmit}
-					className="p-6 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto"
-				>
+				<form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto">
 					{/* Item Type Selection */}
 					<div>
 						<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
@@ -337,29 +294,27 @@ export default function ItemForm({
 						</div>
 					</div>
 
-					{/* Status Selection */}
-					<div>
-						<label
-							htmlFor="status"
-							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-						>
-							Status
-						</label>
-						<CustomSelect
-							value={status}
-							onValueChange={(value) =>
-								setStatus(
-									value as "active" | "claimed" | "removed"
-								)
-							}
-							options={[
-								{ value: "active", label: "Active" },
-								{ value: "claimed", label: "Claimed" },
-								{ value: "removed", label: "Removed" },
-							]}
-							placeholder="Select status"
-						/>
-					</div>
+					{/* Mark as Claimed - Only show if item is active */}
+					{item.status === "active" && (
+						<div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+							<label className="flex items-center gap-3 cursor-pointer">
+								<input
+									type="checkbox"
+									checked={markAsClaimed}
+									onChange={(e) => setMarkAsClaimed(e.target.checked)}
+									className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+								/>
+								<div>
+									<span className="font-medium text-blue-800 dark:text-blue-200">
+										Mark as Claimed
+									</span>
+									<p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
+										Check this if the item has been returned to its owner
+									</p>
+								</div>
+							</label>
+						</div>
+					)}
 
 					{/* Title */}
 					<div>
@@ -450,8 +405,7 @@ export default function ItemForm({
 							htmlFor="date"
 							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
 						>
-							Date {itemType === "lost" ? "Lost" : "Found"}{" "}
-							<span className="text-red-500">*</span>
+							Date {itemType === "lost" ? "Lost" : "Found"} <span className="text-red-500">*</span>
 						</label>
 						<LocalizationProvider dateAdapter={AdapterDayjs}>
 							<DateTimePicker
@@ -488,19 +442,12 @@ export default function ItemForm({
 							{allImages.length < MAX_IMAGES && (
 								<button
 									type="button"
-									onClick={() =>
-										fileInputRef.current?.click()
-									}
+									onClick={() => fileInputRef.current?.click()}
 									className="w-full px-4 py-3 border-2 border-dashed border-gray-300 dark:border-neutral-700 rounded-lg hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 flex items-center justify-center gap-2"
 								>
-									<Upload
-										size={20}
-										className="text-gray-400 dark:text-gray-500"
-										aria-hidden="true"
-									/>
+									<Upload size={20} className="text-gray-400 dark:text-gray-500" aria-hidden="true" />
 									<span className="text-sm text-gray-600 dark:text-gray-400">
-										Click to upload photos (
-										{newImagePreviews.length}/{MAX_IMAGES})
+										Click to upload photos ({newImagePreviews.length}/{MAX_IMAGES})
 									</span>
 								</button>
 							)}
@@ -515,11 +462,7 @@ export default function ItemForm({
 							/>
 
 							{/* Error Message */}
-							{uploadError && (
-								<p className="text-xs text-red-600 dark:text-red-400">
-									{uploadError}
-								</p>
-							)}
+							{uploadError && <p className="text-xs text-red-600 dark:text-red-400">{uploadError}</p>}
 
 							{/* Image Previews */}
 							{allImages.length > 0 && (
@@ -540,9 +483,7 @@ export default function ItemForm({
 												type="button"
 												onClick={() => removeImage(idx)}
 												className="absolute top-2 right-2 p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-												aria-label={`Remove image ${
-													idx + 1
-												}`}
+												aria-label={`Remove image ${idx + 1}`}
 											>
 												<X size={16} />
 											</button>
@@ -571,11 +512,7 @@ export default function ItemForm({
 					>
 						{isSubmitting ? (
 							<>
-								<Loader2
-									size={18}
-									className="animate-spin"
-									aria-hidden="true"
-								/>
+								<Loader2 size={18} className="animate-spin" aria-hidden="true" />
 								Saving...
 							</>
 						) : (

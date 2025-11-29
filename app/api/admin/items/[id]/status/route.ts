@@ -15,8 +15,11 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
 
 		const { status } = await request.json();
 
-		if (!status || !["active", "rejected"].includes(status)) {
-			return NextResponse.json({ error: "Invalid status. Must be 'active' or 'rejected'" }, { status: 400 });
+		if (!status || !["active", "rejected", "pending", "removed"].includes(status)) {
+			return NextResponse.json(
+				{ error: "Invalid status. Must be 'active', 'rejected', 'pending', or 'removed'" },
+				{ status: 400 }
+			);
 		}
 
 		const response = await updateItemStatus(itemID, status, userID);
