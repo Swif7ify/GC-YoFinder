@@ -1,19 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
-
-interface IPhotoMetadata {
-	url: string;
-	publicId: string;
-	cloudinaryId: string;
-	format: string;
-	size: number;
-	width: number;
-	height: number;
-	uploaded_at: Date;
-	version?: number;
-	signature?: string;
-	etag?: string;
-	resourceType: "image" | "video" | "raw" | "auto";
-}
+import { PhotoMetadata } from "@/types/types";
 
 export interface IUser extends Document {
 	username: string;
@@ -22,7 +8,7 @@ export interface IUser extends Document {
 	email: string;
 	password: string;
 	phone: string;
-	photo: IPhotoMetadata;
+    photo: PhotoMetadata;
 	is_online: boolean;
 	role: string;
 	session_id?: string;

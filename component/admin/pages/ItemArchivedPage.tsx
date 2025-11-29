@@ -13,36 +13,17 @@ import {
 	XIcon,
 } from "lucide-react";
 import Image from "next/image";
-
-interface Item {
-	_id: string;
-	name: string;
-	description: string;
-	type: "lost" | "found";
-	status: string;
-	category: string;
-	location: string;
-	views?: number;
-	photos: { url: string }[];
-	user_id: {
-		firstname: string;
-		lastname: string;
-		email?: string;
-	} | null;
-	created_at: string;
-	updated_at: string;
-	date_lost_or_found?: string;
-}
+import { AdminItem } from "@/types/types";
 
 interface ItemArchivedPageProps {
-	items?: Item[];
-	onRefresh?: () => void;
+    items?: AdminItem[];
+    onRefresh?: () => void;
 }
 
 export default function ItemArchivedPage({ items = [], onRefresh }: ItemArchivedPageProps) {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [typeFilter, setTypeFilter] = useState<"all" | "lost" | "found">("all");
-	const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+    const [selectedItem, setSelectedItem] = useState<AdminItem | null>(null);
 
 	const filteredItems = useMemo(() => {
 		return items.filter((item) => {

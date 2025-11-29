@@ -1,5 +1,20 @@
 import { ElementType } from "react";
 
+export interface PhotoMetadata {
+	url: string;
+	publicId: string;
+	cloudinaryId: string;
+	format: string;
+	size: number;
+	width: number;
+	height: number;
+	uploaded_at: Date;
+	version?: number;
+	signature?: string;
+	etag?: string;
+	resourceType: "image" | "video" | "raw" | "auto";
+}
+
 export interface UserData {
 	created_at: string;
 	email: string;
@@ -8,23 +23,18 @@ export interface UserData {
 	lastname: string;
 	is_online: boolean;
 	phone?: string;
-	photo?: {
-		url: string;
-		publicId: string;
-		cloudinaryId: string;
-		format: string;
-		size: number;
-		width: number;
-		height: number;
-		uploaded_at: Date;
-		resourceType: "image" | "video" | "raw" | "auto";
-	};
+	photo?: PhotoMetadata;
 	role: "student" | "admin";
 	updated_at: string;
 }
 
 // Shared status type for all items
-export type ItemStatus = "pending" | "active" | "claimed" | "rejected" | "removed";
+export type ItemStatus =
+	| "pending"
+	| "active"
+	| "claimed"
+	| "rejected"
+	| "removed";
 
 export interface RecentItems {
 	id: string;
@@ -100,7 +110,7 @@ export interface MyItem {
 	views: number;
 	matchCount: number;
 	image_url?: string;
-	images: any[];
+	images: string[];
 	category: string;
 }
 
@@ -119,7 +129,7 @@ export interface AllItem {
 	location: string;
 	matched: number;
 	name: string;
-	photos: any[];
+	photos: PhotoMetadata[];
 	status: ItemStatus;
 	type: "lost" | "found";
 	updated_at: string;
@@ -131,6 +141,30 @@ export interface AllItem {
 		photo?: string;
 	};
 	views: number;
+}
+
+export interface AdminItem {
+	_id: string;
+	name: string;
+	description: string;
+	type: "lost" | "found";
+	status: ItemStatus;
+	category: string;
+	location: string;
+	date_lost_or_found?: string;
+	views?: number;
+	matched?: number;
+	photos: PhotoMetadata[];
+	user_id: {
+		_id?: string;
+		firstname: string;
+		lastname: string;
+		email?: string;
+		username?: string;
+	} | null;
+	created_at: string;
+	updated_at?: string;
+	claimed_at?: string;
 }
 
 export interface CloudinaryImagePreviewProps {

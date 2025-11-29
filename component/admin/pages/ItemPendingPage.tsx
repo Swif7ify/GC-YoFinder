@@ -15,31 +15,12 @@ import {
 	RotateCcwIcon,
 } from "lucide-react";
 import Image from "next/image";
-
-interface Item {
-	_id: string;
-	name: string;
-	description: string;
-	type: "lost" | "found";
-	status: "pending" | "active" | "rejected" | "claimed" | "removed";
-	category: string;
-	location: string;
-	date_lost_or_found: string;
-	photos: { url: string }[];
-	user_id: {
-		_id: string;
-		firstname: string;
-		lastname: string;
-		email: string;
-		username: string;
-	} | null;
-	created_at: string;
-}
+import { AdminItem } from "@/types/types";
 
 type FilterTab = "all" | "pending" | "rejected";
 
 // Status badge colors
-const getStatusColors = (status: Item["status"]) => {
+const getStatusColors = (status: AdminItem["status"]) => {
 	const colors = {
 		pending: {
 			bg: "bg-yellow-100 dark:bg-yellow-900/30",
@@ -49,17 +30,25 @@ const getStatusColors = (status: Item["status"]) => {
 			bg: "bg-green-100 dark:bg-green-900/30",
 			text: "text-green-800 dark:text-green-300",
 		},
-		rejected: { bg: "bg-red-100 dark:bg-red-900/30", text: "text-red-800 dark:text-red-300", dot: "bg-red-500" },
+		rejected: {
+			bg: "bg-red-100 dark:bg-red-900/30",
+			text: "text-red-800 dark:text-red-300",
+			dot: "bg-red-500",
+		},
 		claimed: {
 			bg: "bg-blue-100 dark:bg-blue-900/30",
 			text: "text-blue-800 dark:text-blue-300",
 		},
-		removed: { bg: "bg-gray-100 dark:bg-gray-700", text: "text-gray-800 dark:text-gray-300", dot: "bg-gray-500" },
+		removed: {
+			bg: "bg-gray-100 dark:bg-gray-700",
+			text: "text-gray-800 dark:text-gray-300",
+			dot: "bg-gray-500",
+		},
 	};
 	return colors[status] || colors.pending;
 };
 
-const StatusBadge = ({ status }: { status: Item["status"] }) => {
+const StatusBadge = ({ status }: { status: AdminItem["status"] }) => {
 	const colors = getStatusColors(status);
 	return (
 		<span
@@ -71,13 +60,20 @@ const StatusBadge = ({ status }: { status: Item["status"] }) => {
 };
 
 interface ItemPendingPageProps {
-	items?: Item[];
-	onUpdateStatus?: (itemId: string, status: "active" | "rejected" | "pending") => Promise<boolean>;
+	items?: AdminItem[];
+	onUpdateStatus?: (
+		itemId: string,
+		status: "active" | "rejected" | "pending"
+	) => Promise<boolean>;
 	onRefresh?: () => void;
 }
 
-export default function ItemPendingPage({ items = [], onUpdateStatus, onRefresh }: ItemPendingPageProps) {
-	const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+export default function ItemPendingPage({
+	items = [],
+	onUpdateStatus,
+	onRefresh,
+}: ItemPendingPageProps) {
+	const [selectedItem, setSelectedItem] = useState<AdminItem | null>(null);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [processing, setProcessing] = useState<string | null>(null);
 	const [filterTab, setFilterTab] = useState<FilterTab>("all");
@@ -85,7 +81,9 @@ export default function ItemPendingPage({ items = [], onUpdateStatus, onRefresh 
 	// Count items by status
 	const counts = useMemo(
 		() => ({
-			all: items.filter((i) => i.status === "pending" || i.status === "rejected").length,
+			all: items.filter(
+				(i) => i.status === "pending" || i.status === "rejected"
+			).length,
 			pending: items.filter((i) => i.status === "pending").length,
 			rejected: items.filter((i) => i.status === "rejected").length,
 		}),
@@ -102,9 +100,15 @@ export default function ItemPendingPage({ items = [], onUpdateStatus, onRefresh 
 			})
 			.filter(
 				(item) =>
-					item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-					item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-					item.location.toLowerCase().includes(searchQuery.toLowerCase())
+					item.name
+						.toLowerCase()
+						.includes(searchQuery.toLowerCase()) ||
+					item.description
+						.toLowerCase()
+						.includes(searchQuery.toLowerCase()) ||
+					item.location
+						.toLowerCase()
+						.includes(searchQuery.toLowerCase())
 			);
 	}, [items, filterTab, searchQuery]);
 
@@ -151,8 +155,12 @@ export default function ItemPendingPage({ items = [], onUpdateStatus, onRefresh 
 			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Item Review</h1>
-					<p className="text-gray-600 dark:text-gray-400 mt-1">Review and manage submitted items</p>
+					<h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+						Item Review
+					</h1>
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
+						Review and manage submitted items
+					</p>
 				</div>
 				<button
 					onClick={onRefresh}
@@ -203,7 +211,10 @@ export default function ItemPendingPage({ items = [], onUpdateStatus, onRefresh 
 
 				{/* Search */}
 				<div className="relative flex-1 min-w-[200px]">
-					<SearchIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+					<SearchIcon
+						size={18}
+						className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+					/>
 					<input
 						type="text"
 						placeholder="Search items..."
@@ -219,9 +230,16 @@ export default function ItemPendingPage({ items = [], onUpdateStatus, onRefresh 
 				<div className="lg:col-span-2 space-y-4">
 					{filteredItems.length === 0 ? (
 						<div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 p-8 text-center">
-							<ClockIcon size={48} className="mx-auto text-gray-400 mb-4" />
-							<h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No pending items</h3>
-							<p className="text-gray-500 dark:text-gray-400 mt-1">All items have been reviewed</p>
+							<ClockIcon
+								size={48}
+								className="mx-auto text-gray-400 mb-4"
+							/>
+							<h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+								No pending items
+							</h3>
+							<p className="text-gray-500 dark:text-gray-400 mt-1">
+								All items have been reviewed
+							</p>
 						</div>
 					) : (
 						filteredItems.map((item) => (
@@ -237,7 +255,8 @@ export default function ItemPendingPage({ items = [], onUpdateStatus, onRefresh 
 								<div className="flex items-start gap-4">
 									{/* Image */}
 									<div className="w-20 h-20 rounded-lg bg-gray-100 dark:bg-neutral-800 overflow-hidden flex-shrink-0">
-										{item.photos && item.photos.length > 0 ? (
+										{item.photos &&
+										item.photos.length > 0 ? (
 											<Image
 												src={item.photos[0].url}
 												alt={item.name}
@@ -247,7 +266,10 @@ export default function ItemPendingPage({ items = [], onUpdateStatus, onRefresh 
 											/>
 										) : (
 											<div className="w-full h-full flex items-center justify-center">
-												<ImageIcon size={24} className="text-gray-400" />
+												<ImageIcon
+													size={24}
+													className="text-gray-400"
+												/>
 											</div>
 										)}
 									</div>
@@ -269,7 +291,9 @@ export default function ItemPendingPage({ items = [], onUpdateStatus, onRefresh 
 													>
 														{item.type.toUpperCase()}
 													</span>
-													<StatusBadge status={item.status} />
+													<StatusBadge
+														status={item.status}
+													/>
 												</div>
 											</div>
 											<span className="text-xs text-gray-500 dark:text-gray-400">
@@ -302,7 +326,9 @@ export default function ItemPendingPage({ items = [], onUpdateStatus, onRefresh 
 														e.stopPropagation();
 														handleApprove(item._id);
 													}}
-													disabled={processing === item._id}
+													disabled={
+														processing === item._id
+													}
 													className="p-2 bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400 rounded-lg transition-colors disabled:opacity-50"
 													title="Approve"
 												>
@@ -313,7 +339,9 @@ export default function ItemPendingPage({ items = [], onUpdateStatus, onRefresh 
 														e.stopPropagation();
 														handleReject(item._id);
 													}}
-													disabled={processing === item._id}
+													disabled={
+														processing === item._id
+													}
 													className="p-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400 rounded-lg transition-colors disabled:opacity-50"
 													title="Reject"
 												>
@@ -327,7 +355,9 @@ export default function ItemPendingPage({ items = [], onUpdateStatus, onRefresh 
 														e.stopPropagation();
 														handleApprove(item._id);
 													}}
-													disabled={processing === item._id}
+													disabled={
+														processing === item._id
+													}
 													className="p-2 bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400 rounded-lg transition-colors disabled:opacity-50"
 													title="Approve"
 												>
@@ -336,9 +366,13 @@ export default function ItemPendingPage({ items = [], onUpdateStatus, onRefresh 
 												<button
 													onClick={(e) => {
 														e.stopPropagation();
-														handleRestoreToPending(item._id);
+														handleRestoreToPending(
+															item._id
+														);
 													}}
-													disabled={processing === item._id}
+													disabled={
+														processing === item._id
+													}
 													className="p-2 bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:hover:bg-yellow-900/50 text-yellow-700 dark:text-yellow-400 rounded-lg transition-colors disabled:opacity-50"
 													title="Restore to Pending"
 												>
@@ -358,49 +392,61 @@ export default function ItemPendingPage({ items = [], onUpdateStatus, onRefresh 
 					{selectedItem ? (
 						<div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 p-5 sticky top-6">
 							<div className="flex items-center justify-between mb-4">
-								<h3 className="font-semibold text-gray-900 dark:text-gray-100">Item Details</h3>
+								<h3 className="font-semibold text-gray-900 dark:text-gray-100">
+									Item Details
+								</h3>
 								<button
 									onClick={() => setSelectedItem(null)}
 									className="p-1 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded"
 								>
-									<XIcon size={16} className="text-gray-500" />
+									<XIcon
+										size={16}
+										className="text-gray-500"
+									/>
 								</button>
 							</div>
 
 							{/* Images */}
-							{selectedItem.photos && selectedItem.photos.length > 0 && (
-								<div className="mb-4">
-									<div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-neutral-800">
-										<Image
-											src={selectedItem.photos[0].url}
-											alt={selectedItem.name}
-											width={400}
-											height={225}
-											className="w-full h-full object-cover"
-										/>
-									</div>
-									{selectedItem.photos.length > 1 && (
-										<div className="flex gap-2 mt-2">
-											{selectedItem.photos.slice(1, 4).map((photo, idx) => (
-												<div
-													key={idx}
-													className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-neutral-800"
-												>
-													<Image
-														src={photo.url}
-														alt={`${selectedItem.name} ${idx + 2}`}
-														width={64}
-														height={64}
-														className="w-full h-full object-cover"
-													/>
-												</div>
-											))}
+							{selectedItem.photos &&
+								selectedItem.photos.length > 0 && (
+									<div className="mb-4">
+										<div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-neutral-800">
+											<Image
+												src={selectedItem.photos[0].url}
+												alt={selectedItem.name}
+												width={400}
+												height={225}
+												className="w-full h-full object-cover"
+											/>
 										</div>
-									)}
-								</div>
-							)}
+										{selectedItem.photos.length > 1 && (
+											<div className="flex gap-2 mt-2">
+												{selectedItem.photos
+													.slice(1, 4)
+													.map((photo, idx) => (
+														<div
+															key={idx}
+															className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-neutral-800"
+														>
+															<Image
+																src={photo.url}
+																alt={`${
+																	selectedItem.name
+																} ${idx + 2}`}
+																width={64}
+																height={64}
+																className="w-full h-full object-cover"
+															/>
+														</div>
+													))}
+											</div>
+										)}
+									</div>
+								)}
 
-							<h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">{selectedItem.name}</h4>
+							<h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">
+								{selectedItem.name}
+							</h4>
 
 							<div className="flex flex-wrap gap-2 mb-3">
 								<span
@@ -418,7 +464,9 @@ export default function ItemPendingPage({ items = [], onUpdateStatus, onRefresh 
 								</span>
 							</div>
 
-							<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{selectedItem.description}</p>
+							<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+								{selectedItem.description}
+							</p>
 
 							<div className="space-y-2 text-sm">
 								<div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
@@ -428,8 +476,13 @@ export default function ItemPendingPage({ items = [], onUpdateStatus, onRefresh 
 								<div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
 									<CalendarIcon size={14} />
 									<span>
-										{selectedItem.type === "lost" ? "Lost on" : "Found on"}{" "}
-										{formatDate(selectedItem.date_lost_or_found)}
+										{selectedItem.type === "lost"
+											? "Lost on"
+											: "Found on"}{" "}
+										{formatDate(
+											selectedItem.date_lost_or_found ||
+												selectedItem.created_at
+										)}
 									</span>
 								</div>
 								<div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
@@ -452,16 +505,24 @@ export default function ItemPendingPage({ items = [], onUpdateStatus, onRefresh 
 								{selectedItem.status === "pending" ? (
 									<>
 										<button
-											onClick={() => handleApprove(selectedItem._id)}
-											disabled={processing === selectedItem._id}
+											onClick={() =>
+												handleApprove(selectedItem._id)
+											}
+											disabled={
+												processing === selectedItem._id
+											}
 											className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
 										>
 											<CheckIcon size={16} />
 											Approve
 										</button>
 										<button
-											onClick={() => handleReject(selectedItem._id)}
-											disabled={processing === selectedItem._id}
+											onClick={() =>
+												handleReject(selectedItem._id)
+											}
+											disabled={
+												processing === selectedItem._id
+											}
 											className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50"
 										>
 											<XIcon size={16} />
@@ -471,16 +532,26 @@ export default function ItemPendingPage({ items = [], onUpdateStatus, onRefresh 
 								) : selectedItem.status === "rejected" ? (
 									<>
 										<button
-											onClick={() => handleApprove(selectedItem._id)}
-											disabled={processing === selectedItem._id}
+											onClick={() =>
+												handleApprove(selectedItem._id)
+											}
+											disabled={
+												processing === selectedItem._id
+											}
 											className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
 										>
 											<CheckIcon size={16} />
 											Approve
 										</button>
 										<button
-											onClick={() => handleRestoreToPending(selectedItem._id)}
-											disabled={processing === selectedItem._id}
+											onClick={() =>
+												handleRestoreToPending(
+													selectedItem._id
+												)
+											}
+											disabled={
+												processing === selectedItem._id
+											}
 											className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors disabled:opacity-50"
 										>
 											<RotateCcwIcon size={16} />
@@ -492,8 +563,13 @@ export default function ItemPendingPage({ items = [], onUpdateStatus, onRefresh 
 						</div>
 					) : (
 						<div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 p-8 text-center">
-							<EyeIcon size={48} className="mx-auto text-gray-400 mb-4" />
-							<h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Select an item</h3>
+							<EyeIcon
+								size={48}
+								className="mx-auto text-gray-400 mb-4"
+							/>
+							<h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+								Select an item
+							</h3>
 							<p className="text-gray-500 dark:text-gray-400 mt-1">
 								Click on an item to view details and take action
 							</p>

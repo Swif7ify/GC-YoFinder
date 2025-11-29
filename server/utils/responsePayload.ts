@@ -1,4 +1,9 @@
-export function responsePayload(payload: any, remarks: string, message: string, code: number) {
+export function responsePayload(
+	payload: any,
+	remarks: string,
+	message: string,
+	code: number
+) {
 	const status = {
 		remarks,
 		message,
@@ -12,18 +17,34 @@ export function responsePayload(payload: any, remarks: string, message: string, 
 	};
 }
 
-export async function serverResponseError(payload = null, message = "Internal Server Error", code = 500) {
+export async function serverResponseError(
+	payload: any = null,
+	message = "Internal Server Error",
+	code = 500
+) {
 	return responsePayload(payload, "error", message, code);
 }
 
-export async function invalidInputTypeError(payload = null, message = "Invalid input type", code = 400) {
+export async function invalidInputTypeError(
+	payload: any = null,
+	message = "Invalid input type",
+	code = 400
+) {
 	return responsePayload(payload, "error", message, code);
 }
 
-export async function missingRequiredFieldError(payload = null, message = "Missing required field", code = 404) {
+export async function missingRequiredFieldError(
+	payload: any = null,
+	message = "Missing required field",
+	code = 404
+) {
 	return responsePayload(payload, "error", message, code);
 }
 
-export async function userNotFoundError(payload = null, message = "User not found", code = 404) {
+export async function userNotFoundError(
+	payload: any = null,
+	message = "User not found",
+	code = 404
+) {
 	return responsePayload(payload, "error", message, code);
 }

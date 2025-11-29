@@ -356,13 +356,13 @@ export default function DetailsModal({ item, onClose, isOwnItem, userID, onItemU
 							<div className="space-y-6">
 								{/* Images */}
 								<div>
-									<CloudinaryImagePreview
-										images={currentItem.photos || []}
-										gridCols="3"
-										aspectRatio="square"
-										showCount={true}
-										allowDownload={false}
-									/>
+                                    <CloudinaryImagePreview
+                                        images={(currentItem.photos || []).map((p: any) => (typeof p === "string" ? p : p.url))}
+                                        gridCols="3"
+                                        aspectRatio="square"
+                                        showCount={true}
+                                        allowDownload={false}
+                                    />
 								</div>
 
 								{/* Item Details */}

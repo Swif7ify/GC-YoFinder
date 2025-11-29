@@ -3,7 +3,7 @@
 import { useEffect, useCallback } from "react";
 import { usePusher } from "@/contexts/PusherProvider";
 
-type EventHandler = (data: any) => void;
+type EventHandler = (data: unknown) => void;
 
 interface UsePusherEventsOptions {
 	channelName: string;

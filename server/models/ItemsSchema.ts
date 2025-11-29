@@ -1,20 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
-import { ItemCategory, ITEM_CATEGORIES } from "@/types/types";
-
-interface IPhotoMetadata {
-	url: string;
-	publicId: string;
-	cloudinaryId: string;
-	format: string;
-	size: number;
-	width: number;
-	height: number;
-	uploaded_at: Date;
-	version?: number;
-	signature?: string;
-	etag?: string;
-	resourceType: "image" | "video" | "raw" | "auto";
-}
+import { ItemCategory, ITEM_CATEGORIES, PhotoMetadata } from "@/types/types";
 
 export interface IItems extends Document {
 	user_id: mongoose.Schema.Types.ObjectId; // User who posted this item
@@ -27,7 +12,7 @@ export interface IItems extends Document {
 	date_lost_or_found: Date; // When the item was lost or found
 	matched: number;
 	views: number; // Number of times item has been viewed
-	photos: IPhotoMetadata[]; // Multiple photos support
+    photos: PhotoMetadata[]; // Multiple photos support
 	contact_info?: {
 		phone?: string;
 		email?: string;
@@ -81,7 +66,7 @@ const ItemsSchema = new Schema<IItems>({
 			},
 		],
 		default: [],
-		validate: [(val: any[]) => val.length <= 5, "Cannot upload more than 5 photos"],
+        validate: [(val: unknown[]) => val.length <= 5, "Cannot upload more than 5 photos"],
 	},
 	user_id: {
 		type: mongoose.Schema.Types.ObjectId,

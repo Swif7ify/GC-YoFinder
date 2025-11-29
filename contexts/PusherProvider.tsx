@@ -1,12 +1,19 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
-import Pusher from "pusher-js";
+import React, {
+	createContext,
+	useContext,
+	useEffect,
+	useRef,
+	useState,
+	useCallback,
+} from "react";
+import Pusher, { type Channel } from "pusher-js";
 
 interface PusherContextType {
 	pusher: Pusher | null;
 	isConnected: boolean;
-	subscribe: (channelName: string) => any;
+	subscribe: (channelName: string) => Channel | null;
 	unsubscribe: (channelName: string) => void;
 }
 
@@ -28,7 +35,7 @@ interface PusherProviderProps {
 export function PusherProvider({ children }: PusherProviderProps) {
 	const pusherRef = useRef<Pusher | null>(null);
 	const [isConnected, setIsConnected] = useState(false);
-	const channelsRef = useRef<Map<string, any>>(new Map());
+	const channelsRef = useRef<Map<string, Channel>>(new Map());
 
 	useEffect(() => {
 		const pusherKey = process.env.NEXT_PUBLIC_PUSHER_KEY;
@@ -54,7 +61,7 @@ export function PusherProvider({ children }: PusherProviderProps) {
 			console.log("Pusher disconnected");
 		});
 
-		pusher.connection.bind("error", (err: any) => {
+		pusher.connection.bind("error", (err: unknown) => {
 			console.error("Pusher connection error:", err);
 		});
 
@@ -73,7 +80,7 @@ export function PusherProvider({ children }: PusherProviderProps) {
 		if (!pusherRef.current) return null;
 
 		if (channelsRef.current.has(channelName)) {
-			return channelsRef.current.get(channelName);
+			return channelsRef.current.get(channelName) ?? null;
 		}
 
 		const channel = pusherRef.current.subscribe(channelName);
