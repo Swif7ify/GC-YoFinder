@@ -7,9 +7,7 @@ import {
 	ClipboardListIcon,
 	LineChartIcon,
 	ClockIcon,
-	SettingsIcon,
-	BuildingIcon,
-	UploadIcon,
+	DownloadIcon,
 	CheckCircleIcon,
 	ListIcon,
 	ArchiveIcon,
@@ -248,44 +246,6 @@ export default function AdminSidebar({ isOpen, activeTab, onTabClick, onLogout, 
 					</button>
 
 					<button
-						onClick={() => onTabClick("settings")}
-						className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-							isActive("settings")
-								? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
-								: "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800"
-						}`}
-					>
-						<SettingsIcon
-							size={18}
-							className={`mr-3 ${
-								isActive("settings")
-									? "text-emerald-500 dark:text-emerald-400"
-									: "text-gray-500 dark:text-gray-400"
-							}`}
-						/>
-						System Settings
-					</button>
-
-					<button
-						onClick={() => onTabClick("locations")}
-						className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-							isActive("locations")
-								? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
-								: "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800"
-						}`}
-					>
-						<BuildingIcon
-							size={18}
-							className={`mr-3 ${
-								isActive("locations")
-									? "text-emerald-500 dark:text-emerald-400"
-									: "text-gray-500 dark:text-gray-400"
-							}`}
-						/>
-						Location Management
-					</button>
-
-					<button
 						onClick={() => onTabClick("export")}
 						className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
 							isActive("export")
@@ -293,7 +253,7 @@ export default function AdminSidebar({ isOpen, activeTab, onTabClick, onLogout, 
 								: "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800"
 						}`}
 					>
-						<UploadIcon
+						<DownloadIcon
 							size={18}
 							className={`mr-3 ${
 								isActive("export")
