@@ -37,13 +37,7 @@ interface DetailsModalProps {
 	onItemUpdate?: (updatedItem: AllItem) => void;
 }
 
-export default function DetailsModal({
-	item,
-	onClose,
-	isOwnItem,
-	userID,
-	onItemUpdate,
-}: DetailsModalProps) {
+export default function DetailsModal({ item, onClose, isOwnItem, userID, onItemUpdate }: DetailsModalProps) {
 	const [currentItem, setCurrentItem] = useState<AllItem>(item);
 	const [isClaiming, setIsClaiming] = useState(false);
 	const [hasMatched, setHasMatched] = useState(false);
@@ -65,7 +59,17 @@ export default function DetailsModal({
 				.then((data) => {
 					// Use the updated item returned from the server
 					if (data?.item) {
-						const updatedItem = data.item;
+						// Map the response to match AllItem structure
+						const serverItem = data.item;
+						const updatedItem: AllItem = {
+							...currentItem,
+							...serverItem,
+							id: serverItem.id || serverItem._id || currentItem.id,
+							views: serverItem.views ?? currentItem.views,
+							matched: serverItem.matched ?? currentItem.matched,
+							user_id: serverItem.user_id || currentItem.user_id,
+							photos: serverItem.photos || currentItem.photos,
+						};
 						setCurrentItem(updatedItem);
 						if (onItemUpdate) {
 							setPendingUpdate(updatedItem);
@@ -239,7 +243,7 @@ export default function DetailsModal({
 			}
 
 			const data = await response.json();
-			
+
 			// Mark as matched
 			setHasMatched(true);
 
@@ -258,10 +262,7 @@ export default function DetailsModal({
 				setPendingUpdate(updated);
 			}
 
-			toastSuccess(
-				"Success",
-				`Match recorded! The owner will be notified.`
-			);
+			toastSuccess("Success", `Match recorded! The owner will be notified.`);
 		} catch (error) {
 			console.error("Error tracking match:", error);
 			toastError("Error", "Failed to track match");
@@ -294,14 +295,9 @@ export default function DetailsModal({
 								{currentItem.type === "lost" ? (
 									<AlertCircle size={16} aria-hidden="true" />
 								) : (
-									<CheckCircle2
-										size={16}
-										aria-hidden="true"
-									/>
+									<CheckCircle2 size={16} aria-hidden="true" />
 								)}
-								{currentItem.type === "lost"
-									? "Lost Item"
-									: "Found Item"}
+								{currentItem.type === "lost" ? "Lost Item" : "Found Item"}
 							</div>
 							{currentItem.status === "claimed" && (
 								<div className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
@@ -360,84 +356,73 @@ export default function DetailsModal({
 							<div className="space-y-6">
 								{/* Images */}
 								<div>
-								<CloudinaryImagePreview
-									images={currentItem.photos || []}
-									gridCols="3"
-									aspectRatio="square"
-									showCount={true}
-									allowDownload={false}
-								/>
-							</div>
-
-							{/* Item Details */}
-							<div>
-								<h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-									{currentItem.name}
-								</h2>
-
-								{/* Category */}
-								<div className="flex items-center gap-2 mb-4">
-									<Tag
-										size={16}
-										className="text-gray-500 dark:text-gray-400"
+									<CloudinaryImagePreview
+										images={currentItem.photos || []}
+										gridCols="3"
+										aspectRatio="square"
+										showCount={true}
+										allowDownload={false}
 									/>
-									<span className="text-sm text-gray-600 dark:text-gray-400">
-										{currentItem.category}
-									</span>
 								</div>
 
-								{/* Description */}
-								<div className="mb-4">
-									<h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-										Description
-									</h3>
-									<p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
-										{currentItem.description}
-									</p>
-								</div>
+								{/* Item Details */}
+								<div>
+									<h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+										{currentItem.name}
+									</h2>
 
-								{/* Location */}
-								<div className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-neutral-800 rounded-lg mb-4">
-									<MapPin
-										size={20}
-										className="text-gray-500 dark:text-gray-400 flex-shrink-0 mt-0.5"
-									/>
-									<div>
-										<h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-											Location
+									{/* Category */}
+									<div className="flex items-center gap-2 mb-4">
+										<Tag size={16} className="text-gray-500 dark:text-gray-400" />
+										<span className="text-sm text-gray-600 dark:text-gray-400">
+											{currentItem.category}
+										</span>
+									</div>
+
+									{/* Description */}
+									<div className="mb-4">
+										<h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+											Description
 										</h3>
-										<p className="text-sm text-gray-600 dark:text-gray-400">
-											{currentItem.location}
+										<p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+											{currentItem.description}
 										</p>
 									</div>
-								</div>
 
-								{/* Date */}
-								<div className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-neutral-800 rounded-lg">
-									<Calendar
-										size={20}
-										className="text-gray-500 dark:text-gray-400 flex-shrink-0 mt-0.5"
-									/>
-									<div>
-										<h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-											{currentItem.type === "lost"
-												? "Date Lost"
-												: "Date Found"}
-										</h3>
-										<p className="text-sm text-gray-600 dark:text-gray-400">
-											{dayjs(
-												currentItem.date_lost_or_found
-											).format("MMMM D, YYYY")}
-											<span className="text-xs text-gray-500 dark:text-gray-500 ml-2">
-												(
-												{dayjs(
-													currentItem.date_lost_or_found
-												).fromNow()}
-												)
-											</span>
-										</p>
+									{/* Location */}
+									<div className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-neutral-800 rounded-lg mb-4">
+										<MapPin
+											size={20}
+											className="text-gray-500 dark:text-gray-400 flex-shrink-0 mt-0.5"
+										/>
+										<div>
+											<h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
+												Location
+											</h3>
+											<p className="text-sm text-gray-600 dark:text-gray-400">
+												{currentItem.location}
+											</p>
+										</div>
 									</div>
-								</div>
+
+									{/* Date */}
+									<div className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-neutral-800 rounded-lg">
+										<Calendar
+											size={20}
+											className="text-gray-500 dark:text-gray-400 flex-shrink-0 mt-0.5"
+										/>
+										<div>
+											<h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
+												{currentItem.type === "lost" ? "Date Lost" : "Date Found"}
+											</h3>
+											<p className="text-sm text-gray-600 dark:text-gray-400">
+												{dayjs(currentItem.date_lost_or_found).format("MMMM D, YYYY")}
+												<span className="text-xs text-gray-500 dark:text-gray-500 ml-2">
+													({dayjs(currentItem.date_lost_or_found).fromNow()})
+												</span>
+											</p>
+										</div>
+									</div>
 								</div>
 							</div>
 
@@ -446,9 +431,7 @@ export default function DetailsModal({
 								{/* Owner Information */}
 								<div className="bg-white dark:bg-neutral-800 rounded-lg border border-gray-200 dark:border-neutral-700 p-6">
 									<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-										{currentItem.type === "lost"
-											? "Posted By"
-											: "Found By"}
+										{currentItem.type === "lost" ? "Posted By" : "Found By"}
 									</h3>
 
 									{/* User Avatar and Name */}
@@ -468,8 +451,7 @@ export default function DetailsModal({
 										</div>
 										<div>
 											<p className="font-semibold text-gray-900 dark:text-gray-100">
-												{currentItem.user_id.firstname}{" "}
-												{currentItem.user_id.lastname}
+												{currentItem.user_id.firstname} {currentItem.user_id.lastname}
 											</p>
 											<p className="text-sm text-gray-600 dark:text-gray-400">
 												@{currentItem.user_id.username}
@@ -509,9 +491,7 @@ export default function DetailsModal({
 										<div className="flex items-center justify-between">
 											<div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
 												<Eye size={16} />
-												<span className="text-sm">
-													Views
-												</span>
+												<span className="text-sm">Views</span>
 											</div>
 											<span className="font-medium text-gray-900 dark:text-gray-100">
 												{currentItem.views || 0}
@@ -520,9 +500,7 @@ export default function DetailsModal({
 										<div className="flex items-center justify-between">
 											<div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
 												<MessageSquare size={16} />
-												<span className="text-sm">
-													Matches
-												</span>
+												<span className="text-sm">Matches</span>
 											</div>
 											<span className="font-medium text-gray-900 dark:text-gray-100">
 												{currentItem.matched || 0}
@@ -531,33 +509,23 @@ export default function DetailsModal({
 										<div className="flex items-center justify-between">
 											<div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
 												<Clock size={16} />
-												<span className="text-sm">
-													Posted
-												</span>
+												<span className="text-sm">Posted</span>
 											</div>
 											<span className="text-sm text-gray-600 dark:text-gray-400">
-												{dayjs(
-													item.created_at
-												).fromNow()}
+												{dayjs(item.created_at).fromNow()}
 											</span>
 										</div>
-										{item.updated_at &&
-											item.updated_at !==
-												item.created_at && (
-												<div className="flex items-center justify-between">
-													<div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-														<Clock size={16} />
-														<span className="text-sm">
-															Updated
-														</span>
-													</div>
-													<span className="text-sm text-gray-600 dark:text-gray-400">
-														{dayjs(
-															item.updated_at
-														).fromNow()}
-													</span>
+										{item.updated_at && item.updated_at !== item.created_at && (
+											<div className="flex items-center justify-between">
+												<div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+													<Clock size={16} />
+													<span className="text-sm">Updated</span>
 												</div>
-											)}
+												<span className="text-sm text-gray-600 dark:text-gray-400">
+													{dayjs(item.updated_at).fromNow()}
+												</span>
+											</div>
+										)}
 									</div>
 								</div>
 								{/* Action Buttons */}
@@ -588,23 +556,18 @@ export default function DetailsModal({
 									</div>
 								)}{" "}
 								{/* Claimed Info */}
-								{currentItem.status === "claimed" &&
-									currentItem.claimed_at && (
-										<div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-											<div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 mb-2">
-												<CheckCircle2 size={18} />
-												<span className="font-semibold text-sm">
-													Item Claimed
-												</span>
-											</div>
-											<p className="text-xs text-blue-600 dark:text-blue-400">
-												This item was claimed on{" "}
-												{dayjs(currentItem.claimed_at).format(
-													"MMMM D, YYYY"
-												)}
-											</p>
+								{currentItem.status === "claimed" && currentItem.claimed_at && (
+									<div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+										<div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 mb-2">
+											<CheckCircle2 size={18} />
+											<span className="font-semibold text-sm">Item Claimed</span>
 										</div>
-									)}
+										<p className="text-xs text-blue-600 dark:text-blue-400">
+											This item was claimed on{" "}
+											{dayjs(currentItem.claimed_at).format("MMMM D, YYYY")}
+										</p>
+									</div>
+								)}
 								{/* Similar Items */}
 								{/* TODO: Implement similar items recommendation */}
 								{/* <div className="bg-white dark:bg-neutral-800 rounded-lg border border-gray-200 dark:border-neutral-700 p-6">
@@ -624,10 +587,7 @@ export default function DetailsModal({
 						<div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
 							<span>Item ID: {currentItem.id}</span>
 							<span>•</span>
-							<span>
-								Posted{" "}
-								{dayjs(currentItem.created_at).format("MMM D, YYYY")}
-							</span>
+							<span>Posted {dayjs(currentItem.created_at).format("MMM D, YYYY")}</span>
 						</div>
 						<button
 							type="button"

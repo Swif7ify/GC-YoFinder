@@ -100,6 +100,22 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 		userChannel.bind("conversation-updated", handleConversationUpdate);
 		userChannel.bind("new-message", handleConversationUpdate);
 
+		// Listen for item updates (when item is claimed, update conversation status)
+		const handleItemUpdated = (data: { itemId?: string; status?: string }) => {
+			if (data?.status === "claimed") {
+				// Refresh conversations to get updated item status
+				handleConversationUpdate();
+				// Also update the selected conversation if it's for this item
+				setSelectedConversation((prev) => {
+					if (prev && (prev as any).itemId === data.itemId) {
+						return { ...prev, itemStatus: "claimed" };
+					}
+					return prev;
+				});
+			}
+		};
+		userChannel.bind("item-updated", handleItemUpdated);
+
 		// Listen for unread count updates
 		const handleUnreadCountUpdate = () => {
 			// Trigger custom event to update unread count in parent
@@ -116,11 +132,28 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 		};
 		userChannel.bind("new-notification", handleNewNotification);
 
+		// Subscribe to global items channel for item status changes
+		const globalChannel = pusher.subscribe("global-items");
+		const handleGlobalItemClaimed = (data: { itemId?: string }) => {
+			// Refresh conversations to get updated item status
+			handleConversationUpdate();
+			// Update selected conversation if it matches
+			setSelectedConversation((prev) => {
+				if (prev && (prev as any).itemId === data?.itemId) {
+					return { ...prev, itemStatus: "claimed" };
+				}
+				return prev;
+			});
+		};
+		globalChannel.bind("item-claimed", handleGlobalItemClaimed);
+
 		return () => {
 			userChannel.unbind("conversation-updated", handleConversationUpdate);
 			userChannel.unbind("new-message", handleConversationUpdate);
+			userChannel.unbind("item-updated", handleItemUpdated);
 			userChannel.unbind("unread-count-updated", handleUnreadCountUpdate);
 			userChannel.unbind("new-notification", handleNewNotification);
+			globalChannel.unbind("item-claimed", handleGlobalItemClaimed);
 			pusher.disconnect();
 		};
 	}, [userID]);

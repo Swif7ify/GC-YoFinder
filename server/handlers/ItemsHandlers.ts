@@ -2,6 +2,7 @@ import UserSchema from "@/server/models/UserSchema";
 import ItemsSchema from "@/server/models/ItemsSchema";
 import ItemViewSchema from "@/server/models/ItemViewSchema";
 import ItemMatchSchema from "@/server/models/ItemMatchSchema";
+import ConversationSchema from "@/server/models/ConversationSchema";
 import { createNotification } from "@/server/handlers/NotificationHandlers";
 import { responsePayload, serverResponseError, userNotFoundError } from "@/server/utils/responsePayload";
 import { ValidateStringField } from "@/server/utils/DataValitdation";
@@ -35,9 +36,12 @@ function formatItemForResponse(item: any) {
 			.filter(Boolean);
 	}
 
+	// Create a clean object without MongoDB-specific fields
+	const { _id, __v, ...cleanItem } = item;
+
 	return {
-		...item,
-		id: item._id?.toString() || item.id,
+		...cleanItem,
+		id: _id?.toString() || item.id,
 		user_id: item.user_id
 			? {
 					id: item.user_id._id?.toString() || item.user_id.id,
@@ -155,11 +159,16 @@ class ItemsHandlers {
 			const user = await UserSchema.findById(userID);
 			if (!user) return userNotFoundError();
 
-			const items = await ItemsSchema.find({ user_id: user._id }).sort({
-				created_at: -1,
-			});
+			const items = await ItemsSchema.find({ user_id: user._id }).sort({ created_at: -1 }).lean();
 
-			return responsePayload(items, "success", "User items fetched successfully", 200);
+			// Ensure views and matched fields have default values
+			const itemsWithDefaults = items.map((item: any) => ({
+				...item,
+				views: item.views ?? 0,
+				matched: item.matched ?? 0,
+			}));
+
+			return responsePayload(itemsWithDefaults, "success", "User items fetched successfully", 200);
 		} catch (error) {
 			console.log(error);
 			return serverResponseError();
@@ -342,6 +351,24 @@ class ItemsHandlers {
 					await pusher.trigger("global-items", "item-claimed", {
 						itemId: itemID,
 					});
+
+					// Notify all participants in conversations related to this item
+					try {
+						const conversations = await ConversationSchema.find({ item_id: itemID });
+						for (const conv of conversations) {
+							for (const participantId of conv.participants) {
+								const participantIdStr = participantId.toString();
+								// Notify each participant about the item being claimed
+								await pusher.trigger(`private-user-${participantIdStr}`, "item-updated", {
+									itemId: itemID,
+									status: "claimed",
+								});
+							}
+						}
+					} catch (convError) {
+						console.error("Error notifying conversation participants:", convError);
+						// Don't fail the update if notification fails
+					}
 				}
 			}
 
@@ -400,52 +427,28 @@ class ItemsHandlers {
 				return responsePayload(formattedItem, "success", "View already tracked", 200);
 			}
 
-			// Try to create view record atomically using upsert
-			// This handles race conditions where multiple requests come in simultaneously
+			// Create view record and increment view count
 			try {
-				const result = await ItemViewSchema.findOneAndUpdate(
-					{
-						item_id: itemID,
-						user_id: userID,
-					},
-					{
-						$setOnInsert: {
-							item_id: itemID,
-							user_id: userID,
-							viewed_at: new Date(),
-						},
-					},
-					{
-						upsert: true,
-						new: true,
-						rawResult: true,
-					}
-				);
+				// Try to create a new view record
+				const newView = new ItemViewSchema({
+					item_id: itemID,
+					user_id: userID,
+					viewed_at: new Date(),
+				});
+				await newView.save();
 
-				// Check if document was actually created (not just found and updated)
-				// If upserted field exists, it means a new document was created
-				const wasCreated = result.lastErrorObject?.upserted !== undefined;
-
-				if (wasCreated) {
-					// Only increment view count if we actually created a new view record
-					await ItemsSchema.findByIdAndUpdate(itemID, {
-						$inc: { views: 1 },
-					});
-				}
+				// If we get here, the view was created successfully, so increment the count
+				await ItemsSchema.findByIdAndUpdate(itemID, {
+					$inc: { views: 1 },
+				});
 			} catch (createError: any) {
-				// Handle duplicate key error (E11000) or write conflict gracefully
-				if (
-					createError.code === 11000 ||
-					createError.codeName === "WriteConflict" ||
-					createError.code === 112
-				) {
-					// View was already created by another concurrent request
-					// Return the current item with updated view count
+				// Handle duplicate key error (E11000) - user already viewed this item
+				if (createError.code === 11000) {
+					// View was already created, just return the current item
 					const currentItem = await ItemsSchema.findById(itemID)
 						.populate("user_id", "firstname lastname username photo")
 						.lean();
 
-					// Format the item to match AllItem structure
 					const formattedItem = formatItemForResponse(currentItem);
 					return responsePayload(formattedItem, "success", "View already tracked", 200);
 				}
