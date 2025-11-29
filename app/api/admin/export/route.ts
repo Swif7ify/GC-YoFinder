@@ -3,6 +3,7 @@ import { getUserFromRequest } from "@/services/Access";
 import { connectToDatabase } from "@/server/lib/mongodb";
 import ItemsSchema from "@/server/models/ItemsSchema";
 import UserSchema from "@/server/models/UserSchema";
+import ExportHistorySchema from "@/server/models/ExportHistorySchema";
 
 export async function GET(request: NextRequest) {
 	try {
@@ -109,6 +110,15 @@ export async function GET(request: NextRequest) {
 			default:
 				return NextResponse.json({ error: "Invalid export type" }, { status: 400 });
 		}
+
+		// Save export history
+		await ExportHistorySchema.create({
+			admin_id: userID,
+			type: type as "items" | "users" | "activity",
+			format: format as "csv" | "json",
+			record_count: data.length,
+			status: "success",
+		});
 
 		if (format === "json") {
 			return new NextResponse(JSON.stringify(data, null, 2), {

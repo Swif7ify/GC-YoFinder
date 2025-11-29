@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
 	DownloadIcon,
 	FileSpreadsheetIcon,
@@ -11,48 +11,66 @@ import {
 	CheckCircleIcon,
 	AlertCircleIcon,
 	Loader2Icon,
+	RefreshCwIcon,
 } from "lucide-react";
 import { api } from "@/lib/api.config";
 import { toastError, toastSuccess } from "@/utils/toast";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+
+dayjs.extend(relativeTime);
 
 type ExportType = "items" | "users" | "activity";
 type ExportFormat = "csv" | "json";
 
-interface ExportOption {
-	id: ExportType;
-	title: string;
-	description: string;
-	icon: React.ReactNode;
+interface ExportHistory {
+	id: string;
+	type: ExportType;
+	format: ExportFormat;
+	record_count: number;
+	status: "success" | "failed";
+	error_message?: string;
+	admin_name: string;
+	created_at: string;
 }
 
-const exportOptions: ExportOption[] = [
-	{
-		id: "items",
-		title: "Items Data",
-		description: "Export all lost and found items with details, status, and metadata",
-		icon: <PackageIcon size={24} />,
-	},
-	{
-		id: "users",
-		title: "Users Data",
-		description: "Export user accounts with registration info (excludes passwords)",
-		icon: <UsersIcon size={24} />,
-	},
-	{
-		id: "activity",
-		title: "Activity Logs",
-		description: "Export system activity and audit logs",
-		icon: <ClockIcon size={24} />,
-	},
-];
+const typeLabels: Record<ExportType, string> = {
+	items: "Items Data",
+	users: "Users Data",
+	activity: "Activity Logs",
+};
+
+const typeIcons: Record<ExportType, React.ReactNode> = {
+	items: <PackageIcon size={16} />,
+	users: <UsersIcon size={16} />,
+	activity: <ClockIcon size={16} />,
+};
 
 export default function ExportPage() {
 	const [selectedType, setSelectedType] = useState<ExportType>("items");
 	const [selectedFormat, setSelectedFormat] = useState<ExportFormat>("csv");
 	const [isExporting, setIsExporting] = useState(false);
-	const [exportHistory, setExportHistory] = useState<
-		{ type: ExportType; format: ExportFormat; date: string; status: "success" | "failed" }[]
-	>([]);
+	const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+	const [exportHistory, setExportHistory] = useState<ExportHistory[]>([]);
+
+	const fetchHistory = async () => {
+		try {
+			setIsLoadingHistory(true);
+			const response = await api("/api/admin/export/history");
+			if (response.status === 200) {
+				const data = await response.json();
+				setExportHistory(data.history || []);
+			}
+		} catch (error) {
+			console.error("Error fetching export history:", error);
+		} finally {
+			setIsLoadingHistory(false);
+		}
+	};
+
+	useEffect(() => {
+		fetchHistory();
+	}, []);
 
 	const handleExport = async () => {
 		setIsExporting(true);
@@ -62,18 +80,13 @@ export default function ExportPage() {
 			if (response.status !== 200) {
 				const errorData = await response.json();
 				toastError("Export Failed", errorData.error || "Failed to export data");
-				setExportHistory((prev) => [
-					{ type: selectedType, format: selectedFormat, date: new Date().toLocaleString(), status: "failed" },
-					...prev.slice(0, 9),
-				]);
+				fetchHistory();
 				return;
 			}
 
-			// Get the blob data
 			const blob = await response.blob();
 			const filename = `${selectedType}_export_${new Date().toISOString().split("T")[0]}.${selectedFormat}`;
 
-			// Create download link
 			const url = window.URL.createObjectURL(blob);
 			const link = document.createElement("a");
 			link.href = url;
@@ -83,21 +96,11 @@ export default function ExportPage() {
 			document.body.removeChild(link);
 			window.URL.revokeObjectURL(url);
 
-			toastSuccess(
-				"Export Complete",
-				`${selectedType} data exported successfully as ${selectedFormat.toUpperCase()}`
-			);
-			setExportHistory((prev) => [
-				{ type: selectedType, format: selectedFormat, date: new Date().toLocaleString(), status: "success" },
-				...prev.slice(0, 9),
-			]);
+			toastSuccess("Export Complete", `Exported ${typeLabels[selectedType]} as ${selectedFormat.toUpperCase()}`);
+			fetchHistory();
 		} catch (error) {
 			console.error("Export error:", error);
 			toastError("Export Failed", "An error occurred while exporting data");
-			setExportHistory((prev) => [
-				{ type: selectedType, format: selectedFormat, date: new Date().toLocaleString(), status: "failed" },
-				...prev.slice(0, 9),
-			]);
 		} finally {
 			setIsExporting(false);
 		}
@@ -107,71 +110,66 @@ export default function ExportPage() {
 		<div className="space-y-6">
 			{/* Header */}
 			<div>
-				<h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Data Export</h1>
-				<p className="text-gray-600 dark:text-gray-400">
-					Export system data for backup, reporting, or analysis purposes
-				</p>
+				<h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-1">Data Export</h1>
+				<p className="text-sm text-gray-600 dark:text-gray-400">Export system data for backup or reporting</p>
 			</div>
 
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-				{/* Export Options */}
-				<div className="lg:col-span-2 space-y-6">
-					{/* Data Type Selection */}
-					<div className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 p-6">
-						<h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-							Select Data to Export
-						</h2>
-						<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-							{exportOptions.map((option) => (
+				{/* Export Form */}
+				<div className="lg:col-span-2 space-y-4">
+					{/* Data Type */}
+					<div className="bg-white dark:bg-neutral-900 rounded-lg border border-gray-200 dark:border-neutral-800 p-5">
+						<h2 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Data Type</h2>
+						<div className="grid grid-cols-3 gap-3">
+							{(["items", "users", "activity"] as ExportType[]).map((type) => (
 								<button
-									key={option.id}
+									key={type}
 									type="button"
-									onClick={() => setSelectedType(option.id)}
-									className={`p-4 rounded-lg border-2 transition-all text-left ${
-										selectedType === option.id
+									onClick={() => setSelectedType(type)}
+									className={`p-3 rounded-lg border text-left transition-colors ${
+										selectedType === type
 											? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20"
 											: "border-gray-200 dark:border-neutral-700 hover:border-gray-300 dark:hover:border-neutral-600"
 									}`}
 								>
 									<div
-										className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${
-											selectedType === option.id
+										className={`w-8 h-8 rounded-md flex items-center justify-center mb-2 ${
+											selectedType === type
 												? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400"
 												: "bg-gray-100 dark:bg-neutral-800 text-gray-500 dark:text-gray-400"
 										}`}
 									>
-										{option.icon}
+										{typeIcons[type]}
 									</div>
-									<h3
-										className={`font-medium mb-1 ${
-											selectedType === option.id
+									<p
+										className={`text-sm font-medium ${
+											selectedType === type
 												? "text-emerald-700 dark:text-emerald-300"
 												: "text-gray-900 dark:text-gray-100"
 										}`}
 									>
-										{option.title}
-									</h3>
-									<p className="text-xs text-gray-500 dark:text-gray-400">{option.description}</p>
+										{typeLabels[type]}
+									</p>
 								</button>
 							))}
 						</div>
 					</div>
 
-					{/* Format Selection */}
-					<div className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 p-6">
-						<h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Export Format</h2>
-						<div className="flex gap-4">
+					{/* Format */}
+					<div className="bg-white dark:bg-neutral-900 rounded-lg border border-gray-200 dark:border-neutral-800 p-5">
+						<h2 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Format</h2>
+						<div className="grid grid-cols-2 gap-3">
 							<button
 								type="button"
 								onClick={() => setSelectedFormat("csv")}
-								className={`flex-1 p-4 rounded-lg border-2 transition-all flex items-center gap-3 ${
+								className={`p-3 rounded-lg border flex items-center gap-3 transition-colors ${
 									selectedFormat === "csv"
 										? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20"
 										: "border-gray-200 dark:border-neutral-700 hover:border-gray-300 dark:hover:border-neutral-600"
 								}`}
 							>
 								<FileSpreadsheetIcon
-									size={24}
+									size={20}
 									className={
 										selectedFormat === "csv"
 											? "text-emerald-600 dark:text-emerald-400"
@@ -179,31 +177,29 @@ export default function ExportPage() {
 									}
 								/>
 								<div className="text-left">
-									<h3
-										className={`font-medium ${
+									<p
+										className={`text-sm font-medium ${
 											selectedFormat === "csv"
 												? "text-emerald-700 dark:text-emerald-300"
 												: "text-gray-900 dark:text-gray-100"
 										}`}
 									>
 										CSV
-									</h3>
-									<p className="text-xs text-gray-500 dark:text-gray-400">
-										Spreadsheet compatible format
 									</p>
+									<p className="text-xs text-gray-500 dark:text-gray-400">Spreadsheet format</p>
 								</div>
 							</button>
 							<button
 								type="button"
 								onClick={() => setSelectedFormat("json")}
-								className={`flex-1 p-4 rounded-lg border-2 transition-all flex items-center gap-3 ${
+								className={`p-3 rounded-lg border flex items-center gap-3 transition-colors ${
 									selectedFormat === "json"
-										? "border-emerald-500 bg-emerald-900/20"
+										? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20"
 										: "border-gray-200 dark:border-neutral-700 hover:border-gray-300 dark:hover:border-neutral-600"
 								}`}
 							>
 								<FileTextIcon
-									size={24}
+									size={20}
 									className={
 										selectedFormat === "json"
 											? "text-emerald-600 dark:text-emerald-400"
@@ -211,18 +207,16 @@ export default function ExportPage() {
 									}
 								/>
 								<div className="text-left">
-									<h3
-										className={`font-medium ${
+									<p
+										className={`text-sm font-medium ${
 											selectedFormat === "json"
 												? "text-emerald-700 dark:text-emerald-300"
 												: "text-gray-900 dark:text-gray-100"
 										}`}
 									>
 										JSON
-									</h3>
-									<p className="text-xs text-gray-500 dark:text-gray-400">
-										Developer-friendly format
 									</p>
+									<p className="text-xs text-gray-500 dark:text-gray-400">Developer format</p>
 								</div>
 							</button>
 						</div>
@@ -233,52 +227,72 @@ export default function ExportPage() {
 						type="button"
 						onClick={handleExport}
 						disabled={isExporting}
-						className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
+						className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors"
 					>
 						{isExporting ? (
 							<>
-								<Loader2Icon size={20} className="animate-spin" />
+								<Loader2Icon size={18} className="animate-spin" />
 								Exporting...
 							</>
 						) : (
 							<>
-								<DownloadIcon size={20} />
-								Export {exportOptions.find((o) => o.id === selectedType)?.title} as{" "}
-								{selectedFormat.toUpperCase()}
+								<DownloadIcon size={18} />
+								Export {typeLabels[selectedType]}
 							</>
 						)}
 					</button>
 				</div>
 
 				{/* Export History */}
-				<div className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 p-6">
-					<h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Recent Exports</h2>
-					{exportHistory.length === 0 ? (
+				<div className="bg-white dark:bg-neutral-900 rounded-lg border border-gray-200 dark:border-neutral-800 p-5">
+					<div className="flex items-center justify-between mb-4">
+						<h2 className="text-sm font-medium text-gray-900 dark:text-gray-100">Recent Exports</h2>
+						<button
+							type="button"
+							onClick={fetchHistory}
+							disabled={isLoadingHistory}
+							className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-neutral-800 text-gray-500 dark:text-gray-400 transition-colors"
+							aria-label="Refresh history"
+						>
+							<RefreshCwIcon size={14} className={isLoadingHistory ? "animate-spin" : ""} />
+						</button>
+					</div>
+
+					{isLoadingHistory ? (
+						<div className="flex items-center justify-center py-8">
+							<Loader2Icon size={20} className="animate-spin text-gray-400" />
+						</div>
+					) : exportHistory.length === 0 ? (
 						<div className="text-center py-8">
-							<DownloadIcon size={32} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-							<p className="text-sm text-gray-500 dark:text-gray-400">No exports yet</p>
-							<p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-								Your export history will appear here
-							</p>
+							<DownloadIcon size={24} className="mx-auto text-gray-300 dark:text-gray-600 mb-2" />
+							<p className="text-xs text-gray-500 dark:text-gray-400">No exports yet</p>
 						</div>
 					) : (
-						<div className="space-y-3">
-							{exportHistory.map((item, index) => (
+						<div className="space-y-2">
+							{exportHistory.map((item) => (
 								<div
-									key={index}
-									className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-neutral-800"
+									key={item.id}
+									className="flex items-start gap-2.5 p-2.5 rounded-md bg-gray-50 dark:bg-neutral-800"
 								>
 									{item.status === "success" ? (
-										<CheckCircleIcon size={18} className="text-emerald-500 flex-shrink-0" />
+										<CheckCircleIcon size={14} className="text-emerald-500 mt-0.5 flex-shrink-0" />
 									) : (
-										<AlertCircleIcon size={18} className="text-red-500 flex-shrink-0" />
+										<AlertCircleIcon size={14} className="text-red-500 mt-0.5 flex-shrink-0" />
 									)}
 									<div className="flex-1 min-w-0">
-										<p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-											{exportOptions.find((o) => o.id === item.type)?.title}
+										<div className="flex items-center gap-1.5">
+											<span className="text-gray-500 dark:text-gray-400">
+												{typeIcons[item.type]}
+											</span>
+											<p className="text-xs font-medium text-gray-900 dark:text-gray-100">
+												{typeLabels[item.type]}
+											</p>
+										</div>
+										<p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+											{item.format.toUpperCase()} • {item.record_count} records
 										</p>
-										<p className="text-xs text-gray-500 dark:text-gray-400">
-											{item.format.toUpperCase()} • {item.date}
+										<p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+											{dayjs(item.created_at).fromNow()}
 										</p>
 									</div>
 								</div>
