@@ -5,7 +5,6 @@ import {
 	LayoutDashboardIcon,
 	SearchIcon,
 	MessageSquareIcon,
-	MapPinIcon,
 	PackagePlusIcon,
 	PackageCheckIcon,
 	SettingsIcon,
@@ -48,11 +47,6 @@ const MyItemsComponent = Dynamic(
 	{ ssr: false }
 );
 
-const LocationsComponent = Dynamic(
-	() => import("@/component/dashboard/pages/LocationsComponent").then((mod) => mod.default),
-	{ ssr: false }
-);
-
 const MessagesComponent = Dynamic(
 	() => import("@/component/dashboard/pages/MessagesComponent").then((mod) => mod.default),
 	{ ssr: false }
@@ -69,7 +63,6 @@ const TAB_MAP: Record<string, string> = {
 	"search-items": "Search Items",
 	"my-items": "My Items",
 	messages: "Messages",
-	locations: "Locations",
 	settings: "Settings",
 };
 
@@ -128,11 +121,6 @@ export default function DashboardPage() {
 			name: "Messages",
 			path: "/messages",
 			icon: <MessageSquareIcon size={20} />,
-		},
-		{
-			name: "Locations",
-			path: "/locations",
-			icon: <MapPinIcon size={20} />,
 		},
 		{
 			name: "Settings",
@@ -318,7 +306,6 @@ export default function DashboardPage() {
 		),
 		"my-items": <MyItemsComponent userItems={userItems} onUpdate={fetchUserItems} />,
 		messages: <MessagesComponent userID={userID} />,
-		locations: <LocationsComponent />,
 		settings: <SettingsComponent userData={userData} onChange={fetchUserData} />,
 	};
 

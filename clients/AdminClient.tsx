@@ -37,22 +37,7 @@ const ReportsPage = Dynamic(() => import("@/component/admin/pages/ReportsPage").
 const ActivityPage = Dynamic(() => import("@/component/admin/pages/ActivityPage").then((mod) => mod.default), {
 	ssr: false,
 });
-const SettingsPage = Dynamic(() => import("@/component/admin/pages/SettingsPage").then((mod) => mod.default), {
-	ssr: false,
-});
-const LocationsPage = Dynamic(() => import("@/component/admin/pages/LocationsPage").then((mod) => mod.default), {
-	ssr: false,
-});
-const MessagesPage = Dynamic(() => import("@/component/admin/pages/MessagesPage").then((mod) => mod.default), {
-	ssr: false,
-});
-const SecurityPage = Dynamic(() => import("@/component/admin/pages/SecurityPage").then((mod) => mod.default), {
-	ssr: false,
-});
 const ExportPage = Dynamic(() => import("@/component/admin/pages/ExportPage").then((mod) => mod.default), {
-	ssr: false,
-});
-const MaintenancePage = Dynamic(() => import("@/component/admin/pages/MaintenancePage").then((mod) => mod.default), {
 	ssr: false,
 });
 const ItemAllPage = Dynamic(() => import("@/component/admin/pages/ItemAllPage").then((mod) => mod.default), {
@@ -69,10 +54,6 @@ const TAB_MAP: Record<string, string> = {
 	"item-archived": "Archived Items",
 	reports: "Reports & Analytics",
 	activity: "Activity Logs",
-	settings: "System Settings",
-	locations: "Location Management",
-	messages: "Communication Center",
-	security: "Security & Permissions",
 	export: "Data Export",
 };
 
@@ -381,12 +362,7 @@ export default function AdminClient() {
 		"item-archived": <ItemArchivedPage items={archivedItems} onRefresh={() => fetchItems("removed", false)} />,
 		reports: <ReportsPage stats={dashboardStats} />,
 		activity: <ActivityPage stats={dashboardStats} />,
-		settings: <SettingsPage />,
-		locations: <LocationsPage />,
-		messages: <MessagesPage />,
-		security: <SecurityPage />,
 		export: <ExportPage />,
-		maintenance: <MaintenancePage />,
 	};
 
 	const ActiveComponent = componentMap[activeTab];
