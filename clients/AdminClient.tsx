@@ -11,8 +11,8 @@ import { UserData } from "@/types/types";
 import { useSearchParams } from "next/navigation";
 import { usePusher } from "@/contexts/PusherProvider";
 
-const Header = Dynamic(() => import("@/component/admin/Header").then((mod) => mod.default), { ssr: false });
-const Sidebar = Dynamic(() => import("@/component/admin/Sidebar").then((mod) => mod.default), { ssr: false });
+const Header = Dynamic(() => import("@/component/admin/organisms/Header").then((mod) => mod.default), { ssr: false });
+const Sidebar = Dynamic(() => import("@/component/admin/organisms/Sidebar").then((mod) => mod.default), { ssr: false });
 
 // Page components
 const DashboardPage = Dynamic(() => import("@/component/admin/pages/DashboardPage").then((mod) => mod.default), {

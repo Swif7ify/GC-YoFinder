@@ -22,8 +22,12 @@ import { useConfirm } from "@/ui/ConfirmProvider";
 import { AllItem } from "@/types/types";
 import { usePusher } from "@/contexts/PusherProvider";
 
-const Sidebar = Dynamic(() => import("@/component/dashboard/Sidebar").then((mod) => mod.default), { ssr: false });
-const Header = Dynamic(() => import("@/component/dashboard/Header").then((mod) => mod.default), { ssr: false });
+const Sidebar = Dynamic(() => import("@/component/dashboard/organisms/Sidebar").then((mod) => mod.default), {
+	ssr: false,
+});
+const Header = Dynamic(() => import("@/component/dashboard/organisms/Header").then((mod) => mod.default), {
+	ssr: false,
+});
 
 const HomeComponent = Dynamic(() => import("@/component/dashboard/items/HomeComponent").then((mod) => mod.default), {
 	ssr: false,
