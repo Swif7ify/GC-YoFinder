@@ -204,11 +204,11 @@ export default function SettingsComponent({
 			const en = localStorage.getItem("pref_emailNotifications");
 			const ma = localStorage.getItem("pref_matchAlerts");
 			const ms = localStorage.getItem("pref_messageAlerts");
-		
+
 			const pv = localStorage.getItem("pref_profileVisibility");
 			const se = localStorage.getItem("pref_showEmail");
 			const sci = localStorage.getItem("pref_showContactInfo");
-		
+
 			const th = localStorage.getItem("theme");
 			const ts = localStorage.getItem("textSize");
 			const rm = localStorage.getItem("reduceMotion");
@@ -224,7 +224,6 @@ export default function SettingsComponent({
 					const s = data.settings;
 					if (s?.language) setLanguage(s.language);
 					if (s?.notifications) {
-					
 						try {
 							localStorage.setItem(
 								"pref_emailNotifications",
@@ -241,7 +240,6 @@ export default function SettingsComponent({
 						} catch {}
 					}
 					if (s?.privacy) {
-					
 						try {
 							localStorage.setItem(
 								"pref_profileVisibility",
@@ -337,19 +335,19 @@ export default function SettingsComponent({
 				</p>
 			</section>
 
-			<div className="rounded-lg p-4">
-				<div className="flex flex-col md:flex-row gap-4">
+			<div className="rounded-lg ">
+				<div className="flex flex-col lg:flex-row gap-4">
 					{/* Left nav */}
 					<nav
 						aria-label="Settings sections"
-						className="w-full md:w-64 dark:border-neutral-800 pb-4"
+						className="w-full lg:w-64 dark:border-neutral-800 pb-4"
 					>
-						<div className="md:sticky md:top-6 md:self-start md:max-h-[calc(100vh-1.5rem)] md:overflow-auto bg-white  dark:bg-neutral-900 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800">
+						<div className="md:sticky md:top-6 md:self-start md:max-h-[calc(100vh-1.5rem)] md:overflow-auto bg-white  dark:bg-neutral-900 p-4 max-sm:p-3 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800">
 							<div
 								ref={tabListRef}
 								role="tablist"
 								aria-orientation="vertical"
-								className="flex md:flex-col gap-2"
+								className="flex max-sm:flex-col! flex-col gap-2"
 								onKeyDown={onTabKeyDown}
 							>
 								{tabs.map((t) => {
@@ -392,7 +390,7 @@ export default function SettingsComponent({
 					</nav>
 
 					{/* Right content */}
-					<div className="flex-1  ">
+					<div className="flex-1">
 						{/* Profile Panel */}
 						{activeTab === "profile" && (
 							<section
@@ -404,12 +402,12 @@ export default function SettingsComponent({
 								{/* Profile Settings card */}
 								<section
 									aria-labelledby="profile-settings-heading"
-									className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 p-6"
+									className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 p-6 max-sm:p-4"
 								>
-									<div className="flex items-center gap-3 mb-6">
+									<div className="flex items-center gap-6 mb-6">
 										<User
 											size={20}
-											className="text-emerald-600 dark:text-emerald-400"
+											className="text-emerald-600 dark:text-emerald-400 max-sm:hidden"
 											aria-hidden="true"
 										/>
 										<h2
@@ -536,8 +534,8 @@ export default function SettingsComponent({
 										</div>
 
 										{/* Full Name */}
-										<div className="flex items-center gap-4 justify-between">
-											<div className="flex-1">
+										<div className="flex items-center gap-4 justify-between max-sm:flex-col max-sm:w-full! max-sm:items-start">
+											<div className="flex-1 w-full">
 												<label
 													htmlFor="full-name"
 													className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
@@ -548,12 +546,12 @@ export default function SettingsComponent({
 													type="text"
 													id="first-name"
 													value={firstName}
-													className="w-full px-4 py-2.5 border border-gray-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-neutral-800/50 text-gray-900 dark:text-gray-100 disabled:bg-gray-50 dark:disabled:bg-neutral-800/30 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed disabled:opacity-60"
+													className="w-full! px-4 py-2.5 border border-gray-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-neutral-800/50 text-gray-900 dark:text-gray-100 disabled:bg-gray-50 dark:disabled:bg-neutral-800/30 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed disabled:opacity-60"
 													disabled
 												/>
 											</div>
 
-											<div className="flex-1">
+											<div className="flex-1 w-full">
 												<label
 													htmlFor="full-name"
 													className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
@@ -564,7 +562,7 @@ export default function SettingsComponent({
 													type="text"
 													id="last-name"
 													value={lastName}
-													className="w-full px-4 py-2.5 border border-gray-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-neutral-800/50 text-gray-900 dark:text-gray-100 disabled:bg-gray-50 dark:disabled:bg-neutral-800/30 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed disabled:opacity-60"
+													className="w-full! px-4 py-2.5 border border-gray-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-neutral-800/50 text-gray-900 dark:text-gray-100 disabled:bg-gray-50 dark:disabled:bg-neutral-800/30 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed disabled:opacity-60"
 													disabled
 												/>
 											</div>
@@ -631,12 +629,12 @@ export default function SettingsComponent({
 										</div>
 
 										{/* Save Button */}
-										<div className="flex justify-end">
+										<div className="flex justify-end max-sm:flex-col max-sm:items-stretch gap-3">
 											<div className="flex items-center gap-6">
 												<div>
 													<button
 														type="submit"
-														className={`px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 flex items-center gap-2 ${
+														className={`px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 flex items-center gap-2 max-sm:w-full ${
 															isSubmitting
 																? "opacity-50 cursor-not-allowed"
 																: ""
@@ -658,7 +656,7 @@ export default function SettingsComponent({
 													<button
 														onClick={handleCancel}
 														type="button"
-														className="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+														className="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 max-sm:w-full"
 													>
 														Cancel
 													</button>
@@ -681,7 +679,7 @@ export default function SettingsComponent({
 								{/* Language & Display */}
 								<section
 									aria-labelledby="display-settings-heading"
-									className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 p-6"
+									className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 p-6 max-sm:p-4"
 								>
 									<div className="flex items-center gap-3 mb-6">
 										<Globe
@@ -803,7 +801,7 @@ export default function SettingsComponent({
 														]}
 													/>
 												</div>
-												<div className="flex items-center justify-between py-3">
+												<div className="flex items-center justify-between py-3 max-sm:flex-col max-sm:items-start max-sm:gap-3">
 													<div>
 														<h3 className="font-medium text-gray-900 dark:text-gray-100 mb-1">
 															Reduce Motion

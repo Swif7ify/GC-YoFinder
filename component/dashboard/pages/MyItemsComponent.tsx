@@ -28,7 +28,10 @@ import { useApiLoading } from "@/hooks/useApiLoading";
 
 // Status color utility
 const getStatusColors = (status: ItemStatus) => {
-	const colors: Record<ItemStatus, { bg: string; text: string; dot: string }> = {
+	const colors: Record<
+		ItemStatus,
+		{ bg: string; text: string; dot: string }
+	> = {
 		pending: {
 			bg: "bg-yellow-100 dark:bg-yellow-900/40",
 			text: "text-yellow-700 dark:text-yellow-300",
@@ -74,7 +77,10 @@ interface MyItemsComponentProps {
 	onUpdate?: () => void;
 }
 
-export default function MyItemsComponent({ userItems, onUpdate }: MyItemsComponentProps) {
+export default function MyItemsComponent({
+	userItems,
+	onUpdate,
+}: MyItemsComponentProps) {
 	const searchParams = useSearchParams();
 	const pathname = usePathname();
 	const router = useRouter();
@@ -106,7 +112,9 @@ export default function MyItemsComponent({ userItems, onUpdate }: MyItemsCompone
 		const q = searchQuery.trim().toLowerCase();
 
 		return (items || [])
-			.filter((item) => (filterTab === "all" ? true : item.type === filterTab))
+			.filter((item) =>
+				filterTab === "all" ? true : item.type === filterTab
+			)
 			.filter((item) => {
 				if (!q) return true;
 				return (
@@ -149,7 +157,10 @@ export default function MyItemsComponent({ userItems, onUpdate }: MyItemsCompone
 				toastError("Failed to delete item.", "Please try again later.");
 				return;
 			}
-			toastSuccess("Item deleted successfully.", "The item has been removed from your list.");
+			toastSuccess(
+				"Item deleted successfully.",
+				"The item has been removed from your list."
+			);
 			onUpdate?.();
 		} catch (error) {
 			console.error("Error deleting item:", error);
@@ -175,7 +186,10 @@ export default function MyItemsComponent({ userItems, onUpdate }: MyItemsCompone
 				toastError("Failed to update item.", "Please try again later.");
 				return;
 			}
-			toastSuccess("Item updated successfully.", "Your changes have been saved.");
+			toastSuccess(
+				"Item updated successfully.",
+				"Your changes have been saved."
+			);
 			onUpdate?.();
 			setEditingItem(null);
 		} catch (error) {
@@ -200,14 +214,18 @@ export default function MyItemsComponent({ userItems, onUpdate }: MyItemsCompone
 			{/* Edit Form Modal */}
 			{editingItem && (
 				<div className="z-50">
-					<ItemForm item={editingItem} onClose={handleCloseForm} handleUpdate={handleUpdate} />
+					<ItemForm
+						item={editingItem}
+						onClose={handleCloseForm}
+						handleUpdate={handleUpdate}
+					/>
 				</div>
 			)}
 
 			{/* Header */}
 			<section
 				aria-labelledby="my-items-heading"
-				className="flex items-center justify-between max-sm:flex-col gap-4 max-sm:items-start"
+				className="flex items-center justify-between gap-4 max-sm:flex-col max-sm:items-start"
 			>
 				<div>
 					<h1
@@ -216,7 +234,9 @@ export default function MyItemsComponent({ userItems, onUpdate }: MyItemsCompone
 					>
 						My Items
 					</h1>
-					<p className="text-gray-600 dark:text-gray-400">Manage your posted lost and found items</p>
+					<p className="text-gray-600 dark:text-gray-400">
+						Manage your posted lost and found items
+					</p>
 				</div>
 
 				<div>
@@ -235,42 +255,78 @@ export default function MyItemsComponent({ userItems, onUpdate }: MyItemsCompone
 			</section>
 
 			{/* Stats Cards */}
-			<div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 				<div className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 p-4">
 					<div className="flex items-center justify-between mb-2">
-						<p className="text-sm text-gray-600 dark:text-gray-400">Total Items</p>
-						<Package size={18} className="text-gray-400 dark:text-gray-500" aria-hidden="true" />
+						<p className="text-sm text-gray-600 dark:text-gray-400">
+							Total Items
+						</p>
+						<Package
+							size={18}
+							className="text-gray-400 dark:text-gray-500"
+							aria-hidden="true"
+						/>
 					</div>
-					<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.total}</p>
+					<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+						{stats.total}
+					</p>
 				</div>
 
 				<div className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 p-4">
 					<div className="flex items-center justify-between mb-2">
-						<p className="text-sm text-gray-600 dark:text-gray-400">Lost Items</p>
-						<AlertCircle size={18} className="text-red-500 dark:text-red-400" aria-hidden="true" />
+						<p className="text-sm text-gray-600 dark:text-gray-400">
+							Lost Items
+						</p>
+						<AlertCircle
+							size={18}
+							className="text-red-500 dark:text-red-400"
+							aria-hidden="true"
+						/>
 					</div>
-					<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.lost}</p>
+					<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+						{stats.lost}
+					</p>
 				</div>
 
 				<div className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 p-4">
 					<div className="flex items-center justify-between mb-2">
-						<p className="text-sm text-gray-600 dark:text-gray-400">Found Items</p>
-						<CheckCircle2 size={18} className="text-green-500 dark:text-green-400" aria-hidden="true" />
+						<p className="text-sm text-gray-600 dark:text-gray-400">
+							Found Items
+						</p>
+						<CheckCircle2
+							size={18}
+							className="text-green-500 dark:text-green-400"
+							aria-hidden="true"
+						/>
 					</div>
-					<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.found}</p>
+					<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+						{stats.found}
+					</p>
 				</div>
 
 				<div className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 p-4">
 					<div className="flex items-center justify-between mb-2">
-						<p className="text-sm text-gray-600 dark:text-gray-400">Active</p>
-						<TrendingUp size={18} className="text-emerald-500 dark:text-emerald-400" aria-hidden="true" />
+						<p className="text-sm text-gray-600 dark:text-gray-400">
+							Active
+						</p>
+						<TrendingUp
+							size={18}
+							className="text-emerald-500 dark:text-emerald-400"
+							aria-hidden="true"
+						/>
 					</div>
-					<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.active}</p>
+					<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+						{stats.active}
+					</p>
 				</div>
 			</div>
 
 			{/* Filter Tabs */}
-			<div className="flex items-center justify-between gap-8" role="tablist" aria-label="Filter items">
+			<div
+				className="flex items-center justify-between gap-4 max-sm:flex-col max-sm:items-stretch"
+				role="tablist"
+				aria-label="Filter items"
+			>
 				{/* search */}
 				<div className="relative w-full flex-1">
 					<input
@@ -281,18 +337,21 @@ export default function MyItemsComponent({ userItems, onUpdate }: MyItemsCompone
 						className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-neutral-700  rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-neutral-800/50 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-sm"
 					/>
 					<span className="absolute inset-y-0 left-0 flex items-center pl-3">
-						<Search size={20} className="text-gray-400 dark:text-gray-500" />
+						<Search
+							size={20}
+							className="text-gray-400 dark:text-gray-500"
+						/>
 					</span>
 				</div>
 
-				<div className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 p-1 inline-flex">
+				<div className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 p-1 inline-flex max-sm:w-full max-sm:flex-wrap max-sm:gap-2">
 					<button
 						type="button"
 						role="tab"
 						aria-selected={filterTab === "all"}
 						aria-controls="items-panel"
 						onClick={() => setFilterTab("all")}
-						className={`px-4 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+						className={`px-4 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 max-sm:flex-1 max-sm:text-center ${
 							filterTab === "all"
 								? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300"
 								: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
@@ -306,7 +365,7 @@ export default function MyItemsComponent({ userItems, onUpdate }: MyItemsCompone
 						aria-selected={filterTab === "lost"}
 						aria-controls="items-panel"
 						onClick={() => setFilterTab("lost")}
-						className={`px-4 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+						className={`px-4 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 max-sm:flex-1 max-sm:text-center ${
 							filterTab === "lost"
 								? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300"
 								: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
@@ -320,7 +379,7 @@ export default function MyItemsComponent({ userItems, onUpdate }: MyItemsCompone
 						aria-selected={filterTab === "found"}
 						aria-controls="items-panel"
 						onClick={() => setFilterTab("found")}
-						className={`px-4 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+						className={`px-4 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 max-sm:flex-1 max-sm:text-center ${
 							filterTab === "found"
 								? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300"
 								: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
@@ -332,7 +391,11 @@ export default function MyItemsComponent({ userItems, onUpdate }: MyItemsCompone
 			</div>
 
 			{/* Items List */}
-			<section id="items-panel" role="tabpanel" aria-labelledby="my-items-heading">
+			<section
+				id="items-panel"
+				role="tabpanel"
+				aria-labelledby="my-items-heading"
+			>
 				{visibleItems.length > 0 ? (
 					<div className="space-y-4">
 						{visibleItems.map((item) => (
@@ -340,9 +403,9 @@ export default function MyItemsComponent({ userItems, onUpdate }: MyItemsCompone
 								key={item.id}
 								className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 overflow-hidden hover:shadow-md transition-shadow"
 							>
-								<div className="flex flex-col sm:flex-row gap-4 p-4">
+								<div className="flex flex-col sm:flex-row gap-4 p-4 max-sm:p-3">
 									{/* Image */}
-									<div className="relative w-full sm:w-32 h-32 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
+									<div className="relative w-full sm:w-32 h-32 max-sm:h-40 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
 										<Image
 											src={
 												item.image_url ||
@@ -351,7 +414,7 @@ export default function MyItemsComponent({ userItems, onUpdate }: MyItemsCompone
 											alt={item.title}
 											fill
 											className="object-cover"
-											sizes="128px"
+											sizes="(max-width: 640px) 100vw, 128px"
 										/>
 									</div>
 
@@ -370,9 +433,13 @@ export default function MyItemsComponent({ userItems, onUpdate }: MyItemsCompone
 																: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"
 														}`}
 													>
-														{item.type === "lost" ? "Lost" : "Found"}
+														{item.type === "lost"
+															? "Lost"
+															: "Found"}
 													</span>
-													<StatusBadge status={item.status} />
+													<StatusBadge
+														status={item.status}
+													/>
 												</div>
 											</div>
 
@@ -381,12 +448,19 @@ export default function MyItemsComponent({ userItems, onUpdate }: MyItemsCompone
 												<button
 													type="button"
 													onClick={() =>
-														setActiveMenu(activeMenu === item.id ? null : item.id)
+														setActiveMenu(
+															activeMenu ===
+																item.id
+																? null
+																: item.id
+														)
 													}
 													className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
 													aria-label="Item actions"
 													aria-haspopup="true"
-													aria-expanded={activeMenu === item.id}
+													aria-expanded={
+														activeMenu === item.id
+													}
 												>
 													<MoreVertical
 														size={20}
@@ -417,20 +491,32 @@ export default function MyItemsComponent({ userItems, onUpdate }: MyItemsCompone
 													>
 														<button
 															type="button"
-															onClick={() => handleEdit(item)}
+															onClick={() =>
+																handleEdit(item)
+															}
 															className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
 															role="menuitem"
 														>
-															<Edit size={16} aria-hidden="true" />
+															<Edit
+																size={16}
+																aria-hidden="true"
+															/>
 															Edit Item
 														</button>
 														<button
 															type="button"
-															onClick={() => handleDelete(item.id)}
+															onClick={() =>
+																handleDelete(
+																	item.id
+																)
+															}
 															className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
 															role="menuitem"
 														>
-															<Trash2 size={16} aria-hidden="true" />
+															<Trash2
+																size={16}
+																aria-hidden="true"
+															/>
 															Delete Item
 														</button>
 													</motion.div>
@@ -441,23 +527,35 @@ export default function MyItemsComponent({ userItems, onUpdate }: MyItemsCompone
 											{item.description}
 										</p>
 										<div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 dark:text-gray-400 mb-3">
-											<span>Location: {item.location}</span>
+											<span>
+												Location: {item.location}
+											</span>
 											<span>
 												Posted:{" "}
 												{item.dateReported
-													? dayjs(item.dateReported).format("MMM D, YYYY")
+													? dayjs(
+															item.dateReported
+													  ).format("MMM D, YYYY")
 													: "N/A"}
 											</span>
 										</div>
 										{/* Stats */}
-										<div className="flex items-center gap-4">
+										<div className="flex items-center gap-4 max-sm:flex-wrap max-sm:gap-2">
 											<div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
-												<Eye size={16} aria-hidden="true" />
+												<Eye
+													size={16}
+													aria-hidden="true"
+												/>
 												<span>{item.views} views</span>
 											</div>
 											<div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
-												<MessageSquare size={16} aria-hidden="true" />
-												<span>{item.matchCount} matches</span>
+												<MessageSquare
+													size={16}
+													aria-hidden="true"
+												/>
+												<span>
+													{item.matchCount} matches
+												</span>
 											</div>
 										</div>
 									</div>
@@ -471,9 +569,14 @@ export default function MyItemsComponent({ userItems, onUpdate }: MyItemsCompone
 							className="w-16 h-16 mx-auto rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-4"
 							aria-hidden="true"
 						>
-							<Package size={32} className="text-gray-400 dark:text-gray-500" />
+							<Package
+								size={32}
+								className="text-gray-400 dark:text-gray-500"
+							/>
 						</div>
-						<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">No items yet</h3>
+						<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+							No items yet
+						</h3>
 						<p className="text-sm text-gray-600 dark:text-gray-400">
 							Start by reporting a lost or found item
 						</p>
