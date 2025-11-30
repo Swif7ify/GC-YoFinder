@@ -12,7 +12,17 @@ import {
 	SearchIcon,
 	RefreshCwIcon,
 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import {
+	BarChart,
+	Bar,
+	XAxis,
+	YAxis,
+	Tooltip,
+	ResponsiveContainer,
+	PieChart,
+	Pie,
+	Cell,
+} from "recharts";
 
 interface DashboardStats {
 	totalUsers: number;
@@ -44,7 +54,12 @@ interface DashboardStats {
 		category: string;
 		location: string;
 		createdAt: string;
-		user: { id: string; name: string; username: string; photo: string | null } | null;
+		user: {
+			id: string;
+			name: string;
+			username: string;
+			photo: string | null;
+		} | null;
 	}[];
 }
 
@@ -53,7 +68,10 @@ interface DashboardPageProps {
 	onRefresh?: () => void;
 }
 
-export default function DashboardPage({ stats, onRefresh }: DashboardPageProps) {
+export default function DashboardPage({
+	stats,
+	onRefresh,
+}: DashboardPageProps) {
 	if (!stats) {
 		return (
 			<div className="flex items-center justify-center h-64">
@@ -101,8 +119,16 @@ export default function DashboardPage({ stats, onRefresh }: DashboardPageProps) 
 	const engagementStats = [
 		{ label: "Total Views", value: stats.totalViews, icon: EyeIcon },
 		{ label: "Total Matches", value: stats.totalMatches, icon: SearchIcon },
-		{ label: "Conversations", value: stats.totalConversations, icon: MessageSquareIcon },
-		{ label: "Messages Sent", value: stats.totalMessages, icon: MessageSquareIcon },
+		{
+			label: "Conversations",
+			value: stats.totalConversations,
+			icon: MessageSquareIcon,
+		},
+		{
+			label: "Messages Sent",
+			value: stats.totalMessages,
+			icon: MessageSquareIcon,
+		},
 	];
 
 	const getStatusColor = (status: string) => {
@@ -129,16 +155,19 @@ export default function DashboardPage({ stats, onRefresh }: DashboardPageProps) 
 	return (
 		<div className="space-y-6">
 			{/* Header */}
-			<div className="flex items-center justify-between">
+			<div className="flex items-center justify-between gap-3 max-sm:flex-col max-sm:items-start">
 				<div>
-					<h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Dashboard Overview</h1>
+					<h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+						Dashboard Overview
+					</h1>
 					<p className="text-gray-600 dark:text-gray-400 mt-1">
-						Welcome back! Here&apos;s what&apos;s happening with your platform.
+						Welcome back! Here&apos;s what&apos;s happening with
+						your platform.
 					</p>
 				</div>
 				<button
 					onClick={onRefresh}
-					className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
+					className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors max-sm:w-full"
 				>
 					<RefreshCwIcon size={16} />
 					Refresh
@@ -158,16 +187,25 @@ export default function DashboardPage({ stats, onRefresh }: DashboardPageProps) 
 					>
 						<div className="flex items-start justify-between">
 							<div>
-								<p className="text-sm font-medium text-gray-600 dark:text-gray-400">{stat.title}</p>
-								<p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-1">{stat.value}</p>
-								<p className="text-sm text-gray-500 dark:text-gray-500 mt-1">{stat.subtitle}</p>
+								<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+									{stat.title}
+								</p>
+								<p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-1">
+									{stat.value}
+								</p>
+								<p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
+									{stat.subtitle}
+								</p>
 							</div>
 							<div className={`${stat.color} p-3 rounded-lg`}>
 								<stat.icon size={24} className="text-white" />
 							</div>
 						</div>
 						<div className="mt-3 flex items-center text-sm">
-							<TrendingUpIcon size={14} className="text-emerald-500 mr-1" />
+							<TrendingUpIcon
+								size={14}
+								className="text-emerald-500 mr-1"
+							/>
 							<span
 								className={
 									stat.urgent
@@ -186,15 +224,25 @@ export default function DashboardPage({ stats, onRefresh }: DashboardPageProps) 
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 				{/* Engagement Stats */}
 				<div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-800 p-5">
-					<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Platform Engagement</h3>
-					<div className="grid grid-cols-2 gap-4">
+					<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+						Platform Engagement
+					</h3>
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						{engagementStats.map((stat, index) => (
-							<div key={index} className="text-center p-3 bg-gray-50 dark:bg-neutral-800 rounded-lg">
-								<stat.icon size={20} className="mx-auto text-emerald-600 dark:text-emerald-400 mb-2" />
+							<div
+								key={index}
+								className="text-center p-3 bg-gray-50 dark:bg-neutral-800 rounded-lg"
+							>
+								<stat.icon
+									size={20}
+									className="mx-auto text-emerald-600 dark:text-emerald-400 mb-2"
+								/>
 								<p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
 									{stat.value.toLocaleString()}
 								</p>
-								<p className="text-xs text-gray-500 dark:text-gray-400">{stat.label}</p>
+								<p className="text-xs text-gray-500 dark:text-gray-400">
+									{stat.label}
+								</p>
 							</div>
 						))}
 					</div>
@@ -202,27 +250,59 @@ export default function DashboardPage({ stats, onRefresh }: DashboardPageProps) 
 
 				{/* Item Status - Bar Chart with Recharts */}
 				<div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-800 p-5">
-					<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Item Status</h3>
+					<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+						Item Status
+					</h3>
 					{(() => {
 						const statusData = [
-							{ name: "Pending", value: stats.pendingItems, fill: "#f97316" },
-							{ name: "Active", value: stats.activeItems, fill: "#22c55e" },
-							{ name: "Claimed", value: stats.claimedItems, fill: "#3b82f6" },
-							{ name: "Rejected", value: stats.rejectedItems, fill: "#ef4444" },
+							{
+								name: "Pending",
+								value: stats.pendingItems,
+								fill: "#f97316",
+							},
+							{
+								name: "Active",
+								value: stats.activeItems,
+								fill: "#22c55e",
+							},
+							{
+								name: "Claimed",
+								value: stats.claimedItems,
+								fill: "#3b82f6",
+							},
+							{
+								name: "Rejected",
+								value: stats.rejectedItems,
+								fill: "#ef4444",
+							},
 						];
 
 						return (
 							<div className="h-48">
 								<ResponsiveContainer width="100%" height="100%">
-									<BarChart data={statusData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+									<BarChart
+										data={statusData}
+										margin={{
+											top: 10,
+											right: 10,
+											left: -10,
+											bottom: 0,
+										}}
+									>
 										<XAxis
 											dataKey="name"
-											tick={{ fontSize: 12, fill: "#9ca3af" }}
+											tick={{
+												fontSize: 12,
+												fill: "#9ca3af",
+											}}
 											axisLine={false}
 											tickLine={false}
 										/>
 										<YAxis
-											tick={{ fontSize: 12, fill: "#9ca3af" }}
+											tick={{
+												fontSize: 12,
+												fill: "#9ca3af",
+											}}
 											axisLine={false}
 											tickLine={false}
 										/>
@@ -235,9 +315,16 @@ export default function DashboardPage({ stats, onRefresh }: DashboardPageProps) 
 											}}
 											cursor={{ fill: "rgba(0,0,0,0.1)" }}
 										/>
-										<Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={50}>
+										<Bar
+											dataKey="value"
+											radius={[4, 4, 0, 0]}
+											maxBarSize={50}
+										>
 											{statusData.map((entry, index) => (
-												<Cell key={`cell-${index}`} fill={entry.fill} />
+												<Cell
+													key={`cell-${index}`}
+													fill={entry.fill}
+												/>
 											))}
 										</Bar>
 									</BarChart>
@@ -249,14 +336,24 @@ export default function DashboardPage({ stats, onRefresh }: DashboardPageProps) 
 
 				{/* Top Categories - Pie Chart with Recharts */}
 				<div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-800 p-5">
-					<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Top Categories</h3>
+					<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+						Top Categories
+					</h3>
 					{(() => {
 						const categories = stats.categoryBreakdown.slice(0, 5);
-						const colors = ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ec4899"];
+						const colors = [
+							"#10b981",
+							"#3b82f6",
+							"#8b5cf6",
+							"#f59e0b",
+							"#ec4899",
+						];
 
 						if (categories.length === 0) {
 							return (
-								<p className="text-gray-500 dark:text-gray-400 text-center py-8">No category data</p>
+								<p className="text-gray-500 dark:text-gray-400 text-center py-8">
+									No category data
+								</p>
 							);
 						}
 
@@ -279,12 +376,17 @@ export default function DashboardPage({ stats, onRefresh }: DashboardPageProps) 
 											paddingAngle={2}
 											dataKey="value"
 											label={({ name, percent }) =>
-												`${name} ${((percent || 0) * 100).toFixed(0)}%`
+												`${name} ${(
+													(percent || 0) * 100
+												).toFixed(0)}%`
 											}
 											labelLine={false}
 										>
 											{pieData.map((entry, index) => (
-												<Cell key={`cell-${index}`} fill={entry.fill} />
+												<Cell
+													key={`cell-${index}`}
+													fill={entry.fill}
+												/>
 											))}
 										</Pie>
 										<Tooltip
@@ -301,12 +403,15 @@ export default function DashboardPage({ stats, onRefresh }: DashboardPageProps) 
 					})()}
 				</div>
 			</div>
-
 			{/* Recent Activity */}
 			<div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-800 p-5">
 				<div className="flex items-center justify-between mb-4">
-					<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recent Items</h3>
-					<span className="text-sm text-gray-500 dark:text-gray-400">Last 5 submissions</span>
+					<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+						Recent Items
+					</h3>
+					<span className="text-sm text-gray-500 dark:text-gray-400">
+						Last 5 submissions
+					</span>
 				</div>
 				<div className="overflow-x-auto">
 					<table className="w-full">
@@ -364,7 +469,9 @@ export default function DashboardPage({ stats, onRefresh }: DashboardPageProps) 
 									<td className="py-3 px-4 text-gray-600 dark:text-gray-400 capitalize">
 										{item.category}
 									</td>
-									<td className="py-3 px-4 text-gray-600 dark:text-gray-400">{item.location}</td>
+									<td className="py-3 px-4 text-gray-600 dark:text-gray-400">
+										{item.location}
+									</td>
 									<td className="py-3 px-4">
 										<span className="text-gray-700 dark:text-gray-300">
 											{item.user?.name || "Unknown"}
@@ -376,9 +483,8 @@ export default function DashboardPage({ stats, onRefresh }: DashboardPageProps) 
 					</table>
 				</div>
 			</div>
-
 			{/* Quick Stats Footer */}
-			<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+			<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
 				<div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white">
 					<p className="text-blue-100 text-sm">Items Today</p>
 					<p className="text-2xl font-bold">{stats.itemsToday}</p>
@@ -392,8 +498,12 @@ export default function DashboardPage({ stats, onRefresh }: DashboardPageProps) 
 					<p className="text-2xl font-bold">{stats.itemsThisMonth}</p>
 				</div>
 				<div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-4 text-white">
-					<p className="text-orange-100 text-sm">New Users This Week</p>
-					<p className="text-2xl font-bold">{stats.newUsersThisWeek}</p>
+					<p className="text-orange-100 text-sm">
+						New Users This Week
+					</p>
+					<p className="text-2xl font-bold">
+						{stats.newUsersThisWeek}
+					</p>
 				</div>
 			</div>
 		</div>

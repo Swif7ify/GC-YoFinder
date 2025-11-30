@@ -148,15 +148,15 @@ export default function ActivityPage({ stats, onRefresh }: ActivityPageProps) {
 	return (
 		<div className="space-y-6">
 			{/* Header */}
-			<div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3 max-sm:flex-col max-sm:items-start">
 				<div>
 					<h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Activity Logs</h1>
 					<p className="text-gray-600 dark:text-gray-400 mt-1">Recent platform activity and submissions</p>
 				</div>
-				<button
-					onClick={onRefresh}
-					className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
-				>
+                <button
+                    onClick={onRefresh}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors max-sm:w-full"
+                >
 					<RefreshCwIcon size={16} />
 					Refresh
 				</button>
