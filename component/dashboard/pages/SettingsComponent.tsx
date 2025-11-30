@@ -18,6 +18,7 @@ import { UserData } from "@/types/types";
 import { api, invalidateCache } from "@/lib/api.config";
 import { toastError, toastSuccess } from "@/utils/toast";
 import { useApiLoading } from "@/hooks/useApiLoading";
+import { useTranslation } from "@/contexts/TranslationProvider";
 
 interface SettingsComponentProps {
 	userData: UserData;
@@ -47,7 +48,10 @@ export default function SettingsComponent({
 	const [showEmail, setShowEmail] = useState(false);
 	const [showContactInfo, setShowContactInfo] = useState(true);
 
-	const [language, setLanguage] = useState("en");
+	const { language, setLanguage } = useTranslation();
+	const [theme, setTheme] = useState<string>("system");
+	const [textSize, setTextSize] = useState<string>("16");
+	const [reduceMotion, setReduceMotion] = useState<boolean>(false);
 
 	const [activeTab, setActiveTab] = useState<
 		"profile" | "notifications" | "preferences"
@@ -212,7 +216,137 @@ export default function SettingsComponent({
 		setUsername(userData.username ?? "");
 		setPhotoUrl(userData.photo?.url);
 		setPhone(userData.phone || "");
+		try {
+			const en = localStorage.getItem("pref_emailNotifications");
+			const ma = localStorage.getItem("pref_matchAlerts");
+			const ms = localStorage.getItem("pref_messageAlerts");
+			if (en !== null) setEmailNotifications(en === "1");
+			if (ma !== null) setMatchAlerts(ma === "1");
+			if (ms !== null) setMessageAlerts(ms === "1");
+			const pv = localStorage.getItem("pref_profileVisibility");
+			const se = localStorage.getItem("pref_showEmail");
+			const sci = localStorage.getItem("pref_showContactInfo");
+			if (pv) setProfileVisibility(pv as any);
+			if (se !== null) setShowEmail(se === "1");
+			if (sci !== null) setShowContactInfo(sci === "1");
+			const th = localStorage.getItem("theme");
+			const ts = localStorage.getItem("textSize");
+			const rm = localStorage.getItem("reduceMotion");
+			if (th) setTheme(th);
+			if (ts) setTextSize(ts);
+			if (rm !== null) setReduceMotion(rm === "1");
+		} catch {}
+		const fetchServerSettings = async () => {
+			try {
+				const resp = await api("/api/dashboard/settings");
+				if (resp.status === 200) {
+					const data = await resp.json();
+					const s = data.settings;
+					if (s?.language) setLanguage(s.language);
+					if (s?.notifications) {
+						setEmailNotifications(!!s.notifications.email);
+						setMatchAlerts(!!s.notifications.match);
+						setMessageAlerts(!!s.notifications.message);
+						try {
+							localStorage.setItem(
+								"pref_emailNotifications",
+								s.notifications.email ? "1" : "0"
+							);
+							localStorage.setItem(
+								"pref_matchAlerts",
+								s.notifications.match ? "1" : "0"
+							);
+							localStorage.setItem(
+								"pref_messageAlerts",
+								s.notifications.message ? "1" : "0"
+							);
+						} catch {}
+					}
+					if (s?.privacy) {
+						setProfileVisibility(
+							s.privacy.profileVisibility ?? "college"
+						);
+						setShowEmail(!!s.privacy.showEmail);
+						setShowContactInfo(!!s.privacy.showContactInfo);
+						try {
+							localStorage.setItem(
+								"pref_profileVisibility",
+								s.privacy.profileVisibility ?? "college"
+							);
+							localStorage.setItem(
+								"pref_showEmail",
+								s.privacy.showEmail ? "1" : "0"
+							);
+							localStorage.setItem(
+								"pref_showContactInfo",
+								s.privacy.showContactInfo ? "1" : "0"
+							);
+						} catch {}
+					}
+					if (s?.display) {
+						setTheme(s.display.theme ?? "system");
+						setTextSize(String(s.display.textSize ?? "16"));
+						setReduceMotion(!!s.display.reduceMotion);
+						try {
+							localStorage.setItem(
+								"theme",
+								s.display.theme ?? "system"
+							);
+							localStorage.setItem(
+								"textSize",
+								String(s.display.textSize ?? 16)
+							);
+							localStorage.setItem(
+								"reduceMotion",
+								s.display.reduceMotion ? "1" : "0"
+							);
+						} catch {}
+					}
+				}
+			} catch (e) {}
+		};
+		fetchServerSettings();
 	}, [userData]);
+
+	const updateSettings = async (patch: any) => {
+		try {
+			await api("/api/dashboard/settings", {
+				method: "POST",
+				body: JSON.stringify(patch),
+			});
+		} catch (e) {}
+	};
+
+	useEffect(() => {
+		if (theme === "dark") {
+			document.documentElement.classList.add("dark");
+		} else if (theme === "light") {
+			document.documentElement.classList.remove("dark");
+		} else {
+			const prefersDark =
+				window.matchMedia &&
+				window.matchMedia("(prefers-color-scheme: dark)").matches;
+			document.documentElement.classList.toggle("dark", prefersDark);
+		}
+		localStorage.setItem("theme", theme);
+	}, [theme]);
+
+	useEffect(() => {
+		const n = Number(textSize);
+		if (!Number.isNaN(n) && n > 10 && n < 30) {
+			document.documentElement.style.fontSize = `${n}px`;
+			localStorage.setItem("textSize", String(n));
+		}
+	}, [textSize]);
+
+	useEffect(() => {
+		if (reduceMotion) {
+			document.documentElement.setAttribute("data-reduce-motion", "1");
+		} else {
+			document.documentElement.removeAttribute("data-reduce-motion");
+		}
+		localStorage.setItem("reduceMotion", reduceMotion ? "1" : "0");
+	}, [reduceMotion]);
 
 	return (
 		<div className="space-y-6">
@@ -284,7 +418,7 @@ export default function SettingsComponent({
 					</nav>
 
 					{/* Right content */}
-					<div className="flex-1 bg-white dark:bg-neutral-900 ">
+					<div className="flex-1  ">
 						{/* Profile Panel */}
 						{activeTab === "profile" && (
 							<section
@@ -604,11 +738,24 @@ export default function SettingsComponent({
 												<input
 													type="checkbox"
 													checked={emailNotifications}
-													onChange={(e) =>
+													onChange={(e) => {
+														const v =
+															e.target.checked;
 														setEmailNotifications(
-															e.target.checked
-														)
-													}
+															v
+														);
+														try {
+															localStorage.setItem(
+																"pref_emailNotifications",
+																v ? "1" : "0"
+															);
+														} catch {}
+														updateSettings({
+															notifications: {
+																email: v,
+															},
+														});
+													}}
 													className="sr-only peer"
 												/>
 												<div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
@@ -633,11 +780,27 @@ export default function SettingsComponent({
 												<input
 													type="checkbox"
 													checked={matchAlerts}
-													onChange={(e) =>
-														setMatchAlerts(
-															e.target.checked
-														)
-													}
+													onChange={(e) => {
+														const v =
+															e.target.checked;
+														setMatchAlerts(v);
+														try {
+															localStorage.setItem(
+																"pref_matchAlerts",
+																v ? "1" : "0"
+															);
+															window.dispatchEvent(
+																new CustomEvent(
+																	"notificationPreferencesChanged"
+																)
+															);
+														} catch {}
+														updateSettings({
+															notifications: {
+																match: v,
+															},
+														});
+													}}
 													className="sr-only peer"
 												/>
 												<div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
@@ -662,11 +825,27 @@ export default function SettingsComponent({
 												<input
 													type="checkbox"
 													checked={messageAlerts}
-													onChange={(e) =>
-														setMessageAlerts(
-															e.target.checked
-														)
-													}
+													onChange={(e) => {
+														const v =
+															e.target.checked;
+														setMessageAlerts(v);
+														try {
+															localStorage.setItem(
+																"pref_messageAlerts",
+																v ? "1" : "0"
+															);
+															window.dispatchEvent(
+																new CustomEvent(
+																	"notificationPreferencesChanged"
+																)
+															);
+														} catch {}
+														updateSettings({
+															notifications: {
+																message: v,
+															},
+														});
+													}}
 													className="sr-only peer"
 												/>
 												<div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
@@ -718,14 +897,25 @@ export default function SettingsComponent({
 											</label>
 											<CustomSelect
 												value={profileVisibility}
-												onValueChange={(value) =>
-													setProfileVisibility(
-														value as
-															| "public"
-															| "college"
-															| "private"
-													)
-												}
+												onValueChange={(value) => {
+													const v = value as
+														| "public"
+														| "college"
+														| "private";
+													setProfileVisibility(v);
+													try {
+														localStorage.setItem(
+															"pref_profileVisibility",
+															v
+														);
+													} catch {}
+													updateSettings({
+														privacy: {
+															profileVisibility:
+																v,
+														},
+													});
+												}}
 												options={[
 													{
 														value: "public",
@@ -768,11 +958,22 @@ export default function SettingsComponent({
 												<input
 													type="checkbox"
 													checked={showEmail}
-													onChange={(e) =>
-														setShowEmail(
-															e.target.checked
-														)
-													}
+													onChange={(e) => {
+														const v =
+															e.target.checked;
+														setShowEmail(v);
+														try {
+															localStorage.setItem(
+																"pref_showEmail",
+																v ? "1" : "0"
+															);
+														} catch {}
+														updateSettings({
+															privacy: {
+																showEmail: v,
+															},
+														});
+													}}
 													className="sr-only peer"
 												/>
 												<div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
@@ -797,11 +998,23 @@ export default function SettingsComponent({
 												<input
 													type="checkbox"
 													checked={showContactInfo}
-													onChange={(e) =>
-														setShowContactInfo(
-															e.target.checked
-														)
-													}
+													onChange={(e) => {
+														const v =
+															e.target.checked;
+														setShowContactInfo(v);
+														try {
+															localStorage.setItem(
+																"pref_showContactInfo",
+																v ? "1" : "0"
+															);
+														} catch {}
+														updateSettings({
+															privacy: {
+																showContactInfo:
+																	v,
+															},
+														});
+													}}
 													className="sr-only peer"
 												/>
 												<div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
@@ -844,9 +1057,12 @@ export default function SettingsComponent({
 
 											<CustomSelect
 												value={language}
-												onValueChange={(value) =>
-													setLanguage(value)
-												}
+												onValueChange={(value) => {
+													setLanguage(value);
+													updateSettings({
+														language: value,
+													});
+												}}
 												options={[
 													{
 														value: "en",
@@ -858,6 +1074,122 @@ export default function SettingsComponent({
 													},
 												]}
 											/>
+											<div className="mt-4 space-y-4">
+												<div>
+													<label
+														htmlFor="theme"
+														className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+													>
+														Theme
+													</label>
+													<CustomSelect
+														value={theme}
+														onValueChange={(
+															value
+														) => {
+															setTheme(value);
+															updateSettings({
+																display: {
+																	theme: value,
+																},
+															});
+														}}
+														options={[
+															{
+																value: "system",
+																label: "System",
+															},
+															{
+																value: "light",
+																label: "Light",
+															},
+															{
+																value: "dark",
+																label: "Dark",
+															},
+														]}
+													/>
+												</div>
+												<div>
+													<label
+														htmlFor="text-size"
+														className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+													>
+														Text Size
+													</label>
+													<CustomSelect
+														value={textSize}
+														onValueChange={(
+															value
+														) => {
+															setTextSize(value);
+															const n =
+																Number(value);
+															if (
+																!Number.isNaN(n)
+															)
+																updateSettings({
+																	display: {
+																		textSize:
+																			n,
+																	},
+																});
+														}}
+														options={[
+															{
+																value: "14",
+																label: "Small",
+															},
+															{
+																value: "16",
+																label: "Medium",
+															},
+															{
+																value: "18",
+																label: "Large",
+															},
+														]}
+													/>
+												</div>
+												<div className="flex items-center justify-between py-3">
+													<div>
+														<h3 className="font-medium text-gray-900 dark:text-gray-100 mb-1">
+															Reduce Motion
+														</h3>
+														<p className="text-sm text-gray-600 dark:text-gray-400">
+															Limit animations for
+															accessibility
+														</p>
+													</div>
+													<label className="relative inline-flex items-center cursor-pointer">
+														<input
+															type="checkbox"
+															checked={
+																reduceMotion
+															}
+															onChange={(e) => {
+																const v =
+																	e.target
+																		.checked;
+																setReduceMotion(
+																	v
+																);
+																updateSettings({
+																	display: {
+																		reduceMotion:
+																			v,
+																	},
+																});
+															}}
+															className="sr-only peer"
+														/>
+														<div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+														<span className="sr-only">
+															Toggle reduce motion
+														</span>
+													</label>
+												</div>
+											</div>
 										</div>
 									</div>
 								</section>
