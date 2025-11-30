@@ -572,16 +572,18 @@ export default function AdminClient() {
 				Skip to main content
 			</a>
 			<div className="flex flex-row h-full">
-				<Sidebar
-					isOpen={sidebarOpen}
-					activeTab={activeTab}
-					pendingCount={pendingItems.length}
-					onTabClick={handleTabClick}
-					onLogout={handleLogout}
-					onClose={() => setSidebarOpen(false)}
-				/>
+				<div className="flex flex-nowrap">
+					<Sidebar
+						isOpen={sidebarOpen}
+						activeTab={activeTab}
+						pendingCount={pendingItems.length}
+						onTabClick={handleTabClick}
+						onLogout={handleLogout}
+						onClose={() => setSidebarOpen(false)}
+					/>
+				</div>
 				<div
-					className={`flex-1 flex flex-col  transition-all duration-300`}
+					className={`flex-1 flex flex-col w-full transition-all duration-300`}
 				>
 					<Header
 						onMenuClick={handleMenuClick}
@@ -598,7 +600,7 @@ export default function AdminClient() {
 						aria-label={`${
 							TAB_MAP[activeTab] ?? "Dashboard"
 						} content`}
-						className="overflow-auto p-6 w-full flex-1"
+						className="min-w-0 overflow-auto p-6 max-sm:p-2 "
 					>
 						{loading ? (
 							<div className="flex items-center justify-center h-64">

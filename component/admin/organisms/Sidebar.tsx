@@ -306,10 +306,10 @@ export default function AdminSidebar({
 				</div>
 
 				{/* Sign Out */}
-				<div className="absolute bottom-0 w-full border-t border-gray-200 dark:border-neutral-800 p-4 bg-white dark:bg-neutral-900">
+				<div className="flex-1 flex mt-auto border-t border-gray-200 dark:border-neutral-800 p-4 bg-white dark:bg-neutral-900">
 					<button
 						onClick={onLogout}
-						className="w-full flex items-center px-3 py-2 text-sm font-medium rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+						className="w-max flex items-center px-3 py-2 text-sm font-medium rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
 					>
 						<LogOutIcon
 							size={18}
@@ -601,13 +601,10 @@ export default function AdminSidebar({
 								</nav>
 							</div>
 
-							<div className="absolute bottom-0 w-full border-t border-gray-200 dark:border-neutral-800 p-4 bg-white dark:bg-neutral-900">
+							<div className="flex-1 flex mt-auto border-t border-gray-200 dark:border-neutral-800 p-4 bg-white dark:bg-neutral-900">
 								<button
-									onClick={() => {
-										onLogout();
-										onClose && onClose();
-									}}
-									className="w-full flex items-center px-3 py-2 text-sm font-medium rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+									onClick={onLogout}
+									className="w-max flex items-center px-3 py-2 text-sm font-medium rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
 								>
 									<LogOutIcon
 										size={18}

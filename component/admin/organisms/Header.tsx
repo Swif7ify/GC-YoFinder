@@ -74,7 +74,7 @@ export default function AdminHeader({
 	}, []);
 
 	return (
-		<header className="h-16 bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between px-4 shadow-sm z-10 select-none">
+		<header className="h-16 bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between px-4 shadow-sm z-10 select-none p-4">
 			<div className="flex items-center">
 				<button
 					onClick={onMenuClick}
@@ -94,7 +94,7 @@ export default function AdminHeader({
 						height={40}
 						className="mr-2 rounded-full"
 					/>
-					<div className="flex flex-col">
+					<div className="flex flex-col max-sm:hidden">
 						<span className="font-semibold text-gray-900 dark:text-gray-100">
 							GC YoFinder
 						</span>
