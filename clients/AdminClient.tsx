@@ -11,38 +11,104 @@ import { UserData } from "@/types/types";
 import { useSearchParams } from "next/navigation";
 import { usePusher } from "@/contexts/PusherProvider";
 
-const Header = Dynamic(() => import("@/component/admin/organisms/Header").then((mod) => mod.default), { ssr: false });
-const Sidebar = Dynamic(() => import("@/component/admin/organisms/Sidebar").then((mod) => mod.default), { ssr: false });
+const Header = Dynamic(
+	() =>
+		import("@/component/admin/organisms/Header").then((mod) => mod.default),
+	{ ssr: false }
+);
+const Sidebar = Dynamic(
+	() =>
+		import("@/component/admin/organisms/Sidebar").then(
+			(mod) => mod.default
+		),
+	{ ssr: false }
+);
 
 // Page components
-const DashboardPage = Dynamic(() => import("@/component/admin/pages/DashboardPage").then((mod) => mod.default), {
-	ssr: false,
-});
-const UsersPage = Dynamic(() => import("@/component/admin/pages/UsersPage").then((mod) => mod.default), { ssr: false });
-const ItemPendingPage = Dynamic(() => import("@/component/admin/pages/ItemPendingPage").then((mod) => mod.default), {
-	ssr: false,
-});
-const ItemActivePage = Dynamic(() => import("@/component/admin/pages/ItemActivePage").then((mod) => mod.default), {
-	ssr: false,
-});
-const ItemClaimedPage = Dynamic(() => import("@/component/admin/pages/ItemClaimedPage").then((mod) => mod.default), {
-	ssr: false,
-});
-const ItemArchivedPage = Dynamic(() => import("@/component/admin/pages/ItemArchivedPage").then((mod) => mod.default), {
-	ssr: false,
-});
-const ReportsPage = Dynamic(() => import("@/component/admin/pages/ReportsPage").then((mod) => mod.default), {
-	ssr: false,
-});
-const ActivityPage = Dynamic(() => import("@/component/admin/pages/ActivityPage").then((mod) => mod.default), {
-	ssr: false,
-});
-const ExportPage = Dynamic(() => import("@/component/admin/pages/ExportPage").then((mod) => mod.default), {
-	ssr: false,
-});
-const ItemAllPage = Dynamic(() => import("@/component/admin/pages/ItemAllPage").then((mod) => mod.default), {
-	ssr: false,
-});
+const DashboardPage = Dynamic(
+	() =>
+		import("@/component/admin/pages/DashboardPage").then(
+			(mod) => mod.default
+		),
+	{
+		ssr: false,
+	}
+);
+const UsersPage = Dynamic(
+	() =>
+		import("@/component/admin/pages/UsersPage").then((mod) => mod.default),
+	{ ssr: false }
+);
+const ItemPendingPage = Dynamic(
+	() =>
+		import("@/component/admin/pages/ItemPendingPage").then(
+			(mod) => mod.default
+		),
+	{
+		ssr: false,
+	}
+);
+const ItemActivePage = Dynamic(
+	() =>
+		import("@/component/admin/pages/ItemActivePage").then(
+			(mod) => mod.default
+		),
+	{
+		ssr: false,
+	}
+);
+const ItemClaimedPage = Dynamic(
+	() =>
+		import("@/component/admin/pages/ItemClaimedPage").then(
+			(mod) => mod.default
+		),
+	{
+		ssr: false,
+	}
+);
+const ItemArchivedPage = Dynamic(
+	() =>
+		import("@/component/admin/pages/ItemArchivedPage").then(
+			(mod) => mod.default
+		),
+	{
+		ssr: false,
+	}
+);
+const ReportsPage = Dynamic(
+	() =>
+		import("@/component/admin/pages/ReportsPage").then(
+			(mod) => mod.default
+		),
+	{
+		ssr: false,
+	}
+);
+const ActivityPage = Dynamic(
+	() =>
+		import("@/component/admin/pages/ActivityPage").then(
+			(mod) => mod.default
+		),
+	{
+		ssr: false,
+	}
+);
+const ExportPage = Dynamic(
+	() =>
+		import("@/component/admin/pages/ExportPage").then((mod) => mod.default),
+	{
+		ssr: false,
+	}
+);
+const ItemAllPage = Dynamic(
+	() =>
+		import("@/component/admin/pages/ItemAllPage").then(
+			(mod) => mod.default
+		),
+	{
+		ssr: false,
+	}
+);
 
 const TAB_MAP: Record<string, string> = {
 	dashboard: "Dashboard",
@@ -103,6 +169,26 @@ export default function AdminClient() {
 	const handleMenuClick = () => {
 		setSidebarOpen(!sidebarOpen);
 	};
+
+	useEffect(() => {
+		const applyInitialSidebarState = () => {
+			if (typeof window !== "undefined") {
+				const isMobile = window.innerWidth < 768;
+				if (isMobile) setSidebarOpen(false);
+			}
+		};
+		applyInitialSidebarState();
+		const onResize = () => {
+			if (typeof window !== "undefined") {
+				const isMobile = window.innerWidth < 768;
+				if (isMobile) {
+					setSidebarOpen(false);
+				}
+			}
+		};
+		window.addEventListener("resize", onResize);
+		return () => window.removeEventListener("resize", onResize);
+	}, []);
 
 	const handleTabClick = (tab: string) => {
 		setActiveTab(tab);
@@ -194,7 +280,9 @@ export default function AdminClient() {
 
 			if (response.status === 200) {
 				// Update local state
-				setNotifications((prev) => prev.map((notif) => ({ ...notif, isRead: true })));
+				setNotifications((prev) =>
+					prev.map((notif) => ({ ...notif, isRead: true }))
+				);
 			}
 		} catch (error) {
 			console.error("Error marking notifications as read:", error);
@@ -204,7 +292,11 @@ export default function AdminClient() {
 	// Fetch dashboard stats
 	const fetchDashboardStats = async (useCache = true) => {
 		try {
-			const response = await apiCached("/api/admin/dashboard/stats", { method: "GET" }, useCache);
+			const response = await apiCached(
+				"/api/admin/dashboard/stats",
+				{ method: "GET" },
+				useCache
+			);
 
 			if (response.status !== 200) {
 				console.error("Unable to fetch dashboard stats");
@@ -221,7 +313,11 @@ export default function AdminClient() {
 	// Fetch items by status
 	const fetchItems = async (status: string, useCache = true) => {
 		try {
-			const response = await apiCached(`/api/admin/items?status=${status}&limit=50`, { method: "GET" }, useCache);
+			const response = await apiCached(
+				`/api/admin/items?status=${status}&limit=50`,
+				{ method: "GET" },
+				useCache
+			);
 
 			if (response.status !== 200) {
 				console.error(`Unable to fetch ${status} items`);
@@ -262,7 +358,10 @@ export default function AdminClient() {
 	};
 
 	// Update item status (approve/reject/pending/removed)
-	const updateItemStatus = async (itemId: string, status: "active" | "rejected" | "pending" | "removed") => {
+	const updateItemStatus = async (
+		itemId: string,
+		status: "active" | "rejected" | "pending" | "removed"
+	) => {
 		try {
 			invalidateCache(/\/api\/admin/);
 
@@ -316,10 +415,21 @@ export default function AdminClient() {
 		}
 	};
 	// Combine all items for the All Items page
-	const allItems = [...pendingItems, ...rejectedItems, ...activeItems, ...claimedItems, ...archivedItems];
+	const allItems = [
+		...pendingItems,
+		...rejectedItems,
+		...activeItems,
+		...claimedItems,
+		...archivedItems,
+	];
 
 	const componentMap: Record<string, React.ReactNode> = {
-		dashboard: <DashboardPage stats={dashboardStats} onRefresh={() => fetchDashboardStats(false)} />,
+		dashboard: (
+			<DashboardPage
+				stats={dashboardStats}
+				onRefresh={() => fetchDashboardStats(false)}
+			/>
+		),
 		users: (
 			<UsersPage
 				users={users}
@@ -351,7 +461,12 @@ export default function AdminClient() {
 				}}
 			/>
 		),
-		"item-active": <ItemActivePage items={activeItems} onRefresh={() => fetchItems("active", false)} />,
+		"item-active": (
+			<ItemActivePage
+				items={activeItems}
+				onRefresh={() => fetchItems("active", false)}
+			/>
+		),
 		"item-claimed": (
 			<ItemClaimedPage
 				items={claimedItems}
@@ -359,7 +474,12 @@ export default function AdminClient() {
 				onArchive={archiveItem}
 			/>
 		),
-		"item-archived": <ItemArchivedPage items={archivedItems} onRefresh={() => fetchItems("removed", false)} />,
+		"item-archived": (
+			<ItemArchivedPage
+				items={archivedItems}
+				onRefresh={() => fetchItems("removed", false)}
+			/>
+		),
 		reports: <ReportsPage stats={dashboardStats} />,
 		activity: <ActivityPage stats={dashboardStats} />,
 		export: <ExportPage />,
@@ -423,7 +543,10 @@ export default function AdminClient() {
 			invalidateCache(/\/api\/admin/);
 			fetchDashboardStats(false);
 			fetchItems("pending", false);
-			toastSuccess("New Item", "A new item has been submitted for review");
+			toastSuccess(
+				"New Item",
+				"A new item has been submitted for review"
+			);
 		};
 		adminChannel.bind("new-item", handleNewItem);
 
@@ -455,9 +578,10 @@ export default function AdminClient() {
 					pendingCount={pendingItems.length}
 					onTabClick={handleTabClick}
 					onLogout={handleLogout}
+					onClose={() => setSidebarOpen(false)}
 				/>
 				<div
-					className={`flex-1 flex flex-col min-w-0 ${sidebarOpen ? "ml-64" : ""} transition-all duration-300`}
+					className={`flex-1 flex flex-col  transition-all duration-300`}
 				>
 					<Header
 						onMenuClick={handleMenuClick}
@@ -471,7 +595,9 @@ export default function AdminClient() {
 						ref={mainRef}
 						tabIndex={-1}
 						aria-live="polite"
-						aria-label={`${TAB_MAP[activeTab] ?? "Dashboard"} content`}
+						aria-label={`${
+							TAB_MAP[activeTab] ?? "Dashboard"
+						} content`}
 						className="overflow-auto p-6 w-full flex-1"
 					>
 						{loading ? (
