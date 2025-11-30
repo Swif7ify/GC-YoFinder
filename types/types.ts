@@ -208,3 +208,28 @@ export const ITEM_CATEGORIES: ItemCategory[] = [
 	"Sports Equipment",
 	"Other",
 ];
+
+export interface UserNotificationsPrefs {
+	email: boolean;
+	match: boolean;
+	message: boolean;
+}
+
+export interface UserPrivacyPrefs {
+	profileVisibility: "public" | "college" | "private";
+	showEmail: boolean;
+	showContactInfo: boolean;
+}
+
+export interface UserDisplayPrefs {
+	theme: "system" | "light" | "dark";
+	textSize: number;
+	reduceMotion: boolean;
+}
+
+export interface UserSettings {
+	language: "en" | "fil";
+	notifications: UserNotificationsPrefs;
+	privacy: UserPrivacyPrefs;
+	display: UserDisplayPrefs;
+}

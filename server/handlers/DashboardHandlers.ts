@@ -128,6 +128,103 @@ class DashboardHandlers {
 		}
 	}
 
+	static async getUserSettingsByID(userID: string) {
+		await connectToDatabase();
+		try {
+			const isValidUserID = await ValidateStringField(userID);
+			if (!isValidUserID) return userNotFoundError();
+
+			const user = await UserSchema.findById(userID).select("preferences");
+			if (!user) return userNotFoundError();
+
+			const prefs = (user as any).preferences || {};
+			const payload = {
+				language: prefs.language ?? "en",
+				notifications: {
+					email: prefs?.notifications?.email ?? true,
+					match: prefs?.notifications?.match ?? true,
+					message: prefs?.notifications?.message ?? true,
+				},
+				privacy: {
+					profileVisibility: prefs?.privacy?.profileVisibility ?? "college",
+					showEmail: prefs?.privacy?.showEmail ?? false,
+					showContactInfo: prefs?.privacy?.showContactInfo ?? true,
+				},
+				display: {
+					theme: prefs?.display?.theme ?? "system",
+					textSize: prefs?.display?.textSize ?? 16,
+					reduceMotion: prefs?.display?.reduceMotion ?? false,
+				},
+			};
+
+			return responsePayload(payload, "success", "User settings retrieved successfully", 200);
+		} catch (error) {
+			return serverResponseError();
+		}
+	}
+
+	static async updateUserSettingsByID(
+		userID: string,
+		update: {
+			language?: string;
+			notifications?: { email?: boolean; match?: boolean; message?: boolean };
+			privacy?: { profileVisibility?: "public" | "college" | "private"; showEmail?: boolean; showContactInfo?: boolean };
+			display?: { theme?: "system" | "light" | "dark"; textSize?: number; reduceMotion?: boolean };
+		}
+	) {
+		await connectToDatabase();
+		const session = await mongoose.startSession();
+		try {
+			const isValidUserID = await ValidateStringField(userID);
+			if (!isValidUserID) return userNotFoundError();
+
+			const set: Record<string, any> = {};
+			if (typeof update.language === "string") {
+				set["preferences.language"] = update.language;
+			}
+			if (update.notifications) {
+				const n = update.notifications;
+				if (typeof n.email === "boolean") set["preferences.notifications.email"] = n.email;
+				if (typeof n.match === "boolean") set["preferences.notifications.match"] = n.match;
+				if (typeof n.message === "boolean") set["preferences.notifications.message"] = n.message;
+			}
+			if (update.privacy) {
+				const p = update.privacy;
+				if (typeof p.profileVisibility === "string") set["preferences.privacy.profileVisibility"] = p.profileVisibility;
+				if (typeof p.showEmail === "boolean") set["preferences.privacy.showEmail"] = p.showEmail;
+				if (typeof p.showContactInfo === "boolean") set["preferences.privacy.showContactInfo"] = p.showContactInfo;
+			}
+			if (update.display) {
+				const d = update.display;
+				if (typeof d.theme === "string") set["preferences.display.theme"] = d.theme;
+				if (typeof d.textSize === "number") set["preferences.display.textSize"] = Math.max(12, Math.min(28, d.textSize));
+				if (typeof d.reduceMotion === "boolean") set["preferences.display.reduceMotion"] = d.reduceMotion;
+			}
+
+			if (Object.keys(set).length === 0) {
+				return responsePayload(null, "error", "No valid settings provided", 400);
+			}
+
+			session.startTransaction();
+			const updated = await UserSchema.findByIdAndUpdate(
+				userID,
+				{ $set: set },
+				{ new: true, session, select: "preferences" }
+			);
+			if (!updated) {
+				await session.abortTransaction();
+				return userNotFoundError();
+			}
+			await session.commitTransaction();
+			return responsePayload(null, "success", "User settings updated successfully", 200);
+		} catch (error) {
+			await session.abortTransaction();
+			return serverResponseError();
+		} finally {
+			await session.endSession();
+		}
+	}
+
 	static async getAllItems(
 		userID: string,
 		page = 1,
@@ -320,5 +417,5 @@ class DashboardHandlers {
 	}
 }
 
-export const { getUserDataByID, updateUserDataByID, updateUserPhotoByID, getAllItems, getUserStats } =
+export const { getUserDataByID, updateUserDataByID, updateUserPhotoByID, getAllItems, getUserStats, getUserSettingsByID, updateUserSettingsByID } =
 	DashboardHandlers;

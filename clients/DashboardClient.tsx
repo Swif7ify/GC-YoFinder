@@ -321,16 +321,17 @@ export default function DashboardPage() {
 	}, [initialTab]);
 
 	const [unreadMessageCount, setUnreadMessageCount] = useState(0);
-	const [notifications, setNotifications] = useState<
-		{
-			id: string;
-			title: string;
-			message: string;
-			time: string;
-			isRead: boolean;
-			conversationId?: string;
-		}[]
-	>([]);
+    const [notifications, setNotifications] = useState<
+        {
+            id: string;
+            title: string;
+            message: string;
+            time: string;
+            isRead: boolean;
+            conversationId?: string;
+            type?: string;
+        }[]
+    >([]);
 
 	// Use global Pusher context
 	const { subscribe, isConnected } = usePusher();
@@ -355,18 +356,27 @@ export default function DashboardPage() {
 	}, [userID]);
 
 	// Fetch notifications
-	const fetchNotifications = useCallback(async () => {
-		if (!userID) return;
-		try {
-			const response = await api("/api/notifications");
-			if (response.status === 200) {
-				const data = await response.json();
-				setNotifications(data.notifications || []);
-			}
-		} catch (error) {
-			console.error("Error fetching notifications:", error);
-		}
-	}, [userID]);
+    const fetchNotifications = useCallback(async () => {
+        if (!userID) return;
+        try {
+            const response = await api("/api/notifications");
+            if (response.status === 200) {
+                const data = await response.json();
+                const prefs = {
+                    match: (localStorage.getItem("pref_matchAlerts") ?? "1") === "1",
+                    message: (localStorage.getItem("pref_messageAlerts") ?? "1") === "1",
+                };
+                const filtered = (data.notifications || []).filter((n: any) => {
+                    if (n.type === "match" && !prefs.match) return false;
+                    if (n.type === "message" && !prefs.message) return false;
+                    return true;
+                });
+                setNotifications(filtered);
+            }
+        } catch (error) {
+            console.error("Error fetching notifications:", error);
+        }
+    }, [userID]);
 
 	// Refresh all items (for real-time updates from other users)
 	// Don't use withLoading for Pusher-triggered refreshes to avoid blocking UI
@@ -395,29 +405,34 @@ export default function DashboardPage() {
 		userChannel.bind("unread-count-updated", handleUnreadCountUpdated);
 
 		// Listen for new notifications
-		const handleNewNotification = (data: { notification: any }) => {
-			const newNotification = {
-				id: data.notification.id,
-				title: data.notification.title,
-				message: data.notification.message,
-				time:
-					data.notification.time ||
-					new Date().toLocaleTimeString("en-US", {
-						hour: "2-digit",
-						minute: "2-digit",
-						hour12: false,
-					}),
-				isRead: data.notification.isRead || false,
-				conversationId: data.notification.conversationId || null,
-			};
-			setNotifications((prev) => {
-				if (prev.some((n) => n.id === newNotification.id)) {
-					return prev;
-				}
-				return [newNotification, ...prev];
-			});
-			fetchUnreadCount();
-		};
+        const handleNewNotification = (data: { notification: any }) => {
+            const newNotification = {
+                id: data.notification.id,
+                title: data.notification.title,
+                message: data.notification.message,
+                time:
+                    data.notification.time ||
+                    new Date().toLocaleTimeString("en-US", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false,
+                    }),
+                isRead: data.notification.isRead || false,
+                conversationId: data.notification.conversationId || null,
+                type: data.notification.type || undefined,
+            };
+            const allowMatch = (localStorage.getItem("pref_matchAlerts") ?? "1") === "1";
+            const allowMessage = (localStorage.getItem("pref_messageAlerts") ?? "1") === "1";
+            if (newNotification.type === "match" && !allowMatch) return;
+            if (newNotification.type === "message" && !allowMessage) return;
+            setNotifications((prev) => {
+                if (prev.some((n) => n.id === newNotification.id)) {
+                    return prev;
+                }
+                return [newNotification, ...prev];
+            });
+            fetchUnreadCount();
+        };
 		userChannel.bind("new-notification", handleNewNotification);
 
 		// Listen for conversation updates
@@ -475,34 +490,43 @@ export default function DashboardPage() {
 			fetchNotifications();
 		};
 
-		const handleWindowNotificationUpdate = (event: any) => {
-			if (event.detail) {
-				const newNotification = {
-					id: event.detail.id,
-					title: event.detail.title,
-					message: event.detail.message,
-					time:
-						event.detail.time ||
-						new Date().toLocaleTimeString("en-US", {
-							hour: "2-digit",
-							minute: "2-digit",
-							hour12: false,
-						}),
-					isRead: event.detail.isRead || false,
-					conversationId: event.detail.conversationId || null,
-				};
-				setNotifications((prev) => {
-					if (prev.some((n) => n.id === newNotification.id)) {
-						return prev;
-					}
-					return [newNotification, ...prev];
-				});
-			}
-			fetchNotifications();
-		};
+        const handleWindowNotificationUpdate = (event: any) => {
+            if (event.detail) {
+                const newNotification = {
+                    id: event.detail.id,
+                    title: event.detail.title,
+                    message: event.detail.message,
+                    time:
+                        event.detail.time ||
+                        new Date().toLocaleTimeString("en-US", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: false,
+                        }),
+                    isRead: event.detail.isRead || false,
+                    conversationId: event.detail.conversationId || null,
+                    type: event.detail.type || undefined,
+                };
+                const allowMatch = (localStorage.getItem("pref_matchAlerts") ?? "1") === "1";
+                const allowMessage = (localStorage.getItem("pref_messageAlerts") ?? "1") === "1";
+                if (newNotification.type === "match" && !allowMatch) return;
+                if (newNotification.type === "message" && !allowMessage) return;
+                setNotifications((prev) => {
+                    if (prev.some((n) => n.id === newNotification.id)) {
+                        return prev;
+                    }
+                    return [newNotification, ...prev];
+                });
+            }
+            fetchNotifications();
+        };
 
-		window.addEventListener("unreadCountUpdate", handleWindowUnreadCountUpdate);
-		window.addEventListener("notificationUpdate", handleWindowNotificationUpdate);
+        window.addEventListener("unreadCountUpdate", handleWindowUnreadCountUpdate);
+        window.addEventListener("notificationUpdate", handleWindowNotificationUpdate);
+        const handlePrefsChanged = () => {
+            fetchNotifications();
+        };
+        window.addEventListener("notificationPreferencesChanged", handlePrefsChanged);
 
 		// Cleanup
 		return () => {
@@ -515,10 +539,11 @@ export default function DashboardPage() {
 			if (globalChannel) {
 				globalChannel.unbind_all();
 			}
-			window.removeEventListener("unreadCountUpdate", handleWindowUnreadCountUpdate);
-			window.removeEventListener("notificationUpdate", handleWindowNotificationUpdate);
-		};
-	}, [userID, isConnected, subscribe, fetchUnreadCount, fetchNotifications, refreshAllItems]);
+            window.removeEventListener("unreadCountUpdate", handleWindowUnreadCountUpdate);
+            window.removeEventListener("notificationUpdate", handleWindowNotificationUpdate);
+            window.removeEventListener("notificationPreferencesChanged", handlePrefsChanged);
+        };
+    }, [userID, isConnected, subscribe, fetchUnreadCount, fetchNotifications, refreshAllItems]);
 
 	// Fallback: Listen for custom events even without Pusher
 	useEffect(() => {

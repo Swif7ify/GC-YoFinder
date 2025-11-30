@@ -8,10 +8,28 @@ export interface IUser extends Document {
 	email: string;
 	password: string;
 	phone: string;
-    photo: PhotoMetadata;
+	photo: PhotoMetadata;
 	is_online: boolean;
 	role: string;
 	session_id?: string;
+	preferences?: {
+		notifications?: {
+			email: boolean;
+			match: boolean;
+			message: boolean;
+		};
+		privacy?: {
+			profileVisibility: "public" | "college" | "private";
+			showEmail: boolean;
+			showContactInfo: boolean;
+		};
+		display?: {
+			theme: "system" | "light" | "dark";
+			textSize: number;
+			reduceMotion: boolean;
+		};
+		language?: "en" | "fil";
+	};
 	created_at: Date;
 	updated_at: Date;
 }
@@ -40,6 +58,27 @@ const UserSchema = new Schema<IUser>(
 				height: 0,
 				uploaded_at: new Date(),
 				resourceType: "image",
+			},
+		},
+		preferences: {
+			type: Object,
+			default: {
+				notifications: {
+					email: true,
+					match: true,
+					message: true,
+				},
+				privacy: {
+					profileVisibility: "college",
+					showEmail: false,
+					showContactInfo: true,
+				},
+				display: {
+					theme: "system",
+					textSize: 16,
+					reduceMotion: false,
+				},
+				language: "en",
 			},
 		},
 		session_id: { type: String, default: null },
