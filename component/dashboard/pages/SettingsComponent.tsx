@@ -38,31 +38,17 @@ export default function SettingsComponent({
 	const [photoUrl, setPhotoUrl] = useState<string>();
 	const [phone, setPhone] = useState(userData.phone || "");
 
-	const [emailNotifications, setEmailNotifications] = useState(true);
-	const [matchAlerts, setMatchAlerts] = useState(true);
-	const [messageAlerts, setMessageAlerts] = useState(true);
-
-	const [profileVisibility, setProfileVisibility] = useState<
-		"public" | "college" | "private"
-	>("college");
-	const [showEmail, setShowEmail] = useState(false);
-	const [showContactInfo, setShowContactInfo] = useState(true);
-
 	const { language, setLanguage } = useTranslation();
 	const [theme, setTheme] = useState<string>("system");
 	const [textSize, setTextSize] = useState<string>("16");
 	const [reduceMotion, setReduceMotion] = useState<boolean>(false);
 
-	const [activeTab, setActiveTab] = useState<
-		"profile" | "notifications" | "preferences"
-	>("profile");
+	const [activeTab, setActiveTab] = useState<"profile" | "preferences">(
+		"profile"
+	);
 	const tabs = [
 		{ id: "profile", label: "Profile", icon: <User size={16} /> },
-		{
-			id: "notifications",
-			label: "Notifications",
-			icon: <Bell size={16} />,
-		},
+
 		{ id: "preferences", label: "Preferences", icon: <Shield size={16} /> },
 	];
 
@@ -141,9 +127,7 @@ export default function SettingsComponent({
 	};
 
 	const onTabKeyDown = (e: React.KeyboardEvent) => {
-		const order = tabs.map((t) => t.id) as Array<
-			"profile" | "notifications" | "preferences"
-		>;
+		const order = tabs.map((t) => t.id) as Array<"profile" | "preferences">;
 		const idx = order.indexOf(activeTab);
 		if (e.key === "ArrowRight") {
 			setActiveTab(order[(idx + 1) % order.length]);
@@ -220,15 +204,11 @@ export default function SettingsComponent({
 			const en = localStorage.getItem("pref_emailNotifications");
 			const ma = localStorage.getItem("pref_matchAlerts");
 			const ms = localStorage.getItem("pref_messageAlerts");
-			if (en !== null) setEmailNotifications(en === "1");
-			if (ma !== null) setMatchAlerts(ma === "1");
-			if (ms !== null) setMessageAlerts(ms === "1");
+		
 			const pv = localStorage.getItem("pref_profileVisibility");
 			const se = localStorage.getItem("pref_showEmail");
 			const sci = localStorage.getItem("pref_showContactInfo");
-			if (pv) setProfileVisibility(pv as any);
-			if (se !== null) setShowEmail(se === "1");
-			if (sci !== null) setShowContactInfo(sci === "1");
+		
 			const th = localStorage.getItem("theme");
 			const ts = localStorage.getItem("textSize");
 			const rm = localStorage.getItem("reduceMotion");
@@ -244,9 +224,7 @@ export default function SettingsComponent({
 					const s = data.settings;
 					if (s?.language) setLanguage(s.language);
 					if (s?.notifications) {
-						setEmailNotifications(!!s.notifications.email);
-						setMatchAlerts(!!s.notifications.match);
-						setMessageAlerts(!!s.notifications.message);
+					
 						try {
 							localStorage.setItem(
 								"pref_emailNotifications",
@@ -263,11 +241,7 @@ export default function SettingsComponent({
 						} catch {}
 					}
 					if (s?.privacy) {
-						setProfileVisibility(
-							s.privacy.profileVisibility ?? "college"
-						);
-						setShowEmail(!!s.privacy.showEmail);
-						setShowContactInfo(!!s.privacy.showContactInfo);
+					
 						try {
 							localStorage.setItem(
 								"pref_profileVisibility",
@@ -696,169 +670,6 @@ export default function SettingsComponent({
 							</section>
 						)}
 
-						{/* Notifications Panel */}
-						{activeTab === "notifications" && (
-							<section
-								id="notifications-panel"
-								role="tabpanel"
-								aria-labelledby="notifications-tab"
-								className="space-y-6"
-							>
-								<section
-									aria-labelledby="notification-settings-heading"
-									className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 p-6"
-								>
-									<div className="flex items-center gap-3 mb-6">
-										<Bell
-											size={20}
-											className="text-emerald-600 dark:text-emerald-400"
-											aria-hidden="true"
-										/>
-										<h2
-											id="notification-settings-heading"
-											className="text-lg font-semibold text-gray-900 dark:text-gray-100"
-										>
-											Notification Preferences
-										</h2>
-									</div>
-
-									<div className="space-y-4">
-										{/* Email Notifications */}
-										<div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-neutral-800">
-											<div>
-												<h3 className="font-medium text-gray-900 dark:text-gray-100 mb-1">
-													Email Notifications
-												</h3>
-												<p className="text-sm text-gray-600 dark:text-gray-400">
-													Receive email updates about
-													your items
-												</p>
-											</div>
-											<label className="relative inline-flex items-center cursor-pointer">
-												<input
-													type="checkbox"
-													checked={emailNotifications}
-													onChange={(e) => {
-														const v =
-															e.target.checked;
-														setEmailNotifications(
-															v
-														);
-														try {
-															localStorage.setItem(
-																"pref_emailNotifications",
-																v ? "1" : "0"
-															);
-														} catch {}
-														updateSettings({
-															notifications: {
-																email: v,
-															},
-														});
-													}}
-													className="sr-only peer"
-												/>
-												<div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-												<span className="sr-only">
-													Toggle email notifications
-												</span>
-											</label>
-										</div>
-
-										{/* Match Alerts */}
-										<div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-neutral-800">
-											<div>
-												<h3 className="font-medium text-gray-900 dark:text-gray-100 mb-1">
-													Match Alerts
-												</h3>
-												<p className="text-sm text-gray-600 dark:text-gray-400">
-													Get notified when potential
-													matches are found
-												</p>
-											</div>
-											<label className="relative inline-flex items-center cursor-pointer">
-												<input
-													type="checkbox"
-													checked={matchAlerts}
-													onChange={(e) => {
-														const v =
-															e.target.checked;
-														setMatchAlerts(v);
-														try {
-															localStorage.setItem(
-																"pref_matchAlerts",
-																v ? "1" : "0"
-															);
-															window.dispatchEvent(
-																new CustomEvent(
-																	"notificationPreferencesChanged"
-																)
-															);
-														} catch {}
-														updateSettings({
-															notifications: {
-																match: v,
-															},
-														});
-													}}
-													className="sr-only peer"
-												/>
-												<div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-												<span className="sr-only">
-													Toggle match alerts
-												</span>
-											</label>
-										</div>
-
-										{/* Message Alerts */}
-										<div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-neutral-800">
-											<div>
-												<h3 className="font-medium text-gray-900 dark:text-gray-100 mb-1">
-													Message Alerts
-												</h3>
-												<p className="text-sm text-gray-600 dark:text-gray-400">
-													Be notified about new
-													messages
-												</p>
-											</div>
-											<label className="relative inline-flex items-center cursor-pointer">
-												<input
-													type="checkbox"
-													checked={messageAlerts}
-													onChange={(e) => {
-														const v =
-															e.target.checked;
-														setMessageAlerts(v);
-														try {
-															localStorage.setItem(
-																"pref_messageAlerts",
-																v ? "1" : "0"
-															);
-															window.dispatchEvent(
-																new CustomEvent(
-																	"notificationPreferencesChanged"
-																)
-															);
-														} catch {}
-														updateSettings({
-															notifications: {
-																message: v,
-															},
-														});
-													}}
-													className="sr-only peer"
-												/>
-												<div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-												<span className="sr-only">
-													Toggle message alerts
-												</span>
-											</label>
-										</div>
-									</div>
-								</section>
-							</section>
-						)}
-
 						{/* Preferences Panel */}
 						{activeTab === "preferences" && (
 							<section
@@ -867,165 +678,6 @@ export default function SettingsComponent({
 								aria-labelledby="preferences-tab"
 								className="space-y-6"
 							>
-								{/* Privacy Settings */}
-								<section
-									aria-labelledby="privacy-settings-heading"
-									className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 p-6"
-								>
-									<div className="flex items-center gap-3 mb-6">
-										<Shield
-											size={20}
-											className="text-emerald-600 dark:text-emerald-400"
-											aria-hidden="true"
-										/>
-										<h2
-											id="privacy-settings-heading"
-											className="text-lg font-semibold text-gray-900 dark:text-gray-100"
-										>
-											Privacy Settings
-										</h2>
-									</div>
-
-									<div className="space-y-6">
-										{/* Profile Visibility */}
-										<div>
-											<label
-												htmlFor="profile-visibility"
-												className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-											>
-												Profile Visibility
-											</label>
-											<CustomSelect
-												value={profileVisibility}
-												onValueChange={(value) => {
-													const v = value as
-														| "public"
-														| "college"
-														| "private";
-													setProfileVisibility(v);
-													try {
-														localStorage.setItem(
-															"pref_profileVisibility",
-															v
-														);
-													} catch {}
-													updateSettings({
-														privacy: {
-															profileVisibility:
-																v,
-														},
-													});
-												}}
-												options={[
-													{
-														value: "public",
-														label: "Public - Anyone can view",
-													},
-													{
-														value: "college",
-														label: "College Only - Only Gordon College users",
-													},
-													{
-														value: "private",
-														label: "Private - Only you can view",
-													},
-												]}
-											/>
-
-											<p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-start gap-1.5">
-												<Info
-													size={12}
-													className="flex-shrink-0 mt-0.5"
-													aria-hidden="true"
-												/>
-												Controls who can see your
-												profile and posted items
-											</p>
-										</div>
-
-										{/* Show Email */}
-										<div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-neutral-800">
-											<div>
-												<h3 className="font-medium text-gray-900 dark:text-gray-100 mb-1">
-													Show Email Address
-												</h3>
-												<p className="text-sm text-gray-600 dark:text-gray-400">
-													Display your email on your
-													public profile
-												</p>
-											</div>
-											<label className="relative inline-flex items-center cursor-pointer">
-												<input
-													type="checkbox"
-													checked={showEmail}
-													onChange={(e) => {
-														const v =
-															e.target.checked;
-														setShowEmail(v);
-														try {
-															localStorage.setItem(
-																"pref_showEmail",
-																v ? "1" : "0"
-															);
-														} catch {}
-														updateSettings({
-															privacy: {
-																showEmail: v,
-															},
-														});
-													}}
-													className="sr-only peer"
-												/>
-												<div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-												<span className="sr-only">
-													Toggle show email
-												</span>
-											</label>
-										</div>
-
-										{/* Show Contact Info */}
-										<div className="flex items-center justify-between py-3">
-											<div>
-												<h3 className="font-medium text-gray-900 dark:text-gray-100 mb-1">
-													Show Contact Information
-												</h3>
-												<p className="text-sm text-gray-600 dark:text-gray-400">
-													Allow others to contact you
-													about items
-												</p>
-											</div>
-											<label className="relative inline-flex items-center cursor-pointer">
-												<input
-													type="checkbox"
-													checked={showContactInfo}
-													onChange={(e) => {
-														const v =
-															e.target.checked;
-														setShowContactInfo(v);
-														try {
-															localStorage.setItem(
-																"pref_showContactInfo",
-																v ? "1" : "0"
-															);
-														} catch {}
-														updateSettings({
-															privacy: {
-																showContactInfo:
-																	v,
-															},
-														});
-													}}
-													className="sr-only peer"
-												/>
-												<div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-												<span className="sr-only">
-													Toggle show contact info
-												</span>
-											</label>
-										</div>
-									</div>
-								</section>
-
 								{/* Language & Display */}
 								<section
 									aria-labelledby="display-settings-heading"
