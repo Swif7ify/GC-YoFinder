@@ -1,7 +1,17 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { User, Mail, Bell, Globe, Shield, Save, Camera, Info, Phone } from "lucide-react";
+import {
+	User,
+	Mail,
+	Bell,
+	Globe,
+	Shield,
+	Save,
+	Camera,
+	Info,
+	Phone,
+} from "lucide-react";
 import Image from "next/image";
 import CustomSelect from "@/ui/CustomSelect";
 import { UserData } from "@/types/types";
@@ -14,7 +24,10 @@ interface SettingsComponentProps {
 	onChange: () => void;
 }
 
-export default function SettingsComponent({ userData, onChange }: SettingsComponentProps) {
+export default function SettingsComponent({
+	userData,
+	onChange,
+}: SettingsComponentProps) {
 	const { withLoading } = useApiLoading();
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [firstName, setFirstName] = useState("John");
@@ -27,15 +40,18 @@ export default function SettingsComponent({ userData, onChange }: SettingsCompon
 	const [emailNotifications, setEmailNotifications] = useState(true);
 	const [matchAlerts, setMatchAlerts] = useState(true);
 	const [messageAlerts, setMessageAlerts] = useState(true);
-	const [statusUpdates, setStatusUpdates] = useState(false);
 
-	const [profileVisibility, setProfileVisibility] = useState<"public" | "college" | "private">("college");
+	const [profileVisibility, setProfileVisibility] = useState<
+		"public" | "college" | "private"
+	>("college");
 	const [showEmail, setShowEmail] = useState(false);
 	const [showContactInfo, setShowContactInfo] = useState(true);
 
 	const [language, setLanguage] = useState("en");
 
-	const [activeTab, setActiveTab] = useState<"profile" | "notifications" | "preferences">("profile");
+	const [activeTab, setActiveTab] = useState<
+		"profile" | "notifications" | "preferences"
+	>("profile");
 	const tabs = [
 		{ id: "profile", label: "Profile", icon: <User size={16} /> },
 		{
@@ -50,7 +66,10 @@ export default function SettingsComponent({ userData, onChange }: SettingsCompon
 
 	const ValidateFields = () => {
 		if (phone && !/^(09|\+639)\d{9}$/.test(phone)) {
-			toastError("Invalid phone number", "Please enter a valid phone number.");
+			toastError(
+				"Invalid phone number",
+				"Please enter a valid phone number."
+			);
 			return false;
 		}
 
@@ -79,7 +98,8 @@ export default function SettingsComponent({ userData, onChange }: SettingsCompon
 				phone: string;
 			}> = {};
 
-			if (username !== userData.username && !!username) form.username = username.trim();
+			if (username !== userData.username && !!username)
+				form.username = username.trim();
 			if (phone !== userData.phone && !!phone) form.phone = phone.trim();
 
 			if (Object.keys(form).length === 0) {
@@ -117,7 +137,9 @@ export default function SettingsComponent({ userData, onChange }: SettingsCompon
 	};
 
 	const onTabKeyDown = (e: React.KeyboardEvent) => {
-		const order = tabs.map((t) => t.id) as Array<"profile" | "notifications" | "preferences">;
+		const order = tabs.map((t) => t.id) as Array<
+			"profile" | "notifications" | "preferences"
+		>;
 		const idx = order.indexOf(activeTab);
 		if (e.key === "ArrowRight") {
 			setActiveTab(order[(idx + 1) % order.length]);
@@ -130,15 +152,26 @@ export default function SettingsComponent({ userData, onChange }: SettingsCompon
 		if (!file) return;
 		if (isSubmitting) return;
 
-		const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+		const allowedTypes = [
+			"image/png",
+			"image/jpeg",
+			"image/jpg",
+			"image/webp",
+		];
 		if (!allowedTypes.includes(file.type)) {
-			toastError("Invalid file type", "Please upload a PNG, JPG, JPEG, or WEBP image.");
+			toastError(
+				"Invalid file type",
+				"Please upload a PNG, JPG, JPEG, or WEBP image."
+			);
 			return;
 		}
 
 		const maxSize = 5 * 1024 * 1024; // 5 MB in bytes
 		if (file.size > maxSize) {
-			toastError("File too large", "Please upload an image smaller than 5MB.");
+			toastError(
+				"File too large",
+				"Please upload an image smaller than 5MB."
+			);
 			return;
 		}
 
@@ -160,7 +193,10 @@ export default function SettingsComponent({ userData, onChange }: SettingsCompon
 
 			// Invalidate user data cache after photo update
 			invalidateCache(/\/api\/dashboard\/user/);
-			toastSuccess("Photo updated", "Your profile photo has been updated.");
+			toastSuccess(
+				"Photo updated",
+				"Your profile photo has been updated."
+			);
 			onChange();
 		} catch (error) {
 			console.error("Error updating photo:", error);
@@ -188,13 +224,18 @@ export default function SettingsComponent({ userData, onChange }: SettingsCompon
 				>
 					Settings
 				</h1>
-				<p className="text-gray-600 dark:text-gray-400">Manage your account settings and preferences</p>
+				<p className="text-gray-600 dark:text-gray-400">
+					Manage your account settings and preferences
+				</p>
 			</section>
 
 			<div className="rounded-lg p-4">
 				<div className="flex flex-col md:flex-row gap-4">
 					{/* Left nav */}
-					<nav aria-label="Settings sections" className="w-full md:w-64 dark:border-neutral-800 pb-4">
+					<nav
+						aria-label="Settings sections"
+						className="w-full md:w-64 dark:border-neutral-800 pb-4"
+					>
 						<div className="md:sticky md:top-6 md:self-start md:max-h-[calc(100vh-1.5rem)] md:overflow-auto bg-white  dark:bg-neutral-900 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800">
 							<div
 								ref={tabListRef}
@@ -212,7 +253,9 @@ export default function SettingsComponent({ userData, onChange }: SettingsCompon
 											aria-selected={selected}
 											aria-controls={`${t.id}-panel`}
 											id={`${t.id}-tab`}
-											onClick={() => setActiveTab(t.id as any)}
+											onClick={() =>
+												setActiveTab(t.id as any)
+											}
 											className={`flex items-center gap-3 w-full text-left px-3 py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
 												selected
 													? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800"
@@ -230,7 +273,9 @@ export default function SettingsComponent({ userData, onChange }: SettingsCompon
 											>
 												{t.icon}
 											</span>
-											<span className="font-medium">{t.label}</span>
+											<span className="font-medium">
+												{t.label}
+											</span>
 										</button>
 									);
 								})}
@@ -267,7 +312,10 @@ export default function SettingsComponent({ userData, onChange }: SettingsCompon
 										</h2>
 									</div>
 
-									<form onSubmit={handleSaveProfile} className="space-y-6">
+									<form
+										onSubmit={handleSaveProfile}
+										className="space-y-6"
+									>
 										{/* Profile Picture */}
 										<div className="flex items-center gap-6">
 											<div className="relative">
@@ -291,25 +339,37 @@ export default function SettingsComponent({ userData, onChange }: SettingsCompon
 												</div>
 												<button
 													onClick={() =>
-														document.getElementById("profile-photo-input")?.click()
+														document
+															.getElementById(
+																"profile-photo-input"
+															)
+															?.click()
 													}
 													type="button"
 													className="absolute bottom-0 right-0 w-8 h-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
 													aria-label="Change profile picture"
 												>
-													<Camera size={14} aria-hidden="true" />
+													<Camera
+														size={14}
+														aria-hidden="true"
+													/>
 												</button>
 											</div>
 											<div>
 												<h3 className="font-medium text-gray-900 dark:text-gray-100 mb-1">
-													{userData.firstname} {userData.lastname}
+													{userData.firstname}{" "}
+													{userData.lastname}
 												</h3>
 												<p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
 													JPG or PNG. Max size 5MB.
 												</p>
 												<button
 													onClick={() =>
-														document.getElementById("profile-photo-input")?.click()
+														document
+															.getElementById(
+																"profile-photo-input"
+															)
+															?.click()
 													}
 													type="button"
 													className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded"
@@ -324,7 +384,10 @@ export default function SettingsComponent({ userData, onChange }: SettingsCompon
 											className="hidden"
 											accept="image/png, image/jpg, image/jpeg, image/webp"
 											onChange={(e) => {
-												e.target.files?.[0] && updateUserPhoto(e.target.files[0]);
+												e.target.files?.[0] &&
+													updateUserPhoto(
+														e.target.files[0]
+													);
 											}}
 											id="profile-photo-input"
 										/>
@@ -349,13 +412,18 @@ export default function SettingsComponent({ userData, onChange }: SettingsCompon
 													maxLength={50}
 													value={username}
 													placeholder="Enter your username"
-													onChange={(e) => setUsername(e.target.value)}
+													onChange={(e) =>
+														setUsername(
+															e.target.value
+														)
+													}
 													className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-neutral-800/50 text-gray-900 dark:text-gray-100"
 												/>
 											</div>
 											<p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
-												Must be at least 4-50 characters long and may include letters, numbers
-												but no spaces
+												Must be at least 4-50 characters
+												long and may include letters,
+												numbers but no spaces
 											</p>
 										</div>
 
@@ -417,7 +485,8 @@ export default function SettingsComponent({ userData, onChange }: SettingsCompon
 												/>
 											</div>
 											<p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
-												Must be a valid Gordon College email address
+												Must be a valid Gordon College
+												email address
 											</p>
 										</div>
 
@@ -441,12 +510,15 @@ export default function SettingsComponent({ userData, onChange }: SettingsCompon
 													id="phone"
 													value={phone}
 													placeholder="Enter your phone number"
-													onChange={(e) => setPhone(e.target.value)}
+													onChange={(e) =>
+														setPhone(e.target.value)
+													}
 													className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-neutral-800/50 text-gray-900 dark:text-gray-100"
 												/>
 											</div>
 											<p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
-												Must be a valid Philippine phone number
+												Must be a valid Philippine phone
+												number
 											</p>
 										</div>
 
@@ -457,12 +529,19 @@ export default function SettingsComponent({ userData, onChange }: SettingsCompon
 													<button
 														type="submit"
 														className={`px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 flex items-center gap-2 ${
-															isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+															isSubmitting
+																? "opacity-50 cursor-not-allowed"
+																: ""
 														}`}
 														disabled={isSubmitting}
 													>
-														<Save size={18} aria-hidden="true" />
-														{isSubmitting ? "Saving..." : "Save Profile"}
+														<Save
+															size={18}
+															aria-hidden="true"
+														/>
+														{isSubmitting
+															? "Saving..."
+															: "Save Profile"}
 													</button>
 												</div>
 
@@ -517,18 +596,25 @@ export default function SettingsComponent({ userData, onChange }: SettingsCompon
 													Email Notifications
 												</h3>
 												<p className="text-sm text-gray-600 dark:text-gray-400">
-													Receive email updates about your items
+													Receive email updates about
+													your items
 												</p>
 											</div>
 											<label className="relative inline-flex items-center cursor-pointer">
 												<input
 													type="checkbox"
 													checked={emailNotifications}
-													onChange={(e) => setEmailNotifications(e.target.checked)}
+													onChange={(e) =>
+														setEmailNotifications(
+															e.target.checked
+														)
+													}
 													className="sr-only peer"
 												/>
 												<div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-												<span className="sr-only">Toggle email notifications</span>
+												<span className="sr-only">
+													Toggle email notifications
+												</span>
 											</label>
 										</div>
 
@@ -539,18 +625,25 @@ export default function SettingsComponent({ userData, onChange }: SettingsCompon
 													Match Alerts
 												</h3>
 												<p className="text-sm text-gray-600 dark:text-gray-400">
-													Get notified when potential matches are found
+													Get notified when potential
+													matches are found
 												</p>
 											</div>
 											<label className="relative inline-flex items-center cursor-pointer">
 												<input
 													type="checkbox"
 													checked={matchAlerts}
-													onChange={(e) => setMatchAlerts(e.target.checked)}
+													onChange={(e) =>
+														setMatchAlerts(
+															e.target.checked
+														)
+													}
 													className="sr-only peer"
 												/>
 												<div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-												<span className="sr-only">Toggle match alerts</span>
+												<span className="sr-only">
+													Toggle match alerts
+												</span>
 											</label>
 										</div>
 
@@ -561,40 +654,25 @@ export default function SettingsComponent({ userData, onChange }: SettingsCompon
 													Message Alerts
 												</h3>
 												<p className="text-sm text-gray-600 dark:text-gray-400">
-													Be notified about new messages
+													Be notified about new
+													messages
 												</p>
 											</div>
 											<label className="relative inline-flex items-center cursor-pointer">
 												<input
 													type="checkbox"
 													checked={messageAlerts}
-													onChange={(e) => setMessageAlerts(e.target.checked)}
+													onChange={(e) =>
+														setMessageAlerts(
+															e.target.checked
+														)
+													}
 													className="sr-only peer"
 												/>
 												<div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-												<span className="sr-only">Toggle message alerts</span>
-											</label>
-										</div>
-
-										{/* Status Updates */}
-										<div className="flex items-center justify-between py-3">
-											<div>
-												<h3 className="font-medium text-gray-900 dark:text-gray-100 mb-1">
-													Status Updates
-												</h3>
-												<p className="text-sm text-gray-600 dark:text-gray-400">
-													Notifications when item status changes
-												</p>
-											</div>
-											<label className="relative inline-flex items-center cursor-pointer">
-												<input
-													type="checkbox"
-													checked={statusUpdates}
-													onChange={(e) => setStatusUpdates(e.target.checked)}
-													className="sr-only peer"
-												/>
-												<div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-												<span className="sr-only">Toggle status updates</span>
+												<span className="sr-only">
+													Toggle message alerts
+												</span>
 											</label>
 										</div>
 									</div>
@@ -641,7 +719,12 @@ export default function SettingsComponent({ userData, onChange }: SettingsCompon
 											<CustomSelect
 												value={profileVisibility}
 												onValueChange={(value) =>
-													setProfileVisibility(value as "public" | "college" | "private")
+													setProfileVisibility(
+														value as
+															| "public"
+															| "college"
+															| "private"
+													)
 												}
 												options={[
 													{
@@ -660,8 +743,13 @@ export default function SettingsComponent({ userData, onChange }: SettingsCompon
 											/>
 
 											<p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-start gap-1.5">
-												<Info size={12} className="flex-shrink-0 mt-0.5" aria-hidden="true" />
-												Controls who can see your profile and posted items
+												<Info
+													size={12}
+													className="flex-shrink-0 mt-0.5"
+													aria-hidden="true"
+												/>
+												Controls who can see your
+												profile and posted items
 											</p>
 										</div>
 
@@ -672,18 +760,25 @@ export default function SettingsComponent({ userData, onChange }: SettingsCompon
 													Show Email Address
 												</h3>
 												<p className="text-sm text-gray-600 dark:text-gray-400">
-													Display your email on your public profile
+													Display your email on your
+													public profile
 												</p>
 											</div>
 											<label className="relative inline-flex items-center cursor-pointer">
 												<input
 													type="checkbox"
 													checked={showEmail}
-													onChange={(e) => setShowEmail(e.target.checked)}
+													onChange={(e) =>
+														setShowEmail(
+															e.target.checked
+														)
+													}
 													className="sr-only peer"
 												/>
 												<div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-												<span className="sr-only">Toggle show email</span>
+												<span className="sr-only">
+													Toggle show email
+												</span>
 											</label>
 										</div>
 
@@ -694,18 +789,25 @@ export default function SettingsComponent({ userData, onChange }: SettingsCompon
 													Show Contact Information
 												</h3>
 												<p className="text-sm text-gray-600 dark:text-gray-400">
-													Allow others to contact you about items
+													Allow others to contact you
+													about items
 												</p>
 											</div>
 											<label className="relative inline-flex items-center cursor-pointer">
 												<input
 													type="checkbox"
 													checked={showContactInfo}
-													onChange={(e) => setShowContactInfo(e.target.checked)}
+													onChange={(e) =>
+														setShowContactInfo(
+															e.target.checked
+														)
+													}
 													className="sr-only peer"
 												/>
 												<div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-												<span className="sr-only">Toggle show contact info</span>
+												<span className="sr-only">
+													Toggle show contact info
+												</span>
 											</label>
 										</div>
 									</div>
@@ -742,7 +844,9 @@ export default function SettingsComponent({ userData, onChange }: SettingsCompon
 
 											<CustomSelect
 												value={language}
-												onValueChange={(value) => setLanguage(value)}
+												onValueChange={(value) =>
+													setLanguage(value)
+												}
 												options={[
 													{
 														value: "en",
