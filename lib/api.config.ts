@@ -1,16 +1,16 @@
 let isRefreshing = false;
 let refreshPromise: Promise<string> | null = null;
 
-const simpleCache = new Map<string, { ts: number; data: any }>();
+const simpleCache = new Map<string, { ts: number; data: unknown }>();
 const CACHE_TTL = 30_000; // 30s
 const MAX_CACHE_SIZE = 100; // Prevent memory leaks
 
 // Stable cache key generation
-function getCacheKey(url: string, options: any): string {
-	const sortedOptions = options
-		? JSON.stringify(options, Object.keys(options).sort())
-		: "{}";
-	return `${url}::${sortedOptions}`;
+function getCacheKey(url: string, options: Record<string, unknown>): string {
+    const sortedOptions = options
+        ? JSON.stringify(options, Object.keys(options).sort())
+        : "{}";
+    return `${url}::${sortedOptions}`;
 }
 
 // Clean old entries when cache gets too large
@@ -44,8 +44,8 @@ export function invalidateCache(pattern?: string | RegExp) {
 	});
 }
 
-export async function apiCached(url: string, options = {}, useCache = true) {
-	const key = getCacheKey(url, options);
+export async function apiCached(url: string, options: RequestInit = {}, useCache = true) {
+    const key = getCacheKey(url, options as Record<string, unknown>);
 
 	if (useCache) {
 		const hit = simpleCache.get(key);
@@ -60,10 +60,10 @@ export async function apiCached(url: string, options = {}, useCache = true) {
 		.json()
 		.catch(() => null);
 
-	if (useCache && payload) {
-		simpleCache.set(key, { ts: Date.now(), data: payload });
-		cleanCache(); // Prevent memory leaks
-	}
+    if (useCache && payload) {
+        simpleCache.set(key, { ts: Date.now(), data: payload });
+        cleanCache(); // Prevent memory leaks
+    }
 
 	return res;
 }

@@ -14,37 +14,24 @@ import {
 	XIcon,
 } from "lucide-react";
 import Image from "next/image";
-
-interface Item {
-	_id: string;
-	name: string;
-	description: string;
-	type: "lost" | "found";
-	status: string;
-	category: string;
-	location: string;
-	views?: number;
-	photos: { url: string }[];
-	user_id: {
-		firstname: string;
-		lastname: string;
-		email?: string;
-	} | null;
-	claimed_at?: string;
-	created_at: string;
-	date_lost_or_found?: string;
-}
+import { AdminItem } from "@/types/types";
 
 interface ItemClaimedPageProps {
-	items?: Item[];
+	items?: AdminItem[];
 	onRefresh?: () => void;
 	onArchive?: (itemId: string) => Promise<boolean>;
 }
 
-export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: ItemClaimedPageProps) {
+export default function ItemClaimedPage({
+	items = [],
+	onRefresh,
+	onArchive,
+}: ItemClaimedPageProps) {
 	const [searchQuery, setSearchQuery] = useState("");
-	const [typeFilter, setTypeFilter] = useState<"all" | "lost" | "found">("all");
-	const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+	const [typeFilter, setTypeFilter] = useState<"all" | "lost" | "found">(
+		"all"
+	);
+	const [selectedItem, setSelectedItem] = useState<AdminItem | null>(null);
 	const [archiving, setArchiving] = useState<string | null>(null);
 
 	const handleArchive = async (itemId: string) => {
@@ -61,9 +48,12 @@ export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: It
 		return items.filter((item) => {
 			const matchesSearch =
 				item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-				item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+				item.description
+					?.toLowerCase()
+					.includes(searchQuery.toLowerCase()) ||
 				item.location.toLowerCase().includes(searchQuery.toLowerCase());
-			const matchesType = typeFilter === "all" || item.type === typeFilter;
+			const matchesType =
+				typeFilter === "all" || item.type === typeFilter;
 			return matchesSearch && matchesType;
 		});
 	}, [items, searchQuery, typeFilter]);
@@ -81,7 +71,9 @@ export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: It
 			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Claimed Items</h1>
+					<h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+						Claimed Items
+					</h1>
 					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Items successfully claimed ({items.length} total)
 					</p>
@@ -98,7 +90,10 @@ export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: It
 			{/* Filters */}
 			<div className="flex items-center gap-4 flex-wrap">
 				<div className="relative flex-1 min-w-[200px]">
-					<SearchIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+					<SearchIcon
+						size={18}
+						className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+					/>
 					<input
 						type="text"
 						placeholder="Search claimed items..."
@@ -133,9 +128,16 @@ export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: It
 				<div className="lg:col-span-2 space-y-4">
 					{filteredItems.length === 0 ? (
 						<div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 p-8 text-center">
-							<CheckCircleIcon size={48} className="mx-auto text-gray-400 mb-4" />
-							<h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No claimed items</h3>
-							<p className="text-gray-500 dark:text-gray-400 mt-1">Claimed items will appear here</p>
+							<CheckCircleIcon
+								size={48}
+								className="mx-auto text-gray-400 mb-4"
+							/>
+							<h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+								No claimed items
+							</h3>
+							<p className="text-gray-500 dark:text-gray-400 mt-1">
+								Claimed items will appear here
+							</p>
 						</div>
 					) : (
 						filteredItems.map((item) => (
@@ -150,7 +152,8 @@ export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: It
 							>
 								<div className="flex items-start gap-4">
 									<div className="w-20 h-20 rounded-lg bg-gray-100 dark:bg-neutral-800 overflow-hidden flex-shrink-0">
-										{item.photos && item.photos.length > 0 ? (
+										{item.photos &&
+										item.photos.length > 0 ? (
 											<Image
 												src={item.photos[0].url}
 												alt={item.name}
@@ -160,7 +163,10 @@ export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: It
 											/>
 										) : (
 											<div className="w-full h-full flex items-center justify-center">
-												<ImageIcon size={24} className="text-gray-400" />
+												<ImageIcon
+													size={24}
+													className="text-gray-400"
+												/>
 											</div>
 										)}
 									</div>
@@ -186,7 +192,10 @@ export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: It
 												</div>
 											</div>
 											<span className="text-xs text-gray-500 dark:text-gray-400">
-												{formatDate(item.claimed_at || item.created_at)}
+												{formatDate(
+													item.claimed_at ??
+														item.created_at
+												)}
 											</span>
 										</div>
 										<p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
@@ -227,48 +236,60 @@ export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: It
 					{selectedItem ? (
 						<div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 p-5 sticky top-6">
 							<div className="flex items-center justify-between mb-4">
-								<h3 className="font-semibold text-gray-900 dark:text-gray-100">Item Details</h3>
+								<h3 className="font-semibold text-gray-900 dark:text-gray-100">
+									Item Details
+								</h3>
 								<button
 									onClick={() => setSelectedItem(null)}
 									className="p-1 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded"
 								>
-									<XIcon size={16} className="text-gray-500" />
+									<XIcon
+										size={16}
+										className="text-gray-500"
+									/>
 								</button>
 							</div>
 
-							{selectedItem.photos && selectedItem.photos.length > 0 && (
-								<div className="mb-4">
-									<div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-neutral-800">
-										<Image
-											src={selectedItem.photos[0].url}
-											alt={selectedItem.name}
-											width={400}
-											height={225}
-											className="w-full h-full object-cover"
-										/>
-									</div>
-									{selectedItem.photos.length > 1 && (
-										<div className="flex gap-2 mt-2">
-											{selectedItem.photos.slice(1, 4).map((photo, idx) => (
-												<div
-													key={idx}
-													className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-neutral-800"
-												>
-													<Image
-														src={photo.url}
-														alt={`${selectedItem.name} ${idx + 2}`}
-														width={64}
-														height={64}
-														className="w-full h-full object-cover"
-													/>
-												</div>
-											))}
+							{selectedItem.photos &&
+								selectedItem.photos.length > 0 && (
+									<div className="mb-4">
+										<div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-neutral-800">
+											<Image
+												src={selectedItem.photos[0].url}
+												alt={selectedItem.name}
+												width={400}
+												height={225}
+												className="w-full h-full object-cover"
+											/>
 										</div>
-									)}
-								</div>
-							)}
+										{selectedItem.photos.length > 1 && (
+											<div className="flex gap-2 mt-2">
+												{selectedItem.photos
+													.slice(1, 4)
+													.map((photo, idx) => (
+														<div
+															key={idx}
+															className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-neutral-800"
+														>
+															<Image
+																src={photo.url}
+																alt={`${
+																	selectedItem.name
+																} ${idx + 2}`}
+																width={64}
+																height={64}
+																className="w-full h-full object-cover"
+															/>
+														</div>
+													))}
+											</div>
+										)}
+									</div>
+								)}
 
-							<h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">{selectedItem.name}</h4>
+							<h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">
+								{selectedItem.name}
+							</h4>
 
 							<div className="flex flex-wrap gap-2 mb-3">
 								<span
@@ -288,7 +309,9 @@ export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: It
 								</span>
 							</div>
 
-							<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{selectedItem.description}</p>
+							<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+								{selectedItem.description}
+							</p>
 
 							<div className="space-y-2 text-sm">
 								<div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
@@ -298,7 +321,11 @@ export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: It
 								<div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
 									<CalendarIcon size={14} />
 									<span>
-										Claimed on {formatDate(selectedItem.claimed_at || selectedItem.created_at)}
+										Claimed on{" "}
+										{formatDate(
+											selectedItem.claimed_at ??
+												selectedItem.created_at
+										)}
 									</span>
 								</div>
 								<div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
@@ -319,7 +346,9 @@ export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: It
 							{/* Archive Button */}
 							<div className="mt-6">
 								<button
-									onClick={() => handleArchive(selectedItem._id)}
+									onClick={() =>
+										handleArchive(selectedItem._id)
+									}
 									disabled={archiving === selectedItem._id}
 									className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors disabled:opacity-50"
 								>
@@ -330,9 +359,16 @@ export default function ItemClaimedPage({ items = [], onRefresh, onArchive }: It
 						</div>
 					) : (
 						<div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 p-8 text-center">
-							<EyeIcon size={48} className="mx-auto text-gray-400 mb-4" />
-							<h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Select an item</h3>
-							<p className="text-gray-500 dark:text-gray-400 mt-1">Click on an item to view details</p>
+							<EyeIcon
+								size={48}
+								className="mx-auto text-gray-400 mb-4"
+							/>
+							<h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+								Select an item
+							</h3>
+							<p className="text-gray-500 dark:text-gray-400 mt-1">
+								Click on an item to view details
+							</p>
 						</div>
 					)}
 				</div>

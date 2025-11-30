@@ -76,7 +76,7 @@ export default function SearchItemsComponent({
 	useEffect(() => {
 		const itemId = searchParams.get("itemId");
 		if (!itemId || allItems.length === 0) return;
-		
+
 		// Find the item by ID and open the modal
 		const foundItem = allItems.find((item) => item.id === itemId);
 		if (foundItem) {
@@ -243,16 +243,22 @@ export default function SearchItemsComponent({
 
 			if (response.status !== 200 && response.status !== 201) {
 				const data = await response.json();
-				toastError("Error", data.error || "Failed to start conversation");
+				toastError(
+					"Error",
+					data.error || "Failed to start conversation"
+				);
 				return;
 			}
 
 			const data = await response.json();
-			const conversationId = data.conversation?._id || data.conversation?.id;
+			const conversationId =
+				data.conversation?._id || data.conversation?.id;
 
 			// Navigate to messages tab with conversation ID for auto-selection
 			if (conversationId) {
-				router.push(`/dashboard?tab=messages&conversationId=${conversationId}`);
+				router.push(
+					`/dashboard?tab=messages&conversationId=${conversationId}`
+				);
 			} else {
 				router.push("/dashboard?tab=messages");
 			}
@@ -600,7 +606,11 @@ export default function SearchItemsComponent({
 											src={
 												item.photos &&
 												item.photos.length > 0
-													? item.photos[0]
+													? typeof item.photos[0] ===
+													  "string"
+														? (item
+																.photos[0] as string)
+														: item.photos[0].url
 													: "https://images.unsplash.com/photo-1654965778976-409444e9826b?w=400"
 											}
 											alt={item.name}
@@ -703,7 +713,11 @@ export default function SearchItemsComponent({
 											{item.user_id.id !== userID && (
 												<button
 													type="button"
-													onClick={() => handleStartConversation(item)}
+													onClick={() =>
+														handleStartConversation(
+															item
+														)
+													}
 													className="px-4 py-2 border border-gray-300 dark:border-neutral-700  hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
 													aria-label={`Contact about ${item.name}`}
 												>
@@ -728,7 +742,12 @@ export default function SearchItemsComponent({
 												src={
 													item.photos &&
 													item.photos.length > 0
-														? item.photos[0]
+														? typeof item
+																.photos[0] ===
+														  "string"
+															? (item
+																	.photos[0] as string)
+															: item.photos[0].url
 														: "https://images.unsplash.com/photo-1654965778976-409444e9826b?w=400"
 												}
 												alt={item.name}
@@ -836,7 +855,11 @@ export default function SearchItemsComponent({
 												{item.user_id.id !== userID && (
 													<button
 														type="button"
-														onClick={() => handleStartConversation(item)}
+														onClick={() =>
+															handleStartConversation(
+																item
+															)
+														}
 														className="px-4 py-2 border border-gray-300 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
 														aria-label={`Contact about ${item.name}`}
 													>

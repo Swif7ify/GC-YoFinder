@@ -5,7 +5,10 @@ import {
 	updateItemByID,
 } from "@/server/handlers/ItemsHandlers";
 
-export async function DELETE(request: NextRequest, context: any) {
+export async function DELETE(
+	request: NextRequest,
+	context: { params: Promise<{ id: string }> }
+) {
 	try {
 		const user = await getUserFromRequest(request);
 		if (!user)
@@ -22,7 +25,7 @@ export async function DELETE(request: NextRequest, context: any) {
 			);
 
 		const params = await (context?.params ?? {});
-		const { id } = params as { id: string };
+		const { id } = params;
 
 		const response = await deleteItemByID(userID, id);
 		console.log("Delete Item Response:", response);
@@ -44,7 +47,10 @@ export async function DELETE(request: NextRequest, context: any) {
 	}
 }
 
-export async function PUT(request: NextRequest, context: any) {
+export async function PUT(
+	request: NextRequest,
+	context: { params: Promise<{ id: string }> }
+) {
 	try {
 		const user = await getUserFromRequest(request);
 		if (!user)
@@ -59,7 +65,7 @@ export async function PUT(request: NextRequest, context: any) {
 				{ status: 401 }
 			);
 		const params = await (context?.params ?? {});
-		const { id } = params as { id: string };
+		const { id } = params;
 
 		const formData = await request.formData();
 		const extractedFields = {

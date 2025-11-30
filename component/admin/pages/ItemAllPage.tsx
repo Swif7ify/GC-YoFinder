@@ -16,44 +16,43 @@ import {
 	ArchiveIcon,
 } from "lucide-react";
 import Image from "next/image";
+import { AdminItem } from "@/types/types";
 
-interface Item {
-	_id: string;
-	name: string;
-	description: string;
-	type: "lost" | "found";
-	status: "pending" | "active" | "rejected" | "claimed" | "removed";
-	category: string;
-	location: string;
-	date_lost_or_found: string;
-	views?: number;
-	matched?: number;
-	photos: { url: string }[];
-	user_id: {
-		_id: string;
-		firstname: string;
-		lastname: string;
-		email: string;
-		username: string;
-	} | null;
-	created_at: string;
-	updated_at?: string;
-}
+type StatusFilter =
+	| "all"
+	| "pending"
+	| "active"
+	| "rejected"
+	| "claimed"
+	| "removed";
 
-type StatusFilter = "all" | "pending" | "active" | "rejected" | "claimed" | "removed";
-
-const getStatusColors = (status: Item["status"]) => {
+const getStatusColors = (status: AdminItem["status"]) => {
 	const colors = {
-		pending: { bg: "bg-yellow-100 dark:bg-yellow-900/30", text: "text-yellow-800 dark:text-yellow-300" },
-		active: { bg: "bg-green-100 dark:bg-green-900/30", text: "text-green-800 dark:text-green-300" },
-		rejected: { bg: "bg-red-100 dark:bg-red-900/30", text: "text-red-800 dark:text-red-300" },
-		claimed: { bg: "bg-blue-100 dark:bg-blue-900/30", text: "text-blue-800 dark:text-blue-300" },
-		removed: { bg: "bg-gray-100 dark:bg-gray-700", text: "text-gray-800 dark:text-gray-300" },
+		pending: {
+			bg: "bg-yellow-100 dark:bg-yellow-900/30",
+			text: "text-yellow-800 dark:text-yellow-300",
+		},
+		active: {
+			bg: "bg-green-100 dark:bg-green-900/30",
+			text: "text-green-800 dark:text-green-300",
+		},
+		rejected: {
+			bg: "bg-red-100 dark:bg-red-900/30",
+			text: "text-red-800 dark:text-red-300",
+		},
+		claimed: {
+			bg: "bg-blue-100 dark:bg-blue-900/30",
+			text: "text-blue-800 dark:text-blue-300",
+		},
+		removed: {
+			bg: "bg-gray-100 dark:bg-gray-700",
+			text: "text-gray-800 dark:text-gray-300",
+		},
 	};
 	return colors[status] || colors.pending;
 };
 
-const StatusBadge = ({ status }: { status: Item["status"] }) => {
+const StatusBadge = ({ status }: { status: AdminItem["status"] }) => {
 	const colors = getStatusColors(status);
 	return (
 		<span
@@ -65,16 +64,25 @@ const StatusBadge = ({ status }: { status: Item["status"] }) => {
 };
 
 interface ItemAllPageProps {
-	items?: Item[];
-	onUpdateStatus?: (itemId: string, status: "active" | "rejected" | "pending" | "removed") => Promise<boolean>;
+	items?: AdminItem[];
+	onUpdateStatus?: (
+		itemId: string,
+		status: "active" | "rejected" | "pending" | "removed"
+	) => Promise<boolean>;
 	onRefresh?: () => void;
 }
 
-export default function ItemAllPage({ items = [], onUpdateStatus, onRefresh }: ItemAllPageProps) {
+export default function ItemAllPage({
+	items = [],
+	onUpdateStatus,
+	onRefresh,
+}: ItemAllPageProps) {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-	const [typeFilter, setTypeFilter] = useState<"all" | "lost" | "found">("all");
-	const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+	const [typeFilter, setTypeFilter] = useState<"all" | "lost" | "found">(
+		"all"
+	);
+	const [selectedItem, setSelectedItem] = useState<AdminItem | null>(null);
 	const [processing, setProcessing] = useState<string | null>(null);
 
 	const counts = useMemo(
@@ -93,10 +101,14 @@ export default function ItemAllPage({ items = [], onUpdateStatus, onRefresh }: I
 		return items.filter((item) => {
 			const matchesSearch =
 				item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-				item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+				item.description
+					?.toLowerCase()
+					.includes(searchQuery.toLowerCase()) ||
 				item.location.toLowerCase().includes(searchQuery.toLowerCase());
-			const matchesStatus = statusFilter === "all" || item.status === statusFilter;
-			const matchesType = typeFilter === "all" || item.type === typeFilter;
+			const matchesStatus =
+				statusFilter === "all" || item.status === statusFilter;
+			const matchesType =
+				typeFilter === "all" || item.type === typeFilter;
 			return matchesSearch && matchesStatus && matchesType;
 		});
 	}, [items, searchQuery, statusFilter, typeFilter]);
@@ -141,7 +153,7 @@ export default function ItemAllPage({ items = [], onUpdateStatus, onRefresh }: I
 		});
 	};
 
-	const renderActions = (item: Item) => {
+	const renderActions = (item: AdminItem) => {
 		const isProcessing = processing === item._id;
 		switch (item.status) {
 			case "pending":
@@ -222,8 +234,12 @@ export default function ItemAllPage({ items = [], onUpdateStatus, onRefresh }: I
 			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">All Items</h1>
-					<p className="text-gray-600 dark:text-gray-400 mt-1">Manage all items across all statuses</p>
+					<h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+						All Items
+					</h1>
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
+						Manage all items across all statuses
+					</p>
 				</div>
 				<button
 					onClick={onRefresh}
@@ -237,38 +253,53 @@ export default function ItemAllPage({ items = [], onUpdateStatus, onRefresh }: I
 			{/* Filter Tabs */}
 			<div className="flex items-center gap-4 flex-wrap">
 				<div className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 p-1 inline-flex flex-wrap">
-					{(["all", "pending", "active", "rejected", "claimed", "removed"] as StatusFilter[]).map(
-						(status) => {
-							const colorMap: Record<StatusFilter, string> = {
-								all: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300",
-								pending: "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300",
-								active: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300",
-								rejected: "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300",
-								claimed: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300",
-								removed: "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300",
-							};
-							return (
-								<button
-									key={status}
-									onClick={() => setStatusFilter(status)}
-									className={`px-4 py-2 rounded-md text-sm font-medium transition-colors capitalize ${
-										statusFilter === status
-											? colorMap[status]
-											: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-									}`}
-								>
-									{status === "removed" ? "Archived" : status} ({counts[status]})
-								</button>
-							);
-						}
-					)}
+					{(
+						[
+							"all",
+							"pending",
+							"active",
+							"rejected",
+							"claimed",
+							"removed",
+						] as StatusFilter[]
+					).map((status) => {
+						const colorMap: Record<StatusFilter, string> = {
+							all: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300",
+							pending:
+								"bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300",
+							active: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300",
+							rejected:
+								"bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300",
+							claimed:
+								"bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300",
+							removed:
+								"bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300",
+						};
+						return (
+							<button
+								key={status}
+								onClick={() => setStatusFilter(status)}
+								className={`px-4 py-2 rounded-md text-sm font-medium transition-colors capitalize ${
+									statusFilter === status
+										? colorMap[status]
+										: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+								}`}
+							>
+								{status === "removed" ? "Archived" : status} (
+								{counts[status]})
+							</button>
+						);
+					})}
 				</div>
 			</div>
 
 			{/* Search and Type Filter */}
 			<div className="flex items-center gap-4 flex-wrap">
 				<div className="relative flex-1 min-w-[200px]">
-					<SearchIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+					<SearchIcon
+						size={18}
+						className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+					/>
 					<input
 						type="text"
 						placeholder="Search items..."
@@ -303,9 +334,16 @@ export default function ItemAllPage({ items = [], onUpdateStatus, onRefresh }: I
 				<div className="lg:col-span-2 space-y-4">
 					{filteredItems.length === 0 ? (
 						<div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 p-8 text-center">
-							<PackageIcon size={48} className="mx-auto text-gray-400 mb-4" />
-							<h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No items found</h3>
-							<p className="text-gray-500 dark:text-gray-400 mt-1">Try adjusting your filters</p>
+							<PackageIcon
+								size={48}
+								className="mx-auto text-gray-400 mb-4"
+							/>
+							<h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+								No items found
+							</h3>
+							<p className="text-gray-500 dark:text-gray-400 mt-1">
+								Try adjusting your filters
+							</p>
 						</div>
 					) : (
 						filteredItems.map((item) => (
@@ -320,7 +358,8 @@ export default function ItemAllPage({ items = [], onUpdateStatus, onRefresh }: I
 							>
 								<div className="flex items-start gap-4">
 									<div className="w-20 h-20 rounded-lg bg-gray-100 dark:bg-neutral-800 overflow-hidden flex-shrink-0">
-										{item.photos && item.photos.length > 0 ? (
+										{item.photos &&
+										item.photos.length > 0 ? (
 											<Image
 												src={item.photos[0].url}
 												alt={item.name}
@@ -330,7 +369,10 @@ export default function ItemAllPage({ items = [], onUpdateStatus, onRefresh }: I
 											/>
 										) : (
 											<div className="w-full h-full flex items-center justify-center">
-												<ImageIcon size={24} className="text-gray-400" />
+												<ImageIcon
+													size={24}
+													className="text-gray-400"
+												/>
 											</div>
 										)}
 									</div>
@@ -350,7 +392,9 @@ export default function ItemAllPage({ items = [], onUpdateStatus, onRefresh }: I
 													>
 														{item.type.toUpperCase()}
 													</span>
-													<StatusBadge status={item.status} />
+													<StatusBadge
+														status={item.status}
+													/>
 												</div>
 											</div>
 											<span className="text-xs text-gray-500 dark:text-gray-400">
@@ -391,46 +435,58 @@ export default function ItemAllPage({ items = [], onUpdateStatus, onRefresh }: I
 					{selectedItem ? (
 						<div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 p-5 sticky top-6">
 							<div className="flex items-center justify-between mb-4">
-								<h3 className="font-semibold text-gray-900 dark:text-gray-100">Item Details</h3>
+								<h3 className="font-semibold text-gray-900 dark:text-gray-100">
+									Item Details
+								</h3>
 								<button
 									onClick={() => setSelectedItem(null)}
 									className="p-1 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded"
 								>
-									<XIcon size={16} className="text-gray-500" />
+									<XIcon
+										size={16}
+										className="text-gray-500"
+									/>
 								</button>
 							</div>
-							{selectedItem.photos && selectedItem.photos.length > 0 && (
-								<div className="mb-4">
-									<div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-neutral-800">
-										<Image
-											src={selectedItem.photos[0].url}
-											alt={selectedItem.name}
-											width={400}
-											height={225}
-											className="w-full h-full object-cover"
-										/>
-									</div>
-									{selectedItem.photos.length > 1 && (
-										<div className="flex gap-2 mt-2">
-											{selectedItem.photos.slice(1, 4).map((photo, idx) => (
-												<div
-													key={idx}
-													className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-neutral-800"
-												>
-													<Image
-														src={photo.url}
-														alt={`${selectedItem.name} ${idx + 2}`}
-														width={64}
-														height={64}
-														className="w-full h-full object-cover"
-													/>
-												</div>
-											))}
+							{selectedItem.photos &&
+								selectedItem.photos.length > 0 && (
+									<div className="mb-4">
+										<div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-neutral-800">
+											<Image
+												src={selectedItem.photos[0].url}
+												alt={selectedItem.name}
+												width={400}
+												height={225}
+												className="w-full h-full object-cover"
+											/>
 										</div>
-									)}
-								</div>
-							)}
-							<h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">{selectedItem.name}</h4>
+										{selectedItem.photos.length > 1 && (
+											<div className="flex gap-2 mt-2">
+												{selectedItem.photos
+													.slice(1, 4)
+													.map((photo, idx) => (
+														<div
+															key={idx}
+															className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-neutral-800"
+														>
+															<Image
+																src={photo.url}
+																alt={`${
+																	selectedItem.name
+																} ${idx + 2}`}
+																width={64}
+																height={64}
+																className="w-full h-full object-cover"
+															/>
+														</div>
+													))}
+											</div>
+										)}
+									</div>
+								)}
+							<h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">
+								{selectedItem.name}
+							</h4>
 							<div className="flex flex-wrap gap-2 mb-3">
 								<span
 									className={`px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -446,7 +502,9 @@ export default function ItemAllPage({ items = [], onUpdateStatus, onRefresh }: I
 									{selectedItem.category}
 								</span>
 							</div>
-							<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{selectedItem.description}</p>
+							<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+								{selectedItem.description}
+							</p>
 							<div className="space-y-2 text-sm">
 								<div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
 									<MapPinIcon size={14} />
@@ -455,8 +513,13 @@ export default function ItemAllPage({ items = [], onUpdateStatus, onRefresh }: I
 								<div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
 									<CalendarIcon size={14} />
 									<span>
-										{selectedItem.type === "lost" ? "Lost on" : "Found on"}{" "}
-										{formatDate(selectedItem.date_lost_or_found)}
+										{selectedItem.type === "lost"
+											? "Lost on"
+											: "Found on"}{" "}
+										{formatDate(
+											selectedItem.date_lost_or_found ??
+												selectedItem.created_at
+										)}
 									</span>
 								</div>
 								<div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
@@ -476,9 +539,16 @@ export default function ItemAllPage({ items = [], onUpdateStatus, onRefresh }: I
 						</div>
 					) : (
 						<div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 p-8 text-center">
-							<EyeIcon size={48} className="mx-auto text-gray-400 mb-4" />
-							<h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Select an item</h3>
-							<p className="text-gray-500 dark:text-gray-400 mt-1">Click on an item to view details</p>
+							<EyeIcon
+								size={48}
+								className="mx-auto text-gray-400 mb-4"
+							/>
+							<h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+								Select an item
+							</h3>
+							<p className="text-gray-500 dark:text-gray-400 mt-1">
+								Click on an item to view details
+							</p>
 						</div>
 					)}
 				</div>
