@@ -1,6 +1,13 @@
 import React, { useRef, useEffect, useState } from "react";
 import Image from "next/image";
-import { BellIcon, CheckIcon, MenuIcon, UserIcon, XIcon, LogOut as LogOutIcon } from "lucide-react";
+import {
+	BellIcon,
+	CheckIcon,
+	MenuIcon,
+	UserIcon,
+	XIcon,
+	LogOut as LogOutIcon,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import DarkModeButton from "@/ui/DarkModeButton";
 import { UserData } from "@/types/types";
@@ -62,7 +69,11 @@ export default function Header({
 		function handleClickOutsideNotification(e: MouseEvent | TouchEvent) {
 			if (!showNotifications) return;
 			const target = e.target as Node | null;
-			if (notificationsRef.current && target && !notificationsRef.current.contains(target)) {
+			if (
+				notificationsRef.current &&
+				target &&
+				!notificationsRef.current.contains(target)
+			) {
 				setShowNotifications(false);
 			}
 		}
@@ -70,7 +81,11 @@ export default function Header({
 		function handleClickOutsideAvatar(e: MouseEvent | TouchEvent) {
 			if (!showProfileMenu) return;
 			const target = e.target as Node | null;
-			if (avatarRef.current && target && !avatarRef.current.contains(target)) {
+			if (
+				avatarRef.current &&
+				target &&
+				!avatarRef.current.contains(target)
+			) {
 				setShowProfileMenu(false);
 			}
 		}
@@ -94,13 +109,27 @@ export default function Header({
 		document.addEventListener("touchstart", handleClickOutsideAvatar);
 		document.addEventListener("keydown", handleKeyDown);
 		return () => {
-			document.removeEventListener("mousedown", handleClickOutsideNotification);
-			document.removeEventListener("touchstart", handleClickOutsideNotification);
+			document.removeEventListener(
+				"mousedown",
+				handleClickOutsideNotification
+			);
+			document.removeEventListener(
+				"touchstart",
+				handleClickOutsideNotification
+			);
 			document.removeEventListener("mousedown", handleClickOutsideAvatar);
-			document.removeEventListener("touchstart", handleClickOutsideAvatar);
+			document.removeEventListener(
+				"touchstart",
+				handleClickOutsideAvatar
+			);
 			document.removeEventListener("keydown", handleKeyDown);
 		};
-	}, [showNotifications, setShowNotifications, showProfileMenu, setShowProfileMenu]);
+	}, [
+		showNotifications,
+		setShowNotifications,
+		showProfileMenu,
+		setShowProfileMenu,
+	]);
 
 	const handleProfileSettings = () => {
 		setShowProfileMenu(false);
@@ -141,7 +170,9 @@ export default function Header({
 							height={32}
 							className="rounded-full mr-2"
 						/>
-						<h1 className="text-lg font-semibold text-gray-800 dark:text-gray-100">GC Yofinder</h1>
+						<h1 className="max-sm:hidden text-lg font-semibold text-gray-800 dark:text-gray-100">
+							GC Yofinder
+						</h1>
 					</div>
 				</div>
 
@@ -157,7 +188,9 @@ export default function Header({
 							}}
 							aria-haspopup="true"
 							aria-expanded={showNotifications}
-							aria-label={`Notifications ${unreadCount > 0 ? `(${unreadCount} unread)` : ""}`}
+							aria-label={`Notifications ${
+								unreadCount > 0 ? `(${unreadCount} unread)` : ""
+							}`}
 						>
 							<BellIcon size={20} aria-hidden="true" />
 							{unreadCount > 0 && (
@@ -176,7 +209,7 @@ export default function Header({
 									animate={{ opacity: 1, y: 0 }}
 									exit={{ opacity: 0, y: -6 }}
 									transition={{ duration: 0.12 }}
-									className="absolute right-0 mt-2 w-80 bg-white dark:bg-neutral-900 rounded-md shadow-lg ring-1 ring-black/5 dark:ring-white/10 z-50 py-2"
+									className="absolute right-0 mt-2 w-80 bg-white dark:bg-neutral-900 rounded-md shadow-lg ring-1 ring-black/5 dark:ring-white/10 z-50 py-2 max-sm:fixed max-sm:top-16 max-sm:left-0 max-sm:right-0 max-sm:w-full max-sm:m-0"
 									role="region"
 									aria-label="Notifications panel"
 								>
@@ -192,79 +225,107 @@ export default function Header({
 											)}
 										</div>
 									</div>
-									<div className="max-h-80 overflow-y-auto">
+									<div className="max-h-80 overflow-y-auto max-sm:max-h-[60vh]">
 										{mockNotifications.length > 0 ? (
 											<ul role="list">
-												{mockNotifications.map((notification) => (
-													<li
-														key={notification.id}
-														className={`cursor-pointer px-4 py-3 transition-colors duration-200 ${
-															!notification.isRead
-																? "bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30"
-																: "hover:bg-gray-100 dark:hover:bg-gray-700/50"
-														} border-b border-gray-100 dark:border-neutral-800`}
-														onClick={async () => {
-															if (notification.conversationId) {
-																router.push(
-																	`/dashboard?tab=messages&conversationId=${notification.conversationId}`
-																);
-																setShowNotifications(false);
-																if (!notification.isRead) {
-																	try {
-																		await fetch(
-																			`/api/notifications/${notification.id}`,
-																			{ method: "PUT" }
-																		);
-																		window.dispatchEvent(
-																			new CustomEvent("notificationUpdate")
-																		);
-																	} catch (error) {
-																		console.error(
-																			"Error marking notification as read:",
-																			error
-																		);
+												{mockNotifications.map(
+													(notification) => (
+														<li
+															key={
+																notification.id
+															}
+															className={`cursor-pointer px-4 py-3 transition-colors duration-200 ${
+																!notification.isRead
+																	? "bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30"
+																	: "hover:bg-gray-100 dark:hover:bg-gray-700/50"
+															} border-b border-gray-100 dark:border-neutral-800`}
+															onClick={async () => {
+																if (
+																	notification.conversationId
+																) {
+																	router.push(
+																		`/dashboard?tab=messages&conversationId=${notification.conversationId}`
+																	);
+																	setShowNotifications(
+																		false
+																	);
+																	if (
+																		!notification.isRead
+																	) {
+																		try {
+																			await fetch(
+																				`/api/notifications/${notification.id}`,
+																				{
+																					method: "PUT",
+																				}
+																			);
+																			window.dispatchEvent(
+																				new CustomEvent(
+																					"notificationUpdate"
+																				)
+																			);
+																		} catch (error) {
+																			console.error(
+																				"Error marking notification as read:",
+																				error
+																			);
+																		}
 																	}
 																}
-															}
-														}}
-													>
-														<div className="flex">
-															<div
-																className={`flex-shrink-0 h-8 w-8 rounded-full ${
-																	!notification.isRead
-																		? "bg-emerald-100 dark:bg-emerald-900/40"
-																		: "bg-gray-100 dark:bg-gray-700"
-																} flex items-center justify-center mr-3`}
-																aria-hidden="true"
-															>
-																{!notification.isRead ? (
-																	<BellIcon
-																		size={16}
-																		className="text-emerald-500 dark:text-emerald-400"
-																	/>
-																) : (
-																	<CheckIcon
-																		size={16}
-																		className="text-gray-400 dark:text-gray-500"
-																	/>
-																)}
+															}}
+														>
+															<div className="flex">
+																<div
+																	className={`flex-shrink-0 h-8 w-8 rounded-full ${
+																		!notification.isRead
+																			? "bg-emerald-100 dark:bg-emerald-900/40"
+																			: "bg-gray-100 dark:bg-gray-700"
+																	} flex items-center justify-center mr-3`}
+																	aria-hidden="true"
+																>
+																	{!notification.isRead ? (
+																		<BellIcon
+																			size={
+																				16
+																			}
+																			className="text-emerald-500 dark:text-emerald-400"
+																		/>
+																	) : (
+																		<CheckIcon
+																			size={
+																				16
+																			}
+																			className="text-gray-400 dark:text-gray-500"
+																		/>
+																	)}
+																</div>
+																<div className="flex-1">
+																	<p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+																		{
+																			notification.title
+																		}
+																	</p>
+																	<p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+																		{
+																			notification.message
+																		}
+																	</p>
+																	<p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+																		<time
+																			dateTime={
+																				notification.time
+																			}
+																		>
+																			{
+																				notification.time
+																			}
+																		</time>
+																	</p>
+																</div>
 															</div>
-															<div className="flex-1">
-																<p className="text-sm font-medium text-gray-800 dark:text-gray-200">
-																	{notification.title}
-																</p>
-																<p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-																	{notification.message}
-																</p>
-																<p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-																	<time dateTime={notification.time}>
-																		{notification.time}
-																	</time>
-																</p>
-															</div>
-														</div>
-													</li>
-												))}
+														</li>
+													)
+												)}
 											</ul>
 										) : (
 											<div className="px-4 py-6 text-center">
@@ -278,14 +339,25 @@ export default function Header({
 										<button
 											onClick={async () => {
 												try {
-													const response = await fetch("/api/notifications", {
-														method: "PUT",
-													});
+													const response =
+														await fetch(
+															"/api/notifications",
+															{
+																method: "PUT",
+															}
+														);
 													if (response.ok) {
-														window.dispatchEvent(new CustomEvent("unreadCountUpdate"));
+														window.dispatchEvent(
+															new CustomEvent(
+																"unreadCountUpdate"
+															)
+														);
 													}
 												} catch (error) {
-													console.error("Error marking notifications as read:", error);
+													console.error(
+														"Error marking notifications as read:",
+														error
+													);
 												}
 											}}
 											className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium w-full text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded py-1"
@@ -303,7 +375,8 @@ export default function Header({
 							className="flex items-center space-x-2 rounded-md px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
 							onClick={() => {
 								setShowProfileMenu(!showProfileMenu);
-								if (showNotifications) setShowNotifications(false);
+								if (showNotifications)
+									setShowNotifications(false);
 							}}
 							onKeyDown={handleButtonKeyDown}
 							aria-haspopup="true"
@@ -315,7 +388,12 @@ export default function Header({
 								aria-hidden="true"
 							>
 								{photoUrl ? (
-									<Image src={photoUrl} alt="Profile picture" width={96} height={96} />
+									<Image
+										src={photoUrl}
+										alt="Profile picture"
+										width={96}
+										height={96}
+									/>
 								) : (
 									<UserIcon
 										size={24}
@@ -354,10 +432,16 @@ export default function Header({
 													type="button"
 													className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
 													role="menuitem"
-													onClick={handleProfileSettings}
+													onClick={
+														handleProfileSettings
+													}
 												>
 													<div className="flex items-center">
-														<UserIcon size={16} className="mr-3" aria-hidden="true" />
+														<UserIcon
+															size={16}
+															className="mr-3"
+															aria-hidden="true"
+														/>
 														Profile Settings
 													</div>
 												</button>
@@ -370,7 +454,11 @@ export default function Header({
 													role="menuitem"
 												>
 													<div className="flex items-center">
-														<LogOutIcon size={16} className="mr-3" aria-hidden="true" />
+														<LogOutIcon
+															size={16}
+															className="mr-3"
+															aria-hidden="true"
+														/>
 														Sign Out
 													</div>
 												</button>
