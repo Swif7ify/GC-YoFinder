@@ -6,13 +6,12 @@ const TAB_MAP: Record<string, string> = {
 	"search-items": "Search Items",
 	"my-items": "My Items",
 	messages: "Messages",
-	locations: "Locations",
 };
 
 export async function generateMetadata({
-    searchParams,
+	searchParams,
 }: {
-    searchParams: Record<string, string | string[] | undefined>;
+	searchParams: any;
 }): Promise<Metadata> {
 	const tab =
 		typeof searchParams?.tab === "string"
