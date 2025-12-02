@@ -1,11 +1,11 @@
 export const metadata = {
 	title: {
-		template: "%s | Dashboard",
-		default: "GCYofinder | Dashboard",
+		template: "%s | Sign In",
+		default: "GCYofinder | Sign In",
 	},
 };
 
-export default function DashboardLayout({
+export default function SignInLayout({
 	children,
 }: {
 	children: React.ReactNode;
