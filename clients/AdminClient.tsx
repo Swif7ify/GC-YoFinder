@@ -14,14 +14,37 @@ import { usePusher } from "@/contexts/PusherProvider";
 const Header = Dynamic(
 	() =>
 		import("@/component/admin/organisms/Header").then((mod) => mod.default),
-	{ ssr: false }
+	{
+		ssr: false,
+		loading: () => (
+			<div className="h-16 bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 animate-pulse" />
+		),
+	}
 );
 const Sidebar = Dynamic(
 	() =>
 		import("@/component/admin/organisms/Sidebar").then(
 			(mod) => mod.default
 		),
-	{ ssr: false }
+	{
+		ssr: false,
+		loading: () => (
+			<div className="w-64 h-full bg-white dark:bg-neutral-900 border-r border-gray-200 dark:border-neutral-800 animate-pulse" />
+		),
+	}
+);
+
+// Shared loading component for page content
+const PageLoadingSkeleton = () => (
+	<div className="space-y-6 animate-pulse">
+		<div className="h-8 bg-gray-200 dark:bg-neutral-800 rounded w-1/4" />
+		<div className="h-4 bg-gray-200 dark:bg-neutral-800 rounded w-1/2" />
+		<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+			<div className="h-32 bg-gray-200 dark:bg-neutral-800 rounded" />
+			<div className="h-32 bg-gray-200 dark:bg-neutral-800 rounded" />
+			<div className="h-32 bg-gray-200 dark:bg-neutral-800 rounded" />
+		</div>
+	</div>
 );
 
 // Page components
@@ -32,12 +55,13 @@ const DashboardPage = Dynamic(
 		),
 	{
 		ssr: false,
+		loading: () => <PageLoadingSkeleton />,
 	}
 );
 const UsersPage = Dynamic(
 	() =>
 		import("@/component/admin/pages/UsersPage").then((mod) => mod.default),
-	{ ssr: false }
+	{ ssr: false, loading: () => <PageLoadingSkeleton /> }
 );
 const ItemPendingPage = Dynamic(
 	() =>
@@ -46,6 +70,7 @@ const ItemPendingPage = Dynamic(
 		),
 	{
 		ssr: false,
+		loading: () => <PageLoadingSkeleton />,
 	}
 );
 const ItemActivePage = Dynamic(
@@ -55,6 +80,7 @@ const ItemActivePage = Dynamic(
 		),
 	{
 		ssr: false,
+		loading: () => <PageLoadingSkeleton />,
 	}
 );
 const ItemClaimedPage = Dynamic(
@@ -64,6 +90,7 @@ const ItemClaimedPage = Dynamic(
 		),
 	{
 		ssr: false,
+		loading: () => <PageLoadingSkeleton />,
 	}
 );
 const ItemArchivedPage = Dynamic(
@@ -73,6 +100,7 @@ const ItemArchivedPage = Dynamic(
 		),
 	{
 		ssr: false,
+		loading: () => <PageLoadingSkeleton />,
 	}
 );
 const ReportsPage = Dynamic(
@@ -82,6 +110,7 @@ const ReportsPage = Dynamic(
 		),
 	{
 		ssr: false,
+		loading: () => <PageLoadingSkeleton />,
 	}
 );
 const ActivityPage = Dynamic(
@@ -91,6 +120,7 @@ const ActivityPage = Dynamic(
 		),
 	{
 		ssr: false,
+		loading: () => <PageLoadingSkeleton />,
 	}
 );
 const ExportPage = Dynamic(
@@ -98,6 +128,7 @@ const ExportPage = Dynamic(
 		import("@/component/admin/pages/ExportPage").then((mod) => mod.default),
 	{
 		ssr: false,
+		loading: () => <PageLoadingSkeleton />,
 	}
 );
 const ItemAllPage = Dynamic(
@@ -107,6 +138,7 @@ const ItemAllPage = Dynamic(
 		),
 	{
 		ssr: false,
+		loading: () => <PageLoadingSkeleton />,
 	}
 );
 
@@ -589,6 +621,7 @@ export default function AdminClient() {
 						onMenuClick={handleMenuClick}
 						adminData={adminData}
 						notifications={notifications}
+						onLogout={handleLogout}
 						onMarkAllRead={markAllNotificationsAsRead}
 					/>
 
