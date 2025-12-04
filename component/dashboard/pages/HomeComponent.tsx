@@ -60,23 +60,60 @@ interface HomeComponentProps {
 	userFullName: string;
 	recentItems: RecentItems[];
 }
-import Stats from "@/component/dashboard/pages/Home/Stats";
 
+const Stats = Dynamic(
+	() =>
+		import("@/component/dashboard/pages/Home/Stats").then(
+			(mod) => mod.default
+		),
+	{
+		ssr: false,
+		loading: () => <SectionLoadingSkeleton />,
+	}
+);
 import { StatsCard } from "@/types/types";
-const QuickActions = Dynamic(() => import("@/component/dashboard/pages/Home/QuickActions").then((mod) => mod.default), {
-	ssr: false,
-});
+
+// Shared loading skeleton for home sections
+const SectionLoadingSkeleton = () => (
+	<div className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-gray-200 dark:border-neutral-800 p-6 animate-pulse">
+		<div className="h-6 bg-gray-200 dark:bg-neutral-800 rounded w-1/3 mb-4" />
+		<div className="space-y-3">
+			<div className="h-4 bg-gray-200 dark:bg-neutral-800 rounded w-full" />
+			<div className="h-4 bg-gray-200 dark:bg-neutral-800 rounded w-5/6" />
+			<div className="h-4 bg-gray-200 dark:bg-neutral-800 rounded w-4/6" />
+		</div>
+	</div>
+);
+
+const QuickActions = Dynamic(
+	() =>
+		import("@/component/dashboard/pages/Home/QuickActions").then(
+			(mod) => mod.default
+		),
+	{
+		ssr: false,
+		loading: () => <SectionLoadingSkeleton />,
+	}
+);
 const RecentItemsComponent = Dynamic(
-	() => import("@/component/dashboard/pages/Home/RecentItems").then((mod) => mod.default),
-	{ ssr: false }
+	() =>
+		import("@/component/dashboard/pages/Home/RecentItems").then(
+			(mod) => mod.default
+		),
+	{ ssr: false, loading: () => <SectionLoadingSkeleton /> }
 );
 const RecentActivityComponent = Dynamic(
-	() => import("@/component/dashboard/pages/Home/RecentActivity").then((mod) => mod.default),
-
-	{ ssr: false }
+	() =>
+		import("@/component/dashboard/pages/Home/RecentActivity").then(
+			(mod) => mod.default
+		),
+	{ ssr: false, loading: () => <SectionLoadingSkeleton /> }
 );
 
-export default function HomeComponent({ userFullName, recentItems }: HomeComponentProps) {
+export default function HomeComponent({
+	userFullName,
+	recentItems,
+}: HomeComponentProps) {
 	const [stats, setStats] = useState<StatsCard[]>([]);
 	const [recentItems_n, setRecentItems_n] = useState<RecentItems[]>([]);
 	const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
@@ -85,11 +122,33 @@ export default function HomeComponent({ userFullName, recentItems }: HomeCompone
 		setRecentItems_n(recentItems);
 	}, [recentItems]);
 
+	// Fetch recent activity
+	useEffect(() => {
+		const fetchRecentActivity = async () => {
+			try {
+				const response = await apiCached(
+					"/api/dashboard/activity?limit=5",
+					{ method: "GET" }
+				);
+				if (response.status === 200) {
+					const data = await response.json();
+					setRecentActivity(data.data || []);
+				}
+			} catch (error) {
+				console.error("Error fetching recent activity:", error);
+			}
+		};
+
+		fetchRecentActivity();
+	}, []);
+
 	// Fetch real user stats
 	useEffect(() => {
 		const fetchStats = async () => {
 			try {
-				const response = await apiCached("/api/dashboard/stats", { method: "GET" });
+				const response = await apiCached("/api/dashboard/stats", {
+					method: "GET",
+				});
 				if (response.status === 200) {
 					const data = await response.json();
 					const userStats = data.data;
@@ -98,27 +157,39 @@ export default function HomeComponent({ userFullName, recentItems }: HomeCompone
 						{
 							label: "Items Posted",
 							value: String(userStats.itemsPosted?.total || 0),
-							change: `+${userStats.itemsPosted?.thisWeek || 0} this week`,
+							change: `+${
+								userStats.itemsPosted?.thisWeek || 0
+							} this week`,
 							icon: PackagePlus,
 							color: "emerald",
 							bgColor: "bg-emerald-50 dark:bg-emerald-900/20",
 							iconColor: "text-emerald-600 dark:text-emerald-400",
-							trend: userStats.itemsPosted?.thisWeek > 0 ? "up" : "neutral",
+							trend:
+								userStats.itemsPosted?.thisWeek > 0
+									? "up"
+									: "neutral",
 						},
 						{
 							label: "Items Found",
 							value: String(userStats.itemsFound?.total || 0),
-							change: `${userStats.breakdown?.found || 0} found items`,
+							change: `${
+								userStats.breakdown?.found || 0
+							} found items`,
 							icon: PackageSearch,
 							color: "blue",
 							bgColor: "bg-blue-50 dark:bg-blue-900/20",
 							iconColor: "text-blue-600 dark:text-blue-400",
-							trend: userStats.itemsFound?.total > 0 ? "up" : "neutral",
+							trend:
+								userStats.itemsFound?.total > 0
+									? "up"
+									: "neutral",
 						},
 						{
 							label: "Active Items",
 							value: String(userStats.activeClaims?.total || 0),
-							change: `${userStats.activeClaims?.pending || 0} pending approval`,
+							change: `${
+								userStats.activeClaims?.pending || 0
+							} pending approval`,
 							icon: Clock,
 							color: "amber",
 							bgColor: "bg-amber-50 dark:bg-amber-900/20",
@@ -133,7 +204,10 @@ export default function HomeComponent({ userFullName, recentItems }: HomeCompone
 							color: "purple",
 							bgColor: "bg-purple-50 dark:bg-purple-900/20",
 							iconColor: "text-purple-600 dark:text-purple-400",
-							trend: userStats.messages?.unread > 0 ? "up" : "neutral",
+							trend:
+								userStats.messages?.unread > 0
+									? "up"
+									: "neutral",
 						},
 					]);
 				}
@@ -197,10 +271,13 @@ export default function HomeComponent({ userFullName, recentItems }: HomeCompone
 					className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-gray-100 mb-2"
 				>
 					Welcome back,{" "}
-					<span className="text-emerald-700 font-medium dark:text-emerald-400">{userFullName}!</span>
+					<span className="text-emerald-700 font-medium dark:text-emerald-400">
+						{userFullName}!
+					</span>
 				</h1>
 				<p className="text-gray-600 dark:text-gray-400">
-					Here's what's happening with your lost and found items today.
+					Here's what's happening with your lost and found items
+					today.
 				</p>
 			</section>
 
@@ -228,29 +305,48 @@ export default function HomeComponent({ userFullName, recentItems }: HomeCompone
 					id="tips-heading"
 					className="text-lg font-semibold text-emerald-900 dark:text-emerald-100 mb-3 flex items-center gap-2"
 				>
-					<PackageSearch size={24} className="text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+					<PackageSearch
+						size={24}
+						className="text-emerald-600 dark:text-emerald-400"
+						aria-hidden="true"
+					/>
 					Tips for Finding Your Items
 				</h2>
 				<ul className="space-y-2 text-sm text-emerald-800 dark:text-emerald-200">
 					<li className="flex items-start gap-2">
-						<span className="text-emerald-600 dark:text-emerald-400 mt-0.5">•</span>
+						<span className="text-emerald-600 dark:text-emerald-400 mt-0.5">
+							•
+						</span>
 						<span>
-							Check the <strong>Search Items</strong> tab regularly for new matches
+							Check the <strong>Search Items</strong> tab
+							regularly for new matches
 						</span>
 					</li>
 					<li className="flex items-start gap-2">
-						<span className="text-emerald-600 dark:text-emerald-400 mt-0.5">•</span>
+						<span className="text-emerald-600 dark:text-emerald-400 mt-0.5">
+							•
+						</span>
 						<span>
-							Visit <strong>campus lost & found locations</strong> listed in the Locations tab
+							Visit <strong>campus lost & found locations</strong>{" "}
+							listed in the Locations tab
 						</span>
 					</li>
 					<li className="flex items-start gap-2">
-						<span className="text-emerald-600 dark:text-emerald-400 mt-0.5">•</span>
-						<span>Respond quickly to messages about potential matches</span>
+						<span className="text-emerald-600 dark:text-emerald-400 mt-0.5">
+							•
+						</span>
+						<span>
+							Respond quickly to messages about potential matches
+						</span>
 					</li>
 					<li className="flex items-start gap-2">
-						<span className="text-emerald-600 dark:text-emerald-400 mt-0.5">•</span>
-						<span>Provide detailed descriptions and photos when posting items</span>
+						<span className="text-emerald-600 dark:text-emerald-400 mt-0.5">
+							•
+						</span>
+						<span>
+							Provide detailed descriptions and photos when
+							posting items
+						</span>
 					</li>
 				</ul>
 			</section>

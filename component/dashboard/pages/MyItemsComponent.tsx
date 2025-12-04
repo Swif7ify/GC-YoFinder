@@ -444,6 +444,7 @@ export default function MyItemsComponent({
 											</div>
 
 											{/* Menu */}
+
 											<div className="relative">
 												<button
 													type="button"
@@ -489,20 +490,26 @@ export default function MyItemsComponent({
 														className="absolute right-0 mt-2 w-48 bg-white dark:bg-neutral-900 rounded-lg shadow-lg ring-1 ring-black/5 dark:ring-white/10 z-10 py-1"
 														role="menu"
 													>
-														<button
-															type="button"
-															onClick={() =>
-																handleEdit(item)
-															}
-															className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
-															role="menuitem"
-														>
-															<Edit
-																size={16}
-																aria-hidden="true"
-															/>
-															Edit Item
-														</button>
+														{item.status !==
+															"claimed" && (
+															<button
+																type="button"
+																onClick={() =>
+																	handleEdit(
+																		item
+																	)
+																}
+																className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+																role="menuitem"
+															>
+																<Edit
+																	size={16}
+																	aria-hidden="true"
+																/>
+																Edit Item
+															</button>
+														)}
+
 														<button
 															type="button"
 															onClick={() =>

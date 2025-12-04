@@ -2,7 +2,11 @@ import UserSchema from "@/server/models/UserSchema";
 import ItemsSchema from "@/server/models/ItemsSchema";
 import ConversationSchema from "@/server/models/ConversationSchema";
 import MessageSchema from "@/server/models/MessageSchema";
-import { responsePayload, serverResponseError, userNotFoundError } from "@/server/utils/responsePayload";
+import {
+	responsePayload,
+	serverResponseError,
+	userNotFoundError,
+} from "@/server/utils/responsePayload";
 import { ValidateStringField } from "@/server/utils/DataValitdation";
 import mongoose from "mongoose";
 import { connectToDatabase } from "@/server/lib/mongodb";
@@ -15,21 +19,41 @@ class DashboardHandlers {
 			const isValidUserID = await ValidateStringField(userID);
 			if (!isValidUserID) return userNotFoundError();
 
-			const userData = await UserSchema.findById(userID).select("-__v -password");
+			const userData = await UserSchema.findById(userID).select(
+				"-__v -password"
+			);
 			if (!userData) return userNotFoundError();
 
-			return responsePayload(userData, "success", "User data retrieved successfully", 200);
+			return responsePayload(
+				userData,
+				"success",
+				"User data retrieved successfully",
+				200
+			);
 		} catch (error) {
 			return serverResponseError();
 		}
 	}
 
-	static async updateUserDataByID(userID: string, updateData: { username?: string; phone?: string }) {
+	static async updateUserDataByID(
+		userID: string,
+		updateData: { username?: string; phone?: string }
+	) {
 		await connectToDatabase();
 		const session = await mongoose.startSession();
 		try {
-			const validateFields = ValidateStringField(userID, updateData.username, updateData.phone);
-			if (!validateFields) return responsePayload(null, "error", "Invalid input data", 400);
+			const validateFields = ValidateStringField(
+				userID,
+				updateData.username,
+				updateData.phone
+			);
+			if (!validateFields)
+				return responsePayload(
+					null,
+					"error",
+					"Invalid input data",
+					400
+				);
 
 			session.startTransaction();
 			const userData = await UserSchema.findByIdAndUpdate(
@@ -49,7 +73,12 @@ class DashboardHandlers {
 			}
 
 			await session.commitTransaction();
-			return responsePayload(null, "success", "User data updated successfully", 200);
+			return responsePayload(
+				null,
+				"success",
+				"User data updated successfully",
+				200
+			);
 		} catch (error) {
 			return serverResponseError();
 		} finally {
@@ -62,15 +91,23 @@ class DashboardHandlers {
 		const session = await mongoose.startSession();
 		try {
 			const isValidUserID = await ValidateStringField(userID);
-			if (!isValidUserID) return responsePayload(null, "error", "Invalid user ID", 400);
+			if (!isValidUserID)
+				return responsePayload(null, "error", "Invalid user ID", 400);
 
 			if (!image.photo) {
-				return responsePayload(null, "error", "Invalid image file", 400);
+				return responsePayload(
+					null,
+					"error",
+					"Invalid image file",
+					400
+				);
 			}
 
 			const uploadedPublicIds: string[] = [];
 
-			const username = await UserSchema.findById(userID).select("username");
+			const username = await UserSchema.findById(userID).select(
+				"username"
+			);
 			if (!username) return userNotFoundError();
 			const usernameStr = String(username.username || userID);
 			const sanitize = (s: string) =>
@@ -80,7 +117,10 @@ class DashboardHandlers {
 					.slice(0, 50);
 			const imageBase = `${sanitize(usernameStr)}_profile_photo`;
 
-			const imageResult = await uploadFiles(image.photo as File, imageBase);
+			const imageResult = await uploadFiles(
+				image.photo as File,
+				imageBase
+			);
 
 			uploadedPublicIds.push(imageResult.public_id);
 
@@ -92,7 +132,9 @@ class DashboardHandlers {
 				size: typeof res.bytes === "number" ? res.bytes : res.size || 0,
 				width: res.width || 0,
 				height: res.height || 0,
-				uploaded_at: res.created_at ? new Date(res.created_at) : new Date(),
+				uploaded_at: res.created_at
+					? new Date(res.created_at)
+					: new Date(),
 				version: res.version,
 				signature: res.signature,
 				etag: res.etag,
@@ -120,7 +162,12 @@ class DashboardHandlers {
 			}
 
 			await session.commitTransaction();
-			return responsePayload(null, "success", "User photo updated successfully", 200);
+			return responsePayload(
+				null,
+				"success",
+				"User photo updated successfully",
+				200
+			);
 		} catch (error) {
 			return serverResponseError();
 		} finally {
@@ -134,7 +181,9 @@ class DashboardHandlers {
 			const isValidUserID = await ValidateStringField(userID);
 			if (!isValidUserID) return userNotFoundError();
 
-			const user = await UserSchema.findById(userID).select("preferences");
+			const user = await UserSchema.findById(userID).select(
+				"preferences"
+			);
 			if (!user) return userNotFoundError();
 
 			const prefs = (user as any).preferences || {};
@@ -146,7 +195,8 @@ class DashboardHandlers {
 					message: prefs?.notifications?.message ?? true,
 				},
 				privacy: {
-					profileVisibility: prefs?.privacy?.profileVisibility ?? "college",
+					profileVisibility:
+						prefs?.privacy?.profileVisibility ?? "college",
 					showEmail: prefs?.privacy?.showEmail ?? false,
 					showContactInfo: prefs?.privacy?.showContactInfo ?? true,
 				},
@@ -157,7 +207,12 @@ class DashboardHandlers {
 				},
 			};
 
-			return responsePayload(payload, "success", "User settings retrieved successfully", 200);
+			return responsePayload(
+				payload,
+				"success",
+				"User settings retrieved successfully",
+				200
+			);
 		} catch (error) {
 			return serverResponseError();
 		}
@@ -167,9 +222,21 @@ class DashboardHandlers {
 		userID: string,
 		update: {
 			language?: string;
-			notifications?: { email?: boolean; match?: boolean; message?: boolean };
-			privacy?: { profileVisibility?: "public" | "college" | "private"; showEmail?: boolean; showContactInfo?: boolean };
-			display?: { theme?: "system" | "light" | "dark"; textSize?: number; reduceMotion?: boolean };
+			notifications?: {
+				email?: boolean;
+				match?: boolean;
+				message?: boolean;
+			};
+			privacy?: {
+				profileVisibility?: "public" | "college" | "private";
+				showEmail?: boolean;
+				showContactInfo?: boolean;
+			};
+			display?: {
+				theme?: "system" | "light" | "dark";
+				textSize?: number;
+				reduceMotion?: boolean;
+			};
 		}
 	) {
 		await connectToDatabase();
@@ -184,25 +251,44 @@ class DashboardHandlers {
 			}
 			if (update.notifications) {
 				const n = update.notifications;
-				if (typeof n.email === "boolean") set["preferences.notifications.email"] = n.email;
-				if (typeof n.match === "boolean") set["preferences.notifications.match"] = n.match;
-				if (typeof n.message === "boolean") set["preferences.notifications.message"] = n.message;
+				if (typeof n.email === "boolean")
+					set["preferences.notifications.email"] = n.email;
+				if (typeof n.match === "boolean")
+					set["preferences.notifications.match"] = n.match;
+				if (typeof n.message === "boolean")
+					set["preferences.notifications.message"] = n.message;
 			}
 			if (update.privacy) {
 				const p = update.privacy;
-				if (typeof p.profileVisibility === "string") set["preferences.privacy.profileVisibility"] = p.profileVisibility;
-				if (typeof p.showEmail === "boolean") set["preferences.privacy.showEmail"] = p.showEmail;
-				if (typeof p.showContactInfo === "boolean") set["preferences.privacy.showContactInfo"] = p.showContactInfo;
+				if (typeof p.profileVisibility === "string")
+					set["preferences.privacy.profileVisibility"] =
+						p.profileVisibility;
+				if (typeof p.showEmail === "boolean")
+					set["preferences.privacy.showEmail"] = p.showEmail;
+				if (typeof p.showContactInfo === "boolean")
+					set["preferences.privacy.showContactInfo"] =
+						p.showContactInfo;
 			}
 			if (update.display) {
 				const d = update.display;
-				if (typeof d.theme === "string") set["preferences.display.theme"] = d.theme;
-				if (typeof d.textSize === "number") set["preferences.display.textSize"] = Math.max(12, Math.min(28, d.textSize));
-				if (typeof d.reduceMotion === "boolean") set["preferences.display.reduceMotion"] = d.reduceMotion;
+				if (typeof d.theme === "string")
+					set["preferences.display.theme"] = d.theme;
+				if (typeof d.textSize === "number")
+					set["preferences.display.textSize"] = Math.max(
+						12,
+						Math.min(28, d.textSize)
+					);
+				if (typeof d.reduceMotion === "boolean")
+					set["preferences.display.reduceMotion"] = d.reduceMotion;
 			}
 
 			if (Object.keys(set).length === 0) {
-				return responsePayload(null, "error", "No valid settings provided", 400);
+				return responsePayload(
+					null,
+					"error",
+					"No valid settings provided",
+					400
+				);
 			}
 
 			session.startTransaction();
@@ -216,7 +302,12 @@ class DashboardHandlers {
 				return userNotFoundError();
 			}
 			await session.commitTransaction();
-			return responsePayload(null, "success", "User settings updated successfully", 200);
+			return responsePayload(
+				null,
+				"success",
+				"User settings updated successfully",
+				200
+			);
 		} catch (error) {
 			await session.abortTransaction();
 			return serverResponseError();
@@ -240,7 +331,8 @@ class DashboardHandlers {
 		await connectToDatabase();
 		try {
 			const validateUserID = ValidateStringField(userID);
-			if (!validateUserID) return responsePayload(null, "error", "Invalid user ID", 400);
+			if (!validateUserID)
+				return responsePayload(null, "error", "Invalid user ID", 400);
 
 			const user = await UserSchema.findById(userID);
 			if (!user) return userNotFoundError();
@@ -254,7 +346,11 @@ class DashboardHandlers {
 
 			if (filters?.searchQuery) {
 				const searchRegex = new RegExp(filters.searchQuery, "i");
-				query.$or = [{ name: searchRegex }, { description: searchRegex }, { location: searchRegex }];
+				query.$or = [
+					{ name: searchRegex },
+					{ description: searchRegex },
+					{ location: searchRegex },
+				];
 			}
 
 			if (filters?.type && filters.type !== "all") {
@@ -263,7 +359,10 @@ class DashboardHandlers {
 
 			// Allow filtering by status only for active and claimed (not pending/rejected)
 			if (filters?.status && filters.status !== "all") {
-				if (filters.status === "active" || filters.status === "claimed") {
+				if (
+					filters.status === "active" ||
+					filters.status === "claimed"
+				) {
 					query.status = filters.status;
 				}
 			}
@@ -294,7 +393,9 @@ class DashboardHandlers {
 				let userPhoto = null;
 				if (item.user_id && item.user_id.photo) {
 					userPhoto =
-						typeof item.user_id.photo === "string" ? item.user_id.photo : item.user_id.photo.url || null;
+						typeof item.user_id.photo === "string"
+							? item.user_id.photo
+							: item.user_id.photo.url || null;
 				}
 
 				let itemPhotos = [];
@@ -334,7 +435,12 @@ class DashboardHandlers {
 				},
 			};
 
-			return responsePayload(payload, "success", "Items fetched successfully", 200);
+			return responsePayload(
+				payload,
+				"success",
+				"Items fetched successfully",
+				200
+			);
 		} catch (error) {
 			console.error("Error fetching all items:", error);
 			return serverResponseError();
@@ -346,7 +452,8 @@ class DashboardHandlers {
 		await connectToDatabase();
 		try {
 			const validateUserID = ValidateStringField(userID);
-			if (!validateUserID) return responsePayload(null, "error", "Invalid user ID", 400);
+			if (!validateUserID)
+				return responsePayload(null, "error", "Invalid user ID", 400);
 
 			const user = await UserSchema.findById(userID);
 			if (!user) return userNotFoundError();
@@ -368,12 +475,24 @@ class DashboardHandlers {
 				unreadMessages,
 			] = await Promise.all([
 				ItemsSchema.countDocuments({ user_id: userID }),
-				ItemsSchema.countDocuments({ user_id: userID, created_at: { $gte: weekStart } }),
+				ItemsSchema.countDocuments({
+					user_id: userID,
+					created_at: { $gte: weekStart },
+				}),
 				ItemsSchema.countDocuments({ user_id: userID, type: "lost" }),
 				ItemsSchema.countDocuments({ user_id: userID, type: "found" }),
-				ItemsSchema.countDocuments({ user_id: userID, status: "pending" }),
-				ItemsSchema.countDocuments({ user_id: userID, status: "active" }),
-				ItemsSchema.countDocuments({ user_id: userID, status: "claimed" }),
+				ItemsSchema.countDocuments({
+					user_id: userID,
+					status: "pending",
+				}),
+				ItemsSchema.countDocuments({
+					user_id: userID,
+					status: "active",
+				}),
+				ItemsSchema.countDocuments({
+					user_id: userID,
+					status: "claimed",
+				}),
 				ConversationSchema.countDocuments({
 					$or: [{ user1_id: userID }, { user2_id: userID }],
 				}),
@@ -409,13 +528,150 @@ class DashboardHandlers {
 				},
 			};
 
-			return responsePayload(stats, "success", "User stats retrieved successfully", 200);
+			return responsePayload(
+				stats,
+				"success",
+				"User stats retrieved successfully",
+				200
+			);
 		} catch (error) {
 			console.error("Error fetching user stats:", error);
 			return serverResponseError();
 		}
 	}
+
+	// Get user recent activity (up to 5 items)
+	static async getUserRecentActivity(userID: string, limit = 5) {
+		await connectToDatabase();
+		try {
+			const validateUserID = ValidateStringField(userID);
+			if (!validateUserID)
+				return responsePayload(null, "error", "Invalid user ID", 400);
+
+			const user = await UserSchema.findById(userID);
+			if (!user) return userNotFoundError();
+
+			// Fetch recent items, messages, and status changes
+			const [recentItems, recentMessages, recentStatusChanges] =
+				await Promise.all([
+					// Recent items posted by user
+					ItemsSchema.find({ user_id: userID })
+						.sort({ created_at: -1 })
+						.limit(3)
+						.select("name type status created_at")
+						.lean(),
+					// Recent messages received by user
+					MessageSchema.find({ receiver_id: userID })
+						.sort({ created_at: -1 })
+						.limit(2)
+						.populate("sender_id", "firstname lastname")
+						.select("message created_at")
+						.lean(),
+					// Recent status changes (claimed items)
+					ItemsSchema.find({ user_id: userID, status: "claimed" })
+						.sort({ updated_at: -1 })
+						.limit(2)
+						.select("name status updated_at")
+						.lean(),
+				]);
+
+			// Combine and format activities
+			const activities: any[] = [];
+
+			// Add item activities
+			recentItems.forEach((item: any) => {
+				const action =
+					item.type === "lost"
+						? `You reported a lost item`
+						: `You reported a found item`;
+				activities.push({
+					id: `item-${item._id}`,
+					action,
+					item: item.name,
+					time: this.formatTimeAgo(item.created_at),
+					type: item.type === "lost" ? "lost" : "found",
+					timestamp: item.created_at,
+				});
+			});
+
+			// Add message activities
+			recentMessages.forEach((msg: any) => {
+				const sender = msg.sender_id
+					? `${msg.sender_id.firstname} ${msg.sender_id.lastname}`
+					: "Someone";
+				activities.push({
+					id: `message-${msg._id}`,
+					action: `${sender} sent you a message`,
+					item:
+						msg.message.substring(0, 50) +
+						(msg.message.length > 50 ? "..." : ""),
+					time: this.formatTimeAgo(msg.created_at),
+					type: "message",
+					timestamp: msg.created_at,
+				});
+			});
+
+			// Add claimed item activities
+			recentStatusChanges.forEach((item: any) => {
+				activities.push({
+					id: `claimed-${item._id}`,
+					action: `Item was claimed`,
+					item: item.name,
+					time: this.formatTimeAgo(item.updated_at),
+					type: "claimed",
+					timestamp: item.updated_at,
+				});
+			});
+
+			// Sort by timestamp and limit
+			activities.sort(
+				(a, b) =>
+					new Date(b.timestamp).getTime() -
+					new Date(a.timestamp).getTime()
+			);
+			const limitedActivities = activities
+				.slice(0, limit)
+				.map((activity) => {
+					const { timestamp, ...rest } = activity;
+					return rest;
+				});
+
+			return responsePayload(
+				limitedActivities,
+				"success",
+				"User recent activity retrieved successfully",
+				200
+			);
+		} catch (error) {
+			console.error("Error fetching user recent activity:", error);
+			return serverResponseError();
+		}
+	}
+
+	// Helper function to format time ago
+	private static formatTimeAgo(date: Date): string {
+		const now = new Date();
+		const diff = now.getTime() - new Date(date).getTime();
+		const minutes = Math.floor(diff / 60000);
+		const hours = Math.floor(minutes / 60);
+		const days = Math.floor(hours / 24);
+
+		if (minutes < 1) return "Just now";
+		if (minutes < 60)
+			return `${minutes} minute${minutes !== 1 ? "s" : ""} ago`;
+		if (hours < 24) return `${hours} hour${hours !== 1 ? "s" : ""} ago`;
+		if (days < 7) return `${days} day${days !== 1 ? "s" : ""} ago`;
+		return new Date(date).toLocaleDateString();
+	}
 }
 
-export const { getUserDataByID, updateUserDataByID, updateUserPhotoByID, getAllItems, getUserStats, getUserSettingsByID, updateUserSettingsByID } =
-	DashboardHandlers;
+export const {
+	getUserDataByID,
+	updateUserDataByID,
+	updateUserPhotoByID,
+	getAllItems,
+	getUserStats,
+	getUserSettingsByID,
+	updateUserSettingsByID,
+	getUserRecentActivity,
+} = DashboardHandlers;
