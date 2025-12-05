@@ -132,7 +132,12 @@ export default function HomeComponent({
 		setRecentItems_n(recentItems);
 	}, [recentItems]);
 
-	// Fetch recent activity
+	// Fetch recent activity (small list)
+	// Strategy:
+	// - Uses `apiCached` for a short-lived local cache to make the dashboard snappy.
+	// - The `limit` parameter is included in the cache key so different page sizes
+	//   are cached separately. Callers can bypass cache by changing the query
+	//   (or using a `useCache` flag if added).
 	useEffect(() => {
 		const fetchRecentActivity = async () => {
 			try {
@@ -152,7 +157,11 @@ export default function HomeComponent({
 		fetchRecentActivity();
 	}, []);
 
-	// Fetch real user stats
+	// Fetch real user stats for the dashboard
+	// Strategy:
+	// - Uses `apiCached` to reduce repeated network requests for the same stats.
+	// - Ideal for data that updates periodically; force refresh by adding
+	//   a parameter to the request or by calling a non-cached endpoint.
 	useEffect(() => {
 		const fetchStats = async () => {
 			try {

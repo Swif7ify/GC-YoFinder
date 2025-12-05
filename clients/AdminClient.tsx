@@ -266,6 +266,10 @@ export default function AdminClient() {
 	};
 
 	// Fetch admin user data
+	// Strategy:
+	// - Use `apiCached` to provide a simple in-memory cache for fast UI loads.
+	// - `useCache` param controls whether to return a cached response or hit network.
+	// - Consumers should call `fetchAdminData(false)` after mutations to force refresh.
 	const fetchAdminData = async (useCache = true) => {
 		try {
 			const response = await apiCached(
@@ -290,6 +294,9 @@ export default function AdminClient() {
 	};
 
 	// Fetch notifications
+	// Strategy:
+	// - Leverages `apiCached` so repeated dashboard visits are snappy.
+	// - `useCache=false` can be passed to retrieve fresh notifications after changes.
 	const fetchNotifications = async (useCache = true) => {
 		try {
 			const response = await apiCached(
@@ -333,6 +340,9 @@ export default function AdminClient() {
 	};
 
 	// Fetch dashboard stats
+	// Strategy:
+	// - Uses `apiCached` for quick loads and reduced network traffic.
+	// - Call with `useCache=false` when stats may be stale (e.g., after bulk updates).
 	const fetchDashboardStats = async (useCache = true) => {
 		try {
 			const response = await apiCached(
@@ -354,6 +364,10 @@ export default function AdminClient() {
 	};
 
 	// Fetch items by status
+	// Strategy:
+	// - Uses `apiCached` with `status` and `limit` encoded into the cache key.
+	// - `useCache=false` should be used after mutating item state so the admin
+	//   UI reflects changes immediately.
 	const fetchItems = async (status: string, useCache = true) => {
 		try {
 			const response = await apiCached(
@@ -379,7 +393,11 @@ export default function AdminClient() {
 		}
 	};
 
-	// Fetch users
+	// Fetch users (paginated)
+	// Strategy:
+	// - Uses `apiCached` for paginated user lists. Cache keys include the query
+	//   string (page/search) so different pages are cached separately.
+	// - Use `useCache=false` to force-refresh when user data changes.
 	const fetchUsers = async (page = 1, search?: string, useCache = true) => {
 		try {
 			let url = `/api/admin/users?page=${page}&limit=10`;
