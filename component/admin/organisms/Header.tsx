@@ -6,11 +6,9 @@ import Image from "next/image";
 import {
 	BellIcon,
 	MenuIcon,
-	AlertTriangleIcon,
 	ShieldIcon,
 	UserIcon,
 	LogOutIcon,
-	SettingsIcon,
 } from "lucide-react";
 import DarkModeButton from "@/ui/DarkModeButton";
 
@@ -29,12 +27,14 @@ interface AdminHeaderProps {
 	adminData?: any;
 	notifications?: Notification[];
 	onMarkAllRead?: () => void;
+	onLogout: () => void;
 }
 
 export default function AdminHeader({
 	onMenuClick,
 	adminData,
 	notifications = [],
+	onLogout,
 	onMarkAllRead,
 }: AdminHeaderProps) {
 	const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -295,27 +295,10 @@ export default function AdminHeader({
 								</div>
 							</div>
 							<div className="py-1">
-								<Link
-									href="/admin?tab=settings"
-									className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800"
+								<button
+									onClick={onLogout}
+									className="w-full flex items-center px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
 								>
-									<UserIcon
-										size={16}
-										className="mr-3 text-gray-500 dark:text-gray-400"
-									/>
-									Profile Settings
-								</Link>
-								<Link
-									href="/admin?tab=security"
-									className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800"
-								>
-									<ShieldIcon
-										size={16}
-										className="mr-3 text-gray-500 dark:text-gray-400"
-									/>
-									Security & Permissions
-								</Link>
-								<button className="w-full flex items-center px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
 									<LogOutIcon
 										size={16}
 										className="mr-3 text-red-500 dark:text-red-400"

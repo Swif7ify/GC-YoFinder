@@ -1,17 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import {
-	User,
-	Mail,
-	Bell,
-	Globe,
-	Shield,
-	Save,
-	Camera,
-	Info,
-	Phone,
-} from "lucide-react";
+import { User, Mail, Globe, Shield, Save, Camera, Phone } from "lucide-react";
 import Image from "next/image";
 import CustomSelect from "@/ui/CustomSelect";
 import { UserData } from "@/types/types";

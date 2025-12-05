@@ -1,11 +1,18 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { MessageSquare, Send, Search, MoreVertical, Eye, Lock } from "lucide-react";
+import {
+	MessageSquare,
+	Send,
+	Search,
+	MoreVertical,
+	Eye,
+	Lock,
+} from "lucide-react";
 import { Conversation, Message } from "@/types/types";
 import { api } from "@/lib/api.config";
 import { useApiLoading } from "@/hooks/useApiLoading";
-import { toastError, toastSuccess } from "@/utils/toast";
+import { toastError } from "@/utils/toast";
 import Pusher from "pusher-js";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
@@ -19,7 +26,8 @@ interface MessagesComponentProps {
 export default function MessagesComponent({ userID }: MessagesComponentProps) {
 	const searchParams = useSearchParams();
 	const [conversations, setConversations] = useState<Conversation[]>([]);
-	const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+	const [selectedConversation, setSelectedConversation] =
+		useState<Conversation | null>(null);
 	const [messages, setMessages] = useState<Message[]>([]);
 	const [newMessage, setNewMessage] = useState("");
 	const [searchQuery, setSearchQuery] = useState("");
@@ -37,14 +45,17 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 	const counts = useMemo(
 		() => ({
 			all: conversations.length,
-			active: conversations.filter((c) => c.itemStatus !== "claimed").length,
-			claimed: conversations.filter((c) => c.itemStatus === "claimed").length,
+			active: conversations.filter((c) => c.itemStatus !== "claimed")
+				.length,
+			claimed: conversations.filter((c) => c.itemStatus === "claimed")
+				.length,
 		}),
 		[conversations]
 	);
 
 	// Check if selected conversation is for a claimed item
-	const isConversationClaimed = selectedConversation?.itemStatus === "claimed";
+	const isConversationClaimed =
+		selectedConversation?.itemStatus === "claimed";
 
 	// Initialize Pusher
 	useEffect(() => {
@@ -81,14 +92,19 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 					.then((data) => {
 						if (data?.conversations) {
 							// Ensure unreadCount is a number
-							const formattedConversations = data.conversations.map((conv: any) => ({
-								...conv,
-								unreadCount:
-									typeof conv.unreadCount === "number" ? conv.unreadCount : conv.unreadCount || 0,
-							}));
+							const formattedConversations =
+								data.conversations.map((conv: any) => ({
+									...conv,
+									unreadCount:
+										typeof conv.unreadCount === "number"
+											? conv.unreadCount
+											: conv.unreadCount || 0,
+								}));
 							setConversations(formattedConversations);
 							// Trigger custom event to update unread count in parent
-							window.dispatchEvent(new CustomEvent("unreadCountUpdate"));
+							window.dispatchEvent(
+								new CustomEvent("unreadCountUpdate")
+							);
 						}
 					})
 					.catch((error) => {
@@ -101,7 +117,10 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 		userChannel.bind("new-message", handleConversationUpdate);
 
 		// Listen for item updates (when item is claimed, update conversation status)
-		const handleItemUpdated = (data: { itemId?: string; status?: string }) => {
+		const handleItemUpdated = (data: {
+			itemId?: string;
+			status?: string;
+		}) => {
 			if (data?.status === "claimed") {
 				// Refresh conversations to get updated item status
 				handleConversationUpdate();
@@ -126,7 +145,11 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 		// Listen for new notifications
 		const handleNewNotification = (data: { notification: any }) => {
 			// Trigger custom event to update notifications in parent with the notification data
-			window.dispatchEvent(new CustomEvent("notificationUpdate", { detail: data.notification }));
+			window.dispatchEvent(
+				new CustomEvent("notificationUpdate", {
+					detail: data.notification,
+				})
+			);
 			// Also trigger unread count update since a new notification means potentially new unread messages
 			window.dispatchEvent(new CustomEvent("unreadCountUpdate"));
 		};
@@ -148,7 +171,10 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 		globalChannel.bind("item-claimed", handleGlobalItemClaimed);
 
 		return () => {
-			userChannel.unbind("conversation-updated", handleConversationUpdate);
+			userChannel.unbind(
+				"conversation-updated",
+				handleConversationUpdate
+			);
 			userChannel.unbind("new-message", handleConversationUpdate);
 			userChannel.unbind("item-updated", handleItemUpdated);
 			userChannel.unbind("unread-count-updated", handleUnreadCountUpdate);
@@ -164,7 +190,7 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 
 		try {
 			setIsLoading(true);
-			const response = await withLoading(() => api("/api/messages/conversations"));
+			const response = await api("/api/messages/conversations");
 
 			if (response.status !== 200) {
 				toastError("Error", "Failed to load conversations");
@@ -174,10 +200,15 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 			const data = await response.json();
 			const conversationsData = data.conversations || [];
 			// Ensure unreadCount is a number
-			const formattedConversations = conversationsData.map((conv: any) => ({
-				...conv,
-				unreadCount: typeof conv.unreadCount === "number" ? conv.unreadCount : conv.unreadCount || 0,
-			}));
+			const formattedConversations = conversationsData.map(
+				(conv: any) => ({
+					...conv,
+					unreadCount:
+						typeof conv.unreadCount === "number"
+							? conv.unreadCount
+							: conv.unreadCount || 0,
+				})
+			);
 			setConversations(formattedConversations);
 		} catch (error) {
 			console.error("Error fetching conversations:", error);
@@ -198,8 +229,14 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 	useEffect(() => {
 		const conversationId = searchParams.get("conversationId");
 		if (conversationId && conversations.length > 0) {
-			const conversation = conversations.find((c) => c.id === conversationId);
-			if (conversation && (!selectedConversation || selectedConversation.id !== conversationId)) {
+			const conversation = conversations.find(
+				(c) => c.id === conversationId
+			);
+			if (
+				conversation &&
+				(!selectedConversation ||
+					selectedConversation.id !== conversationId)
+			) {
 				handleConversationClick(conversation);
 				// Clean up URL parameter
 				const url = new URL(window.location.href);
@@ -215,7 +252,9 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 		if (!userID) return;
 
 		try {
-			const response = await api(`/api/messages/conversations/${conversationID}`);
+			const response = await api(
+				`/api/messages/conversations/${conversationID}`
+			);
 
 			if (response.status !== 200) {
 				toastError("Error", "Failed to load messages");
@@ -232,7 +271,11 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 
 			// Update unread count in conversations list
 			setConversations((prev) =>
-				prev.map((conv) => (conv.id === conversationID ? { ...conv, unreadCount: 0 } : conv))
+				prev.map((conv) =>
+					conv.id === conversationID
+						? { ...conv, unreadCount: 0 }
+						: conv
+				)
 			);
 
 			// Trigger custom event to update unread count in parent
@@ -256,7 +299,9 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 
 		// Subscribe to conversation channel for real-time messages
 		if (pusherRef.current) {
-			const channel = pusherRef.current.subscribe(`conversation-${conversation.id}`);
+			const channel = pusherRef.current.subscribe(
+				`conversation-${conversation.id}`
+			);
 
 			channel.bind("new-message", (data: { message: Message }) => {
 				// Check if this message is from the current user
@@ -288,7 +333,9 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 								lastMessage: messageToAdd.content,
 								time: messageToAdd.timestamp,
 								unreadCount:
-									selectedConversation?.id === conversation.id ? 0 : (conv.unreadCount || 0) + 1,
+									selectedConversation?.id === conversation.id
+										? 0
+										: (conv.unreadCount || 0) + 1,
 							};
 						}
 						return conv;
@@ -393,28 +440,39 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 		return conversations
 			.filter((conv) => {
 				// Filter by tab
-				if (filterTab === "active") return conv.itemStatus !== "claimed";
-				if (filterTab === "claimed") return conv.itemStatus === "claimed";
+				if (filterTab === "active")
+					return conv.itemStatus !== "claimed";
+				if (filterTab === "claimed")
+					return conv.itemStatus === "claimed";
 				return true; // "all"
 			})
 			.filter(
 				(conv) =>
-					conv.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-					conv.subject.toLowerCase().includes(searchQuery.toLowerCase())
+					conv.name
+						.toLowerCase()
+						.includes(searchQuery.toLowerCase()) ||
+					conv.subject
+						.toLowerCase()
+						.includes(searchQuery.toLowerCase())
 			);
 	}, [conversations, filterTab, searchQuery]);
 
 	return (
 		<div className="h-[calc(100vh-180px)] flex flex-col overflow-hidden">
 			{/* Header */}
-			<section aria-labelledby="messages-heading" className="mb-4 flex-shrink-0">
+			<section
+				aria-labelledby="messages-heading"
+				className="mb-4 flex-shrink-0"
+			>
 				<h1
 					id="messages-heading"
 					className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-gray-100 mb-1"
 				>
 					Messages
 				</h1>
-				<p className="text-gray-600 dark:text-gray-400">Communicate about lost and found items</p>
+				<p className="text-gray-600 dark:text-gray-400">
+					Communicate about lost and found items
+				</p>
 			</section>
 
 			{/* Messages Container */}
@@ -490,22 +548,33 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 									Loading conversations...
 								</li>
 							)}
-							{!isLoading && filteredConversations.length === 0 && (
-								<li className="px-4 py-3 text-center text-gray-500 dark:text-gray-400">
-									No conversations yet
-								</li>
-							)}
+							{!isLoading &&
+								filteredConversations.length === 0 && (
+									<li className="px-4 py-3 text-center text-gray-500 dark:text-gray-400">
+										No conversations yet
+									</li>
+								)}
 							{filteredConversations.map((conversation) => (
 								<li key={conversation.id}>
 									<button
 										type="button"
-										onClick={() => handleConversationClick(conversation)}
+										onClick={() =>
+											handleConversationClick(
+												conversation
+											)
+										}
 										className={`w-full text-left px-4 py-3 border-b border-gray-100 dark:border-neutral-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500 ${
-											selectedConversation?.id === conversation.id
+											selectedConversation?.id ===
+											conversation.id
 												? "bg-emerald-50 dark:bg-emerald-900/20"
 												: ""
 										}`}
-										aria-current={selectedConversation?.id === conversation.id ? "true" : undefined}
+										aria-current={
+											selectedConversation?.id ===
+											conversation.id
+												? "true"
+												: undefined
+										}
 									>
 										<div className="flex items-start gap-3">
 											{/* Avatar */}
@@ -514,14 +583,25 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 												aria-hidden="true"
 											>
 												{(() => {
-													const photo = (conversation as any).otherParticipant?.photo;
-													const photoUrl = typeof photo === "string" ? photo : photo?.url;
+													const photo = (
+														conversation as any
+													).otherParticipant?.photo;
+													const photoUrl =
+														typeof photo ===
+														"string"
+															? photo
+															: photo?.url;
 
-													if (photoUrl && photoUrl.trim() !== "") {
+													if (
+														photoUrl &&
+														photoUrl.trim() !== ""
+													) {
 														return (
 															<Image
 																src={photoUrl}
-																alt={conversation.name}
+																alt={
+																	conversation.name
+																}
 																width={40}
 																height={40}
 																className="w-full h-full object-cover"
@@ -544,12 +624,14 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 														{conversation.name}
 													</p>
 													<div className="flex items-center gap-2 flex-shrink-0">
-														{conversation.unreadCount > 0 && (
+														{conversation.unreadCount >
+															0 && (
 															<span
 																className="bg-red-500 text-white text-xs font-medium px-2 py-0.5 rounded-full min-w-[20px] text-center"
 																aria-label={`${conversation.unreadCount} new messages`}
 															>
-																{conversation.unreadCount > 99
+																{conversation.unreadCount >
+																99
 																	? "99+"
 																	: conversation.unreadCount}
 															</span>
@@ -563,7 +645,8 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 													<p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium truncate">
 														{conversation.subject}
 													</p>
-													{conversation.itemStatus === "claimed" && (
+													{conversation.itemStatus ===
+														"claimed" && (
 														<span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
 															Claimed
 														</span>
@@ -597,14 +680,24 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 											aria-hidden="true"
 										>
 											{(() => {
-												const photo = (selectedConversation as any).otherParticipant?.photo;
-												const photoUrl = typeof photo === "string" ? photo : photo?.url;
+												const photo = (
+													selectedConversation as any
+												).otherParticipant?.photo;
+												const photoUrl =
+													typeof photo === "string"
+														? photo
+														: photo?.url;
 
-												if (photoUrl && photoUrl.trim() !== "") {
+												if (
+													photoUrl &&
+													photoUrl.trim() !== ""
+												) {
 													return (
 														<Image
 															src={photoUrl}
-															alt={selectedConversation.name}
+															alt={
+																selectedConversation.name
+															}
 															width={40}
 															height={40}
 															className="w-full h-full object-cover"
@@ -626,7 +719,9 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 											</h2>
 											<div className="flex items-center gap-2">
 												<p className="text-xs text-emerald-600 dark:text-emerald-400">
-													{selectedConversation.subject}
+													{
+														selectedConversation.subject
+													}
 												</p>
 												{isConversationClaimed && (
 													<span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
@@ -641,11 +736,18 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 									<div className="relative">
 										<button
 											type="button"
-											onClick={() => setShowHeaderMenu(!showHeaderMenu)}
+											onClick={() =>
+												setShowHeaderMenu(
+													!showHeaderMenu
+												)
+											}
 											className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
 											aria-label="More options"
 										>
-											<MoreVertical size={20} className="text-gray-600 dark:text-gray-200" />
+											<MoreVertical
+												size={20}
+												className="text-gray-600 dark:text-gray-200"
+											/>
 										</button>
 
 										{showHeaderMenu && (
@@ -653,15 +755,21 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 												{/* Backdrop to close menu */}
 												<div
 													className="fixed inset-0 z-10"
-													onClick={() => setShowHeaderMenu(false)}
+													onClick={() =>
+														setShowHeaderMenu(false)
+													}
 												/>
 												{/* Dropdown Menu */}
 												<div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-neutral-800 rounded-lg shadow-lg border border-gray-200 dark:border-neutral-700 z-20 py-1">
 													<button
 														type="button"
 														onClick={() => {
-															setShowProfileModal(true);
-															setShowHeaderMenu(false);
+															setShowProfileModal(
+																true
+															);
+															setShowHeaderMenu(
+																false
+															);
 														}}
 														className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
 													>
@@ -684,15 +792,28 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 							>
 								{messages.length === 0 && (
 									<div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
-										<p>No messages yet. Start the conversation!</p>
+										<p>
+											No messages yet. Start the
+											conversation!
+										</p>
 									</div>
 								)}
 								{messages.map((message) => (
 									<div
 										key={message.id}
-										className={`flex ${message.isOwn ? "justify-end" : "justify-start"}`}
+										className={`flex ${
+											message.isOwn
+												? "justify-end"
+												: "justify-start"
+										}`}
 									>
-										<div className={`max-w-[70%] ${message.isOwn ? "order-2" : "order-1"}`}>
+										<div
+											className={`max-w-[70%] ${
+												message.isOwn
+													? "order-2"
+													: "order-1"
+											}`}
+										>
 											<div
 												className={`rounded-lg px-4 py-2 ${
 													message.isOwn
@@ -700,11 +821,15 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 														: "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
 												}`}
 											>
-												<p className="text-sm">{message.content}</p>
+												<p className="text-sm">
+													{message.content}
+												</p>
 											</div>
 											<p
 												className={`text-xs text-gray-500 dark:text-gray-400 mt-1 ${
-													message.isOwn ? "text-right" : "text-left"
+													message.isOwn
+														? "text-right"
+														: "text-left"
 												}`}
 											>
 												{message.timestamp}
@@ -721,7 +846,8 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 									<div className="flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400">
 										<Lock size={16} />
 										<span className="text-sm">
-											This item has been claimed. Messaging is disabled.
+											This item has been claimed.
+											Messaging is disabled.
 										</span>
 									</div>
 								</div>
@@ -734,18 +860,25 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 										<input
 											type="text"
 											value={newMessage}
-											onChange={(e) => setNewMessage(e.target.value)}
+											onChange={(e) =>
+												setNewMessage(e.target.value)
+											}
 											placeholder="Type your message..."
 											className="flex-1 px-4 py-2 border border-gray-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-neutral-800/50 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
 											aria-label="Message input"
 										/>
 										<button
 											type="submit"
-											disabled={!newMessage.trim() || isSending}
+											disabled={
+												!newMessage.trim() || isSending
+											}
 											className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-colors"
 											aria-label="Send message"
 										>
-											<Send size={20} aria-hidden="true" />
+											<Send
+												size={20}
+												aria-hidden="true"
+											/>
 										</button>
 									</div>
 								</form>
@@ -757,13 +890,17 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 								className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-4"
 								aria-hidden="true"
 							>
-								<MessageSquare size={32} className="text-gray-400 dark:text-gray-500" />
+								<MessageSquare
+									size={32}
+									className="text-gray-400 dark:text-gray-500"
+								/>
 							</div>
 							<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
 								Select a Conversation
 							</h3>
 							<p className="text-sm text-gray-600 dark:text-gray-400">
-								Choose a conversation from the list to start messaging
+								Choose a conversation from the list to start
+								messaging
 							</p>
 						</div>
 					)}
@@ -791,14 +928,24 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 									<div className="-mt-12 mb-4 flex justify-center">
 										<div className="w-24 h-24 rounded-full bg-emerald-100 dark:bg-emerald-900/40 border-4 border-white dark:border-neutral-900 flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-bold text-2xl overflow-hidden shadow-lg">
 											{(() => {
-												const photo = (selectedConversation as any).otherParticipant?.photo;
-												const photoUrl = typeof photo === "string" ? photo : photo?.url;
+												const photo = (
+													selectedConversation as any
+												).otherParticipant?.photo;
+												const photoUrl =
+													typeof photo === "string"
+														? photo
+														: photo?.url;
 
-												if (photoUrl && photoUrl.trim() !== "") {
+												if (
+													photoUrl &&
+													photoUrl.trim() !== ""
+												) {
 													return (
 														<Image
 															src={photoUrl}
-															alt={selectedConversation.name}
+															alt={
+																selectedConversation.name
+															}
 															width={96}
 															height={96}
 															className="w-full h-full object-cover"
@@ -822,7 +969,10 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 											{selectedConversation.name}
 										</h3>
 										<p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-											@{(selectedConversation as any).otherParticipant?.username || "user"}
+											@
+											{(selectedConversation as any)
+												.otherParticipant?.username ||
+												"user"}
 										</p>
 										<p className="text-sm text-emerald-600 dark:text-emerald-400 mt-1">
 											{selectedConversation.subject}
@@ -834,7 +984,8 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 
 									{/* Contact Details */}
 									<div className="space-y-3">
-										{(selectedConversation as any).otherParticipant?.email && (
+										{(selectedConversation as any)
+											.otherParticipant?.email && (
 											<div className="flex items-center gap-3 text-sm">
 												<svg
 													className="w-4 h-4 text-gray-400 shrink-0"
@@ -850,11 +1001,16 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 													/>
 												</svg>
 												<span className="text-gray-600 dark:text-gray-300 truncate">
-													{(selectedConversation as any).otherParticipant.email}
+													{
+														(
+															selectedConversation as any
+														).otherParticipant.email
+													}
 												</span>
 											</div>
 										)}
-										{(selectedConversation as any).otherParticipant?.phone && (
+										{(selectedConversation as any)
+											.otherParticipant?.phone && (
 											<div className="flex items-center gap-3 text-sm">
 												<svg
 													className="w-4 h-4 text-gray-400 shrink-0"
@@ -870,12 +1026,19 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 													/>
 												</svg>
 												<span className="text-gray-600 dark:text-gray-300">
-													{(selectedConversation as any).otherParticipant.phone}
+													{
+														(
+															selectedConversation as any
+														).otherParticipant.phone
+													}
 												</span>
 											</div>
 										)}
 										<div className="flex items-center gap-3 text-sm">
-											<MessageSquare size={16} className="text-gray-400 shrink-0" />
+											<MessageSquare
+												size={16}
+												className="text-gray-400 shrink-0"
+											/>
 											<span className="text-gray-600 dark:text-gray-400">
 												Conversation started
 											</span>
@@ -885,7 +1048,9 @@ export default function MessagesComponent({ userID }: MessagesComponentProps) {
 									{/* Close Button */}
 									<button
 										type="button"
-										onClick={() => setShowProfileModal(false)}
+										onClick={() =>
+											setShowProfileModal(false)
+										}
 										className="mt-6 w-full py-2.5 px-4 bg-gray-100 dark:bg-neutral-800 hover:bg-gray-200 dark:hover:bg-neutral-700 text-gray-700 dark:text-gray-200 rounded-lg font-medium transition-colors"
 									>
 										Close
