@@ -1,3 +1,38 @@
+/**
+ * Root Layout
+ * ===========
+ *
+ * This is the root layout for the entire application. It wraps all pages
+ * and provides global functionality including:
+ *
+ * - Theme management (dark/light mode)
+ * - Global loading states
+ * - Toast notifications
+ * - Pusher real-time connection
+ * - Confirmation dialogs
+ * - Translation support
+ *
+ * DATA FETCHING STRATEGY: Static Shell
+ *
+ * The root layout is statically generated and provides:
+ * - HTML shell with global styles
+ * - Provider components that don't fetch data
+ * - Metadata for SEO
+ *
+ * WHY STATIC:
+ * - Layout doesn't change based on user or request
+ * - Providers initialize on client-side
+ * - Faster initial page load
+ * - Better caching at CDN level
+ *
+ * PROVIDER HIERARCHY:
+ * 1. PusherProvider - Real-time connection (outermost for global access)
+ * 2. ConfirmProvider - Confirmation dialogs
+ * 3. LoadingProvider - Global loading states
+ * 4. TranslationProvider - i18n support
+ * 5. ThemeProvider - Dark/light mode (innermost, wraps content)
+ */
+
 import "./globals.css";
 import { ToastContainer, Slide } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -8,19 +43,21 @@ import { ConfirmProvider } from "@/ui/ConfirmProvider";
 import { PusherProvider } from "@/contexts/PusherProvider";
 import { TranslationProvider } from "@/contexts/TranslationProvider";
 
-// Metadata for the application (used by Next.js App Router)
-//
-// This object controls page-level SEO attributes that Next.js will
-// inject into the <head>. Keep this file up-to-date whenever you change
-// site-wide copy, branding, or canonical URLs. For page-specific
-// overrides, provide metadata objects from individual route files.
+/**
+ * Application Metadata
+ *
+ * Global SEO configuration for the application.
+ * Individual pages can override these values with their own metadata.
+ *
+ * This metadata is statically generated at build time for optimal
+ * SEO performance and social sharing.
+ */
 export const metadata = {
 	// Human-readable title shown in search results and social cards
 	title: "GC Yofinder - Lost and Found System for Gordon College",
 
 	// Primary description used by search engines and social shares
-	description:
-		"GC Yofinder helps Gordon College students report and recover lost items on campus.",
+	description: "GC Yofinder helps Gordon College students report and recover lost items on campus.",
 
 	// Helpful keyword list (minor SEO value but useful for organization)
 	keywords: [
@@ -60,8 +97,7 @@ export const metadata = {
 		type: "website",
 		url: "https://gc-yofinder.vercel.app",
 		title: "GC Yofinder - Lost and Found System for Gordon College",
-		description:
-			"GC Yofinder is a platform that helps students report and recover lost items on campus.",
+		description: "GC Yofinder is a platform that helps students report and recover lost items on campus.",
 		siteName: "GC Yofinder",
 		images: [
 			{
@@ -82,8 +118,7 @@ export const metadata = {
 	twitter: {
 		card: "summary_large_image",
 		title: "GC Yofinder - Lost and Found System for Gordon College",
-		description:
-			"Report and recover lost items on Gordon College campus with GC Yofinder.",
+		description: "Report and recover lost items on Gordon College campus with GC Yofinder.",
 		images: ["/logo.png"],
 		creator: "@GCYofinder",
 	},
@@ -103,11 +138,7 @@ export const metadata = {
 	],
 };
 
-export default function RootLayout({
-	children,
-}: {
-	children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
 	return (
 		<html lang="en">
 			<link rel="icon" type="image/x-icon" href="/logo.png" />

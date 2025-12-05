@@ -192,6 +192,11 @@ export default function DashboardPage() {
 		},
 	];
 
+	// Fetch user profile data
+	// Strategy:
+	// - Uses `apiCached` for a simple cache layer with a configurable `useCache` flag.
+	// - Callers can set `useCache=false` to force a network refresh (e.g., after updates).
+	// - Responses are written into local React state (`userData`) for reuse across the client.
 	const fetchUserData = async (useCache = true) => {
 		try {
 			const response = await apiCached(
@@ -215,6 +220,11 @@ export default function DashboardPage() {
 		}
 	};
 
+	// Fetch items owned by the current user
+	// Strategy:
+	// - Calls `api` (non-cached) and then maps/normalizes server payload into UI-friendly shape.
+	// - Invalidates dashboard items cache via `invalidateCache` so list views pick up new changes.
+	// - Triggers `fetchPaginatedItems` to populate the public/paginated listing.
 	const fetchUserItems = async () => {
 		try {
 			// Invalidate dashboard items cache when user items change
@@ -259,6 +269,10 @@ export default function DashboardPage() {
 		}
 	};
 
+	// Fetch a small page of recent items for the dashboard home
+	// Strategy:
+	// - Uses `apiCached` so repeated visits to the dashboard are fast.
+	// - `useCache` parameter allows bypassing cache when called after a mutation.
 	const fetchRecentItems = async (page = 1, limit = 4, useCache = true) => {
 		try {
 			const response = await apiCached(
@@ -287,6 +301,13 @@ export default function DashboardPage() {
 		}
 	};
 
+	// Fetch paginated items for search/list views
+	// Strategy:
+	// - Builds URLSearchParams from `page`, `limit`, and the provided `filters`.
+	// - Uses `withLoading` wrapper to show a loader for user-triggered loads, but
+	//   avoids showing a spinner when `showLoader` is false (useful for Pusher-triggered updates).
+	// - Supports `append` to enable infinite-scroll style loading (appending to state).
+	// - Maps/normalizes server response to a consistent client-side shape and updates `paginationMeta`.
 	const fetchPaginatedItems = async (
 		page: number,
 		limit: number,
