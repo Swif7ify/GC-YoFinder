@@ -6,12 +6,23 @@ import { LoadingProvider } from "@/contexts/LoadingManager";
 import { GlobalLoading } from "@/component/GlobalLoader";
 import { ConfirmProvider } from "@/ui/ConfirmProvider";
 import { PusherProvider } from "@/contexts/PusherProvider";
-// import { SpeedInsights } from "@vercel/speed-insights/next";
 import { TranslationProvider } from "@/contexts/TranslationProvider";
 
+// Metadata for the application (used by Next.js App Router)
+//
+// This object controls page-level SEO attributes that Next.js will
+// inject into the <head>. Keep this file up-to-date whenever you change
+// site-wide copy, branding, or canonical URLs. For page-specific
+// overrides, provide metadata objects from individual route files.
 export const metadata = {
+	// Human-readable title shown in search results and social cards
 	title: "GC Yofinder - Lost and Found System for Gordon College",
-	description: "Lost and Found System for Gordon College",
+
+	// Primary description used by search engines and social shares
+	description:
+		"GC Yofinder helps Gordon College students report and recover lost items on campus.",
+
+	// Helpful keyword list (minor SEO value but useful for organization)
 	keywords: [
 		"GC Yofinder",
 		"Lost and Found",
@@ -24,17 +35,27 @@ export const metadata = {
 		"Community Engagement",
 		"GCYofinder",
 	],
+
+	// Site authorship information
 	authors: [{ name: "1DEV", url: "https://gc-yofinder.vercel.app" }],
 	publisher: "GC Yofinder Inc.",
+
+	// Robots instructions — allow indexing and following links
 	robots: {
 		index: true,
 		follow: true,
 		nocache: false,
 	},
+
+	// Base URL used when Next.js constructs absolute URLs for meta tags
 	metadataBase: new URL("https://gc-yofinder.vercel.app"),
+
+	// Canonical alternate for SEO
 	alternates: {
 		canonical: "https://gc-yofinder.vercel.app",
 	},
+
+	// Open Graph (used by Facebook, LinkedIn, etc.)
 	openGraph: {
 		type: "website",
 		url: "https://gc-yofinder.vercel.app",
@@ -56,6 +77,30 @@ export const metadata = {
 		],
 		category: "education",
 	},
+
+	// Twitter card metadata for richer shares on Twitter/X
+	twitter: {
+		card: "summary_large_image",
+		title: "GC Yofinder - Lost and Found System for Gordon College",
+		description:
+			"Report and recover lost items on Gordon College campus with GC Yofinder.",
+		images: ["/logo.png"],
+		creator: "@GCYofinder",
+	},
+
+	// Icons used by browsers and when sharing; keep a small favicon and
+	// a larger app icon for social previews.
+	icons: {
+		icon: "/logo.png",
+		shortcut: "/favicon.ico",
+		apple: "/apple-touch-icon.png",
+	},
+
+	// Theme color gives a hint to browsers for UI theming (address bar, task switcher)
+	themeColor: [
+		{ media: "(prefers-color-scheme: light)", color: "#0f172a" },
+		{ media: "(prefers-color-scheme: dark)", color: "#000000" },
+	],
 };
 
 export default function RootLayout({
