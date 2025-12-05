@@ -11,6 +11,10 @@ import { UserData } from "@/types/types";
 import { useSearchParams } from "next/navigation";
 import { usePusher } from "@/contexts/PusherProvider";
 
+// Lazy-loaded Header component:
+// - Loaded on the client using `next/dynamic` to keep initial bundle small.
+// - `ssr: false` ensures this renders only in the browser.
+// - `loading` provides a skeleton while the component is fetched.
 const Header = Dynamic(
 	() =>
 		import("@/component/admin/organisms/Header").then((mod) => mod.default),
@@ -21,6 +25,8 @@ const Header = Dynamic(
 		),
 	}
 );
+// Lazy-loaded Sidebar component (client-only)
+// Provides a lightweight skeleton while the full sidebar JS is downloaded.
 const Sidebar = Dynamic(
 	() =>
 		import("@/component/admin/organisms/Sidebar").then(
@@ -47,6 +53,11 @@ const PageLoadingSkeleton = () => (
 	</div>
 );
 
+// Page components (lazy-loaded per route)
+// Each page is loaded on-demand to reduce initial payload. The
+// `PageLoadingSkeleton` provides a consistent placeholder while
+// the real component is fetched.
+// Use `ssr: false` because these are client-only interactive pages.
 // Page components
 const DashboardPage = Dynamic(
 	() =>

@@ -61,6 +61,9 @@ interface HomeComponentProps {
 	recentItems: RecentItems[];
 }
 
+// Lazy-loaded Stats section
+// - Loaded dynamically to avoid adding infrequently-used UI to the
+//   main bundle. Shows `SectionLoadingSkeleton` while loading.
 const Stats = Dynamic(
 	() =>
 		import("@/component/dashboard/pages/Home/Stats").then(
@@ -85,6 +88,9 @@ const SectionLoadingSkeleton = () => (
 	</div>
 );
 
+// Lazy-loaded QuickActions (client-only)
+// - Keeps the initial server HTML light and shows a skeleton placeholder
+//   until the interactive controls are available.
 const QuickActions = Dynamic(
 	() =>
 		import("@/component/dashboard/pages/Home/QuickActions").then(
@@ -95,6 +101,8 @@ const QuickActions = Dynamic(
 		loading: () => <SectionLoadingSkeleton />,
 	}
 );
+// Lazy-loaded RecentItems component
+// - Dynamically imported with a small skeleton to prevent layout popping.
 const RecentItemsComponent = Dynamic(
 	() =>
 		import("@/component/dashboard/pages/Home/RecentItems").then(
@@ -102,6 +110,8 @@ const RecentItemsComponent = Dynamic(
 		),
 	{ ssr: false, loading: () => <SectionLoadingSkeleton /> }
 );
+// Lazy-loaded RecentActivity list
+// - Fetched on mount and rendered client-side; skeleton prevents UI jump.
 const RecentActivityComponent = Dynamic(
 	() =>
 		import("@/component/dashboard/pages/Home/RecentActivity").then(
