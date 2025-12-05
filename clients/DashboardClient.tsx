@@ -21,6 +21,9 @@ import { useConfirm } from "@/ui/ConfirmProvider";
 import { AllItem } from "@/types/types";
 import { usePusher } from "@/contexts/PusherProvider";
 
+// Lazy-loaded Sidebar component (client-only)
+// - Dynamically imported with `next/dynamic` to keep initial HTML lightweight.
+// - `loading` shows a skeleton while the client bundle downloads.
 const Sidebar = Dynamic(
 	() =>
 		import("@/component/dashboard/organisms/Sidebar").then(
@@ -33,6 +36,8 @@ const Sidebar = Dynamic(
 		),
 	}
 );
+// Lazy-loaded Header component (client-only)
+// - Avoids shipping header JS on first paint; provides instant skeleton UI.
 const Header = Dynamic(
 	() =>
 		import("@/component/dashboard/organisms/Header").then(
@@ -59,6 +64,9 @@ const PageLoadingSkeleton = () => (
 	</div>
 );
 
+// Lazy-loaded page components
+// HomeComponent and other pages are loaded on-demand to reduce initial bundle size.
+// They use a shared `PageLoadingSkeleton` so the layout doesn't shift while fetching.
 const HomeComponent = Dynamic(
 	() =>
 		import("@/component/dashboard/pages/HomeComponent").then(
