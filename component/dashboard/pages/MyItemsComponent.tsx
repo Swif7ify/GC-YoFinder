@@ -92,7 +92,6 @@ export default function MyItemsComponent({
 	const [activeMenu, setActiveMenu] = useState<string | null>(null);
 	const [searchQuery, setSearchQuery] = useState<string>("");
 	const [editingItem, setEditingItem] = useState<MyItem | null>(null);
-
 	useEffect(() => {
 		const editId = searchParams.get("edit");
 		if (!editId) return;

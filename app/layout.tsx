@@ -42,6 +42,7 @@ import { GlobalLoading } from "@/component/GlobalLoader";
 import { ConfirmProvider } from "@/ui/ConfirmProvider";
 import { PusherProvider } from "@/contexts/PusherProvider";
 import { TranslationProvider } from "@/contexts/TranslationProvider";
+import { Providers } from "./providers";
 
 /**
  * Application Metadata
@@ -57,7 +58,8 @@ export const metadata = {
 	title: "GC Yofinder - Lost and Found System for Gordon College",
 
 	// Primary description used by search engines and social shares
-	description: "GC Yofinder helps Gordon College students report and recover lost items on campus.",
+	description:
+		"GC Yofinder helps Gordon College students report and recover lost items on campus.",
 
 	// Helpful keyword list (minor SEO value but useful for organization)
 	keywords: [
@@ -97,7 +99,8 @@ export const metadata = {
 		type: "website",
 		url: "https://gc-yofinder.vercel.app",
 		title: "GC Yofinder - Lost and Found System for Gordon College",
-		description: "GC Yofinder is a platform that helps students report and recover lost items on campus.",
+		description:
+			"GC Yofinder is a platform that helps students report and recover lost items on campus.",
 		siteName: "GC Yofinder",
 		images: [
 			{
@@ -118,7 +121,8 @@ export const metadata = {
 	twitter: {
 		card: "summary_large_image",
 		title: "GC Yofinder - Lost and Found System for Gordon College",
-		description: "Report and recover lost items on Gordon College campus with GC Yofinder.",
+		description:
+			"Report and recover lost items on Gordon College campus with GC Yofinder.",
 		images: ["/logo.png"],
 		creator: "@GCYofinder",
 	},
@@ -138,7 +142,11 @@ export const metadata = {
 	],
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+	children,
+}: {
+	children: React.ReactNode;
+}) {
 	return (
 		<html lang="en">
 			<link rel="icon" type="image/x-icon" href="/logo.png" />
@@ -147,7 +155,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 					<ConfirmProvider>
 						<LoadingProvider>
 							<TranslationProvider>
-								<ThemeProvider>{children}</ThemeProvider>
+								<Providers>
+									<ThemeProvider>{children}</ThemeProvider>
+								</Providers>
 							</TranslationProvider>
 							<GlobalLoading />
 						</LoadingProvider>

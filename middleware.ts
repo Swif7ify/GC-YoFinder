@@ -3,31 +3,12 @@ import type { NextRequest } from "next/server";
 import { jwtDecode } from "jwt-decode";
 import dayjs from "dayjs";
 
-/*
- Middleware: route protection + remember-me handling
-
- Responsibilities:
- - Redirect authenticated users away from public login routes.
- - Support a "remember me" token to silently rehydrate sessions.
- - Protect dashboard routes by validating `accessToken` and falling
-   back to `refreshToken` where appropriate.
- - Clear cookies and redirect to login/root on invalid tokens.
-
- Notes:
- - This middleware runs for paths defined in `config.matcher` below.
- - We intentionally return `NextResponse.next()` in cases where a
-   refresh token exists so downstream code (API route) can attempt
-   token rotation without forcing an immediate redirect here.
-*/
 
 export async function middleware(request: NextRequest, response: NextResponse) {
 	// Determine route types for easier branching
 	const isPublicRoute = request.nextUrl.pathname.startsWith("/login");
 	const ProtectedRoutes = request.nextUrl.pathname.startsWith("/dashboard");
 
-	// Handle public routes (e.g. /login). If the user already has a valid
-	// access token we redirect them to their dashboard. If they have a
-	// remember token we attempt to refresh the session silently.
 	if (isPublicRoute) {
 		const accessTokenRaw = request.cookies.get("accessToken")?.value;
 		const rememberToken = request.cookies.get("rememberToken")?.value;
